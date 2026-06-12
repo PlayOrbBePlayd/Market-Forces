@@ -615,7 +615,11 @@ var CH_DECOR = {
     { kind: "billboard", tx: 11, ty: 8 },
     { kind: "billboard", tx: 24, ty: 16 },
     { kind: "lamp", tx: 13, ty: 7 },  { kind: "lamp", tx: 22, ty: 7 },
-    { kind: "lamp", tx: 13, ty: 17 }, { kind: "lamp", tx: 22, ty: 17 },
+    { kind: "lamp", tx: 13, ty: 16 }, { kind: "lamp", tx: 22, ty: 16 },
+    { kind: "foodcart", tx: 10, ty: 14 }, { kind: "foodcart", tx: 24, ty: 6 },
+    { kind: "subway", tx: 11, ty: 18 },
+    { kind: "scaffold", tx: 23, ty: 3 },
+    { kind: "neon", tx: 33, ty: 16 },
     { kind: "crates", tx: 10, ty: 18 }, { kind: "crates", tx: 25, ty: 8 }
   ],
   ch2: [
@@ -623,16 +627,22 @@ var CH_DECOR = {
     { kind: "bunting", tx: 20, ty: 16 },
     { kind: "bench", tx: 12, ty: 16 }, { kind: "bench", tx: 23, ty: 10 },
     { kind: "planter", tx: 10, ty: 8 }, { kind: "planter", tx: 25, ty: 17 },
-    { kind: "lamp", tx: 13, ty: 17 }, { kind: "lamp", tx: 22, ty: 7 }
+    { kind: "lamp", tx: 13, ty: 16 }, { kind: "lamp", tx: 22, ty: 7 },
+    { kind: "bikes", tx: 12, ty: 6 }, { kind: "bikes", tx: 24, ty: 14 },
+    { kind: "laundry", tx: 11, ty: 19 }, { kind: "laundry", tx: 21, ty: 19 },
+    { kind: "tramstop", tx: 14, ty: 9 }, { kind: "tramstop", tx: 23, ty: 16 }
   ]
 };
 var CH_CRITTERS = {
   ch1: [
     { kind: "pigeon", x: 14, y: 9 }, { kind: "pigeon", x: 21, y: 15 },
+    { kind: "pigeon", x: 19, y: 19 },
+    { kind: "drone", x: 17, y: 8 },
     { kind: "cat", x: 11, y: 19 }
   ],
   ch2: [
     { kind: "pigeon", x: 19, y: 9 }, { kind: "pigeon", x: 13, y: 15 },
+    { kind: "duck", x: 15, y: 14 }, { kind: "duck", x: 18, y: 14 },
     { kind: "cat", x: 24, y: 19 }
   ]
 };
@@ -651,7 +661,7 @@ function updateCritters(dt){
     var dx = c.tx - c.x, dy = c.ty - c.y;
     var d = Math.sqrt(dx*dx + dy*dy);
     if (d > 2){
-      var sp = c.kind === "cat" ? 34 : 52;
+      var sp = c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : 52;
       c.x += dx/d * sp * dt/1000;
       c.y += dy/d * sp * dt/1000;
       c.flip = dx < 0 ? -1 : 1;
@@ -671,12 +681,28 @@ function updateCritters(dt){
 
 function drawDecorItem(d, sx, sy){
   if (d.kind === "billboard"){
-    ctx.fillStyle = "#2a1c12"; ctx.fillRect(sx+4, sy-30, 5, 48); ctx.fillRect(sx+52, sy-30, 5, 48);
-    ctx.fillStyle = "#15121c"; ctx.fillRect(sx-4, sy-58, 70, 34);
-    ctx.fillStyle = "#efe6d2"; ctx.fillRect(sx, sy-54, 62, 26);
-    ctx.fillStyle = "#e25549"; ctx.fillRect(sx+4, sy-50, 22, 8);
-    ctx.fillStyle = "#3fb8af"; ctx.fillRect(sx+4, sy-39, 34, 5);
-    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+42, sy-50, 16, 16);
+    // a digital board cycling abstract color bars, no readable text
+    ctx.fillStyle = "#26282e"; ctx.fillRect(sx+4, sy-30, 5, 48); ctx.fillRect(sx+52, sy-30, 5, 48);
+    ctx.fillStyle = "#0e1016"; ctx.fillRect(sx-4, sy-58, 70, 34);
+    var cyc = Math.floor(G.time/900) % 3;
+    if (cyc === 0){
+      ctx.fillStyle = "#102030"; ctx.fillRect(sx, sy-54, 62, 26);
+      ctx.fillStyle = "#3fb8af"; ctx.fillRect(sx+4, sy-50, 26, 8);
+      ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+4, sy-39, 38, 5);
+      ctx.fillStyle = "#7fb2e5"; ctx.fillRect(sx+46, sy-50, 12, 16);
+    } else if (cyc === 1){
+      ctx.fillStyle = "#241420"; ctx.fillRect(sx, sy-54, 62, 26);
+      ctx.fillStyle = "#e25549"; ctx.fillRect(sx+4, sy-50, 16, 16);
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(sx+26, sy-48, 32, 4); ctx.fillRect(sx+26, sy-40, 24, 4);
+    } else {
+      ctx.fillStyle = "#10241c"; ctx.fillRect(sx, sy-54, 62, 26);
+      ctx.fillStyle = "#43d17c";
+      ctx.fillRect(sx+5, sy-36, 7, 6); ctx.fillRect(sx+15, sy-42, 7, 12);
+      ctx.fillRect(sx+25, sy-46, 7, 16); ctx.fillRect(sx+35, sy-50, 7, 20);
+      ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+48, sy-52, 10, 4);
+    }
+    var scan = (Math.floor(G.time/90) % 26);
+    ctx.fillStyle = "rgba(255,255,255,.06)"; ctx.fillRect(sx, sy-54+scan, 62, 2);
   } else if (d.kind === "lamp"){
     ctx.fillStyle = "#2a2a30"; ctx.fillRect(sx+14, sy-34, 4, 52);
     ctx.fillStyle = "#ffe9b0"; ctx.fillRect(sx+10, sy-42, 12, 10);
@@ -684,6 +710,81 @@ function drawDecorItem(d, sx, sy){
   } else if (d.kind === "crates"){
     ctx.fillStyle = "#8a5a3c"; ctx.fillRect(sx+2, sy+8, 18, 18); ctx.fillRect(sx+14, sy-4, 16, 16);
     ctx.fillStyle = "#5c3a25"; ctx.fillRect(sx+2, sy+8, 18, 4); ctx.fillRect(sx+14, sy-4, 16, 4);
+  } else if (d.kind === "foodcart"){
+    // the steel cart with a striped umbrella and rising steam
+    ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(sx+2, sy+22, 30, 5);
+    ctx.fillStyle = "#b8bcc4"; ctx.fillRect(sx+2, sy+4, 28, 18);
+    ctx.fillStyle = "#8a8e96"; ctx.fillRect(sx+2, sy+4, 28, 4);
+    ctx.fillStyle = "#241a12";
+    ctx.beginPath(); ctx.arc(sx+8, sy+24, 4, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx+24, sy+24, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = "#2a2a30"; ctx.fillRect(sx+15, sy-22, 3, 26);
+    for (var ui = 0; ui < 5; ui++){
+      ctx.fillStyle = (ui % 2 === 0) ? "#e8b04b" : "#e25549";
+      ctx.fillRect(sx+1+ui*7, sy-22, 7, 7);
+    }
+    var stm = Math.floor(G.time/350) % 3;
+    ctx.fillStyle = "rgba(240,240,245,.4)";
+    ctx.fillRect(sx+10, sy-2-stm*3, 4, 3); ctx.fillRect(sx+20, sy-6-stm*2, 4, 3);
+  } else if (d.kind === "subway"){
+    // the stair into the underground, globe lamp glowing
+    ctx.fillStyle = "#1c1e26"; ctx.fillRect(sx+2, sy+6, 30, 22);
+    ctx.fillStyle = "#0c0e14"; ctx.fillRect(sx+5, sy+10, 24, 18);
+    ctx.fillStyle = "rgba(255,255,255,.10)";
+    ctx.fillRect(sx+5, sy+12, 24, 2); ctx.fillRect(sx+7, sy+17, 20, 2); ctx.fillRect(sx+9, sy+22, 16, 2);
+    ctx.fillStyle = "#2f6b4f"; ctx.fillRect(sx, sy+2, 34, 5); ctx.fillRect(sx, sy+2, 4, 26); ctx.fillRect(sx+30, sy+2, 4, 26);
+    ctx.fillStyle = "#2a2a30"; ctx.fillRect(sx+32, sy-16, 3, 20);
+    var glow = Math.floor(G.time/700) % 5 !== 0;
+    ctx.fillStyle = glow ? "#7fe5b0" : "#3a5e4a";
+    ctx.beginPath(); ctx.arc(sx+33, sy-18, 5, 0, 7); ctx.fill();
+  } else if (d.kind === "scaffold"){
+    // pipes, planks, and a plywood band: the city forever under construction
+    ctx.fillStyle = "#3a3d47";
+    ctx.fillRect(sx, sy-38, 4, 62); ctx.fillRect(sx+30, sy-38, 4, 62); ctx.fillRect(sx+60, sy-38, 4, 62);
+    ctx.fillRect(sx, sy-38, 64, 3); ctx.fillRect(sx, sy-12, 64, 3);
+    ctx.fillStyle = "#8a6a42"; ctx.fillRect(sx-2, sy-10, 68, 5);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx-2, sy+14, 68, 6);
+    ctx.fillStyle = "#27435c"; ctx.fillRect(sx, sy-34, 64, 8);
+    ctx.fillStyle = "rgba(232,176,75,.7)";
+    for (var hz = 0; hz < 6; hz++){ ctx.fillRect(sx+3+hz*11, sy+16, 5, 3); }
+  } else if (d.kind === "neon"){
+    // the flashy end of town: stacked neon shapes on a pole
+    ctx.fillStyle = "#2a2a30"; ctx.fillRect(sx+12, sy-46, 5, 70);
+    var ph2 = Math.floor(G.time/260) % 4;
+    ctx.fillStyle = ph2 === 0 ? "#3a1a2a" : "#e25549"; ctx.fillRect(sx+2, sy-44, 26, 9);
+    ctx.fillStyle = ph2 === 1 ? "#1a2a3a" : "#3fb8af"; ctx.fillRect(sx+2, sy-32, 26, 9);
+    ctx.fillStyle = ph2 === 2 ? "#3a2e14" : "#e8b04b"; ctx.fillRect(sx+2, sy-20, 26, 9);
+    ctx.fillStyle = "rgba(226,85,73,.10)"; ctx.fillRect(sx-10, sy-50, 50, 64);
+  } else if (d.kind === "bikes"){
+    // the rack of parked bicycles, the commons commute
+    ctx.fillStyle = "#5a5e66"; ctx.fillRect(sx, sy+18, 34, 3);
+    for (var bi = 0; bi < 3; bi++){
+      var bxo = sx + 2 + bi * 11;
+      ctx.strokeStyle = ["#a3504f","#3c566e","#4a7553"][bi];
+      ctx.beginPath(); ctx.arc(bxo+3, sy+16, 4, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(bxo+10, sy+16, 4, 0, 7); ctx.stroke();
+      ctx.fillStyle = ["#a3504f","#3c566e","#4a7553"][bi];
+      ctx.fillRect(bxo+3, sy+9, 8, 2); ctx.fillRect(bxo+5, sy+11, 2, 5);
+    }
+  } else if (d.kind === "laundry"){
+    // the courtyard laundry line, color squares drying in the air
+    ctx.fillStyle = "#5c4632"; ctx.fillRect(sx, sy-22, 4, 42); ctx.fillRect(sx+62, sy-22, 4, 42);
+    ctx.strokeStyle = "rgba(220,215,200,.6)";
+    ctx.beginPath(); ctx.moveTo(sx+4, sy-18); ctx.lineTo(sx+62, sy-16); ctx.stroke();
+    var sway = Math.round(Math.sin(G.time/420) * 2);
+    var cols = ["#efe6d2","#3fb8af","#e8b04b","#a3504f","#efe6d2"];
+    for (var lc = 0; lc < 5; lc++){
+      ctx.fillStyle = cols[lc];
+      ctx.fillRect(sx + 7 + lc*11 + (lc % 2 === 0 ? sway : -sway), sy-17, 8, 11);
+    }
+  } else if (d.kind === "tramstop"){
+    // a small shelter by the rails, sign left blank on purpose
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+2, sy+22, 30, 4);
+    ctx.fillStyle = "#5c4632"; ctx.fillRect(sx+2, sy-2, 4, 26); ctx.fillRect(sx+28, sy-2, 4, 26);
+    ctx.fillStyle = "#8a6a4c"; ctx.fillRect(sx-2, sy-8, 38, 7);
+    ctx.fillStyle = "rgba(200,225,250,.30)"; ctx.fillRect(sx+6, sy+2, 22, 16);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+9, sy-16, 8, 8);
+    ctx.fillStyle = "#5c4632"; ctx.fillRect(sx+12, sy-8, 2, 6);
   } else if (d.kind === "bunting"){
     ctx.fillStyle = "#2a1c12"; ctx.fillRect(sx, sy-26, 4, 44); ctx.fillRect(sx+88, sy-26, 4, 44);
     for (var i = 0; i < 7; i++){
@@ -707,6 +808,29 @@ function drawCritter(c, sx, sy){
     ctx.fillStyle = "#9aa6b8"; ctx.fillRect(sx + (c.flip > 0 ? 8 : -2), sy + peck, 5, 5);
     ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (c.flip > 0 ? 13 : -4), sy + 2 + peck, 3, 2);
     ctx.fillStyle = "#3a3f48"; ctx.fillRect(sx+2, sy+11, 2, 3); ctx.fillRect(sx+6, sy+11, 2, 3);
+  } else if (c.kind === "duck"){
+    // a fountain duck, waddling and unbothered
+    var wad = Math.floor(G.time/280) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx+1, sy+12, 12, 3);
+    ctx.fillStyle = "#e8dcc4"; ctx.fillRect(sx, sy+3+wad, 11, 8);
+    ctx.fillStyle = "#caa06a"; ctx.fillRect(sx+1, sy+5+wad, 6, 5);
+    ctx.fillStyle = "#e8dcc4"; ctx.fillRect(sx + (c.flip > 0 ? 8 : -2), sy-2+wad, 6, 7);
+    ctx.fillStyle = "#d8a420"; ctx.fillRect(sx + (c.flip > 0 ? 14 : -5), sy+wad, 3, 3);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip > 0 ? 10 : 0), sy-1+wad, 2, 2);
+    ctx.fillStyle = "#d8a420"; ctx.fillRect(sx+3, sy+11, 2, 3); ctx.fillRect(sx+7, sy+11, 2, 3);
+  } else if (c.kind === "drone"){
+    // a little delivery quadcopter, hovering with a blinking light
+    var hov = Math.round(Math.sin(G.time/220) * 3);
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+2, sy+16, 12, 3);
+    ctx.fillStyle = "#3a3d47"; ctx.fillRect(sx+3, sy-14+hov, 10, 6);
+    ctx.fillStyle = "#5a5e66"; ctx.fillRect(sx-1, sy-16+hov, 6, 2); ctx.fillRect(sx+11, sy-16+hov, 6, 2);
+    var spin = Math.floor(G.time/80) % 2 === 0;
+    ctx.fillStyle = "rgba(220,225,235,.55)";
+    if (spin){ ctx.fillRect(sx-3, sy-17+hov, 8, 1); ctx.fillRect(sx+11, sy-17+hov, 8, 1); }
+    else { ctx.fillRect(sx-1, sy-19+hov, 1, 5); ctx.fillRect(sx+16, sy-19+hov, 1, 5); }
+    ctx.fillStyle = "#8a6a42"; ctx.fillRect(sx+5, sy-8+hov, 6, 5);
+    var bl = Math.floor(G.time/400) % 2 === 0;
+    ctx.fillStyle = bl ? "#e25549" : "#5a2a26"; ctx.fillRect(sx+7, sy-16+hov, 2, 2);
   } else if (c.kind === "cat"){
     var tail = Math.floor(G.time/300) % 2 === 0 ? 0 : 2;
     ctx.fillStyle = "#3a3026"; ctx.fillRect(sx, sy+4, 16, 8);
@@ -716,6 +840,212 @@ function drawCritter(c, sx, sy){
     ctx.fillRect(sx + (c.flip > 0 ? 13 : -3), sy-3, 2, 4); ctx.fillRect(sx + (c.flip > 0 ? 18 : 2), sy-3, 2, 4);
     ctx.fillStyle = "#7fe5b0"; ctx.fillRect(sx + (c.flip > 0 ? 15 : -1), sy+2, 2, 2);
     ctx.fillStyle = "#3a3f48"; ctx.fillRect(sx+3, sy+12, 2, 3); ctx.fillRect(sx+11, sy+12, 2, 3);
+  }
+}
+
+/* ---------- Per chapter ground tiles. Milestone 8, Stage 1. ----------
+   Each town owns its streets. Chapter 1 is the metro: concrete, asphalt,
+   a glass tower skyline ringing the map. Chapter 2 is the commons: warm
+   paving, tram rails, courtyard housing walls in the Red Vienna key.
+   Visual only: the solid grid never changes. */
+function tileHash(x, y){ return ((x * 73856093) ^ (y * 19349663)) >>> 0; }
+
+function drawMetroGround(c, x, y, sx, sy){
+  var st = CUR.streets || {};
+  var road = (st.roadRows || []).indexOf(y) >= 0;
+  if (road && c === "."){
+    // asphalt with curbs, a faded center dash, and zebra crosswalks
+    ctx.fillStyle = "#23242b"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#3a3d47";
+    ctx.fillRect(sx, sy, TILE, 2); ctx.fillRect(sx, sy + TILE - 2, TILE, 2);
+    if ((st.crossAt || []).indexOf(x) >= 0){
+      ctx.fillStyle = "rgba(222,222,228,.8)";
+      for (var zx = sx + 2; zx < sx + TILE - 2; zx += 8){ ctx.fillRect(zx, sy + 4, 5, TILE - 8); }
+    } else if (x % 2 === 0){
+      ctx.fillStyle = "#b09030"; ctx.fillRect(sx + 4, sy + TILE/2 - 1, 14, 2);
+    }
+    return;
+  }
+  // concrete sidewalk with expansion joints
+  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  ctx.fillStyle = "rgba(0,0,0,.10)";
+  if (x % 2 === 0) ctx.fillRect(sx, sy, 1, TILE);
+  if (y % 2 === 0) ctx.fillRect(sx, sy, TILE, 1);
+  var h = tileHash(x, y);
+  if (h % 23 === 0){ ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fillRect(sx + 6, sy + 8, 9, 5); }
+
+  if (c === "T"){
+    var border = (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1);
+    if (border){
+      // the financial canyon: one glass tower per border tile
+      var v = h % 3;
+      var body = v === 0 ? "#2c3a4e" : v === 1 ? "#33353d" : "#3a3330";
+      var glass = v === 0 ? "rgba(127,178,229,.55)" : v === 1 ? "rgba(63,184,175,.45)" : "rgba(232,176,75,.40)";
+      ctx.fillStyle = "#0e1016"; ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.fillStyle = body; ctx.fillRect(sx + 2, sy - 6, TILE - 4, TILE + 6);
+      // lit window grid, most lights on, a few dark by hash
+      for (var wy = sy - 2; wy < sy + TILE - 4; wy += 6){
+        for (var wx = sx + 5; wx < sx + TILE - 6; wx += 7){
+          var wh = tileHash(wx + x, wy + y);
+          ctx.fillStyle = (wh % 5 === 0) ? "rgba(10,12,16,.6)" : glass;
+          ctx.fillRect(wx, wy, 4, 3);
+        }
+      }
+      // rooftop furniture: a water tank or a blinking antenna
+      if (h % 4 === 0){
+        ctx.fillStyle = "#26282e"; ctx.fillRect(sx + 8, sy - 12, 12, 8);
+        ctx.fillStyle = "#3a3d47"; ctx.fillRect(sx + 10, sy - 4, 2, 3); ctx.fillRect(sx + 16, sy - 4, 2, 3);
+      } else if (h % 4 === 1){
+        ctx.fillStyle = "#3a3d47"; ctx.fillRect(sx + TILE/2 - 1, sy - 13, 2, 8);
+        var blink = (Math.floor(G.time / 600) + (h % 7)) % 3 === 0;
+        ctx.fillStyle = blink ? "#e25549" : "#5a2a26"; ctx.fillRect(sx + TILE/2 - 2, sy - 15, 4, 3);
+      }
+    } else {
+      // a street tree in a square concrete planter
+      ctx.fillStyle = "#3d3f48"; ctx.fillRect(sx + 5, sy + 18, TILE - 10, 12);
+      ctx.fillStyle = "#23242b"; ctx.fillRect(sx + 7, sy + 20, TILE - 14, 8);
+      ctx.fillStyle = "#2a4634"; ctx.fillRect(sx + 6, sy + 4, TILE - 12, 16);
+      ctx.fillStyle = "#3a5e44"; ctx.fillRect(sx + 9, sy + 1, TILE - 18, 14);
+      ctx.fillStyle = "#4a7553"; ctx.fillRect(sx + 12, sy + 4, TILE - 24, 8);
+    }
+  } else if (c === "F"){
+    // the plaza fountain: granite ring, teal water, a moving shimmer
+    ctx.fillStyle = "#4a4d57"; ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+    ctx.fillStyle = "#33353d"; ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+    ctx.fillStyle = "#2e7d78"; ctx.fillRect(sx + 6, sy + 6, TILE - 12, TILE - 12);
+    var sh = (Math.floor(G.time / 260) + x + y) % 4;
+    ctx.fillStyle = "rgba(190,235,230,.65)";
+    ctx.fillRect(sx + 8 + sh * 3, sy + 9, 6, 2); ctx.fillRect(sx + 18 - sh * 2, sy + 18, 5, 2);
+  } else if (c === "C"){
+    // street furniture: a hydrant or a pair of news boxes, by hash
+    if (h % 2 === 0){
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx + 8, sy + 24, 16, 5);
+      ctx.fillStyle = "#c14b40"; ctx.fillRect(sx + 11, sy + 10, 10, 16);
+      ctx.fillRect(sx + 8, sy + 14, 16, 5);
+      ctx.fillStyle = "#e0d8c8"; ctx.fillRect(sx + 13, sy + 7, 6, 4);
+    } else {
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx + 4, sy + 24, 24, 5);
+      ctx.fillStyle = "#2f7d78"; ctx.fillRect(sx + 4, sy + 8, 11, 18);
+      ctx.fillStyle = "#b08a30"; ctx.fillRect(sx + 17, sy + 8, 11, 18);
+      ctx.fillStyle = "rgba(240,240,245,.7)"; ctx.fillRect(sx + 6, sy + 10, 7, 6); ctx.fillRect(sx + 19, sy + 10, 7, 6);
+    }
+  }
+}
+
+function drawCommonsGround(c, x, y, sx, sy){
+  var st = CUR.streets || {};
+  var tram = (st.tramRows || []).indexOf(y) >= 0;
+  var bike = (st.bikeRows || []).indexOf(y) >= 0;
+  // warm paving stones
+  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  var h = tileHash(x, y);
+  if (h % 11 === 0){ ctx.fillStyle = "rgba(180,130,70,.10)"; ctx.fillRect(sx + 3, sy + 3, TILE - 6, TILE - 6); }
+  ctx.fillStyle = "rgba(0,0,0,.08)";
+  ctx.fillRect(sx, sy, TILE, 1); ctx.fillRect(sx, sy, 1, TILE);
+
+  if (tram && c === "."){
+    // tram rails with ties across the paving
+    ctx.fillStyle = "rgba(60,46,34,.5)";
+    for (var tx3 = sx + 2; tx3 < sx + TILE; tx3 += 8){ ctx.fillRect(tx3, sy + 8, 4, 16); }
+    ctx.fillStyle = "#5a5e66";
+    ctx.fillRect(sx, sy + 9, TILE, 2); ctx.fillRect(sx, sy + 21, TILE, 2);
+    ctx.fillStyle = "rgba(220,220,228,.25)";
+    ctx.fillRect(sx, sy + 9, TILE, 1); ctx.fillRect(sx, sy + 21, TILE, 1);
+    return;
+  }
+  if (bike && c === "."){
+    // the bike street: a tinted lane, dashes, and a wheel glyph now and then
+    ctx.fillStyle = "rgba(63,140,120,.20)"; ctx.fillRect(sx, sy + 4, TILE, TILE - 8);
+    ctx.fillStyle = "rgba(240,240,235,.55)";
+    if (x % 2 === 0) ctx.fillRect(sx + 10, sy + TILE/2 - 1, 12, 2);
+    if (h % 6 === 0){
+      ctx.strokeStyle = "rgba(240,240,235,.6)";
+      ctx.beginPath(); ctx.arc(sx + 11, sy + 18, 4, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx + 21, sy + 18, 4, 0, 7); ctx.stroke();
+      ctx.fillStyle = "rgba(240,240,235,.6)"; ctx.fillRect(sx + 11, sy + 12, 10, 2);
+    }
+    return;
+  }
+
+  if (c === "T"){
+    var border = (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1);
+    if (border){
+      // the courtyard wall: monumental housing in the Red Vienna key,
+      // with Bologna porticoes and shape only murals along the street
+      var v = h % 4;
+      var wall = v === 0 ? "#9c5a48" : v === 1 ? "#b07a4a" : v === 2 ? "#a3504f" : "#8a6a4c";
+      ctx.fillStyle = "#1c1611"; ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.fillStyle = wall; ctx.fillRect(sx, sy - 4, TILE, TILE + 4);
+      // the tiled roofline
+      ctx.fillStyle = "#6e3231"; ctx.fillRect(sx, sy - 8, TILE, 6);
+      ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.fillRect(sx, sy - 3, TILE, 2);
+      if (h % 3 === 0){
+        // a portico arch opening with column edges
+        ctx.fillStyle = "#241a12"; ctx.fillRect(sx + 9, sy + 12, 14, 20);
+        ctx.fillRect(sx + 11, sy + 8, 10, 6);
+        ctx.fillStyle = "#e8d8bc"; ctx.fillRect(sx + 6, sy + 8, 3, 24); ctx.fillRect(sx + 23, sy + 8, 3, 24);
+      } else if (h % 3 === 1){
+        // arched windows with warm light and a flower box
+        ctx.fillStyle = "rgba(255,225,170,.55)";
+        ctx.fillRect(sx + 6, sy + 8, 8, 12); ctx.fillRect(sx + 18, sy + 8, 8, 12);
+        ctx.fillRect(sx + 8, sy + 5, 4, 4); ctx.fillRect(sx + 20, sy + 5, 4, 4);
+        ctx.fillStyle = "#3f6e3a"; ctx.fillRect(sx + 5, sy + 20, 10, 3); ctx.fillRect(sx + 17, sy + 20, 10, 3);
+        ctx.fillStyle = "#e25549"; ctx.fillRect(sx + 7, sy + 18, 2, 2); ctx.fillRect(sx + 21, sy + 18, 2, 2);
+      } else {
+        // a mural in shapes and color only
+        ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 5, sy + 7, 9, 9);
+        ctx.fillStyle = "#3fb8af"; ctx.fillRect(sx + 16, sy + 11, 11, 6);
+        ctx.fillStyle = "#e25549";
+        ctx.beginPath(); ctx.arc(sx + 20, sy + 24, 5, 0, 7); ctx.fill();
+        ctx.fillStyle = "rgba(240,235,220,.5)"; ctx.fillRect(sx + 6, sy + 22, 7, 3);
+      }
+    } else {
+      // a linden in a tended ring of earth
+      ctx.fillStyle = "#4a3424"; ctx.fillRect(sx + 8, sy + 22, TILE - 16, 8);
+      ctx.fillStyle = "#2f5232"; ctx.fillRect(sx + 4, sy + 4, TILE - 8, 18);
+      ctx.fillStyle = "#41743f"; ctx.fillRect(sx + 7, sy + 1, TILE - 14, 15);
+      ctx.fillStyle = "#5c9450"; ctx.fillRect(sx + 10, sy + 4, TILE - 20, 9);
+      var bh = tileHash(x + 3, y + 5);
+      if (bh % 3 === 0){ ctx.fillStyle = "#f2e8d5"; ctx.fillRect(sx + 12, sy + 5, 2, 2); ctx.fillRect(sx + 18, sy + 9, 2, 2); }
+    }
+  } else if (c === "F"){
+    // the commons fountain: warm stone, gentle water
+    ctx.fillStyle = "#8a6a4c"; ctx.fillRect(sx + 1, sy + 1, TILE - 2, TILE - 2);
+    ctx.fillStyle = "#5c4632"; ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+    ctx.fillStyle = "#46618c"; ctx.fillRect(sx + 6, sy + 6, TILE - 12, TILE - 12);
+    var sh2 = (Math.floor(G.time / 300) + x * 2 + y) % 4;
+    ctx.fillStyle = "rgba(200,225,250,.6)";
+    ctx.fillRect(sx + 9 + sh2 * 2, sy + 10, 5, 2); ctx.fillRect(sx + 17 - sh2, sy + 18, 5, 2);
+  } else if (c === "C"){
+    // a raised communal garden bed, tended and producing
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx + 3, sy + 25, 26, 4);
+    ctx.fillStyle = "#5c3a25"; ctx.fillRect(sx + 3, sy + 8, 26, 18);
+    ctx.fillStyle = "#3a2a1c"; ctx.fillRect(sx + 5, sy + 10, 22, 14);
+    ctx.fillStyle = "#3f6e3a";
+    ctx.fillRect(sx + 7, sy + 11, 4, 8); ctx.fillRect(sx + 14, sy + 9, 4, 10); ctx.fillRect(sx + 21, sy + 12, 4, 7);
+    ctx.fillStyle = "#e25549"; ctx.fillRect(sx + 8, sy + 10, 2, 2);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 22, sy + 11, 2, 2);
+  }
+}
+
+function drawGroundTile(c, x, y, sx, sy){
+  if (CUR.theme === "metro") return drawMetroGround(c, x, y, sx, sy);
+  if (CUR.theme === "commons") return drawCommonsGround(c, x, y, sx, sy);
+  // the old cobble checker, kept as the fallback for future chapters
+  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  if (c === "T"){
+    ctx.fillStyle = "#1d3a2b"; ctx.fillRect(sx + 4, sy + 8, TILE - 8, TILE - 10);
+    ctx.fillStyle = "#2f5e41"; ctx.fillRect(sx + 7, sy + 3, TILE - 14, TILE - 14);
+    ctx.fillStyle = "#3f7d55"; ctx.fillRect(sx + 10, sy + 6, TILE - 20, TILE - 20);
+  } else if (c === "F"){
+    ctx.fillStyle = "#46618c"; ctx.fillRect(sx + 2, sy + 2, TILE - 4, TILE - 4);
+    ctx.fillStyle = "#7fb2e5"; ctx.fillRect(sx + 7, sy + 7, TILE - 14, TILE - 14);
+  } else if (c === "C"){
+    ctx.fillStyle = "#6e4a24"; ctx.fillRect(sx + 4, sy + 6, TILE - 8, TILE - 10);
+    ctx.strokeStyle = "#a3713c"; ctx.strokeRect(sx + 4.5, sy + 6.5, TILE - 9, TILE - 11);
   }
 }
 
@@ -747,48 +1077,82 @@ var BUILDING_ART = {
     ctx.fillRect(bx+bw-36 - ph*2, by-28 - ph*4, 10 + ph*2, 7);
   },
   bank1: function(b, bx, by, bw, bh){
+    // the financial canyon: a glass tower rising behind the old stone branch
+    ctx.fillStyle = "#222a36"; ctx.fillRect(bx+8, by-34, bw-16, 38);
+    ctx.fillStyle = "rgba(127,178,229,.5)";
+    for (var ty3 = by-30; ty3 < by; ty3 += 7){
+      for (var tx4 = bx+12; tx4 < bx+bw-16; tx4 += 9){
+        if (tileHash(tx4, ty3) % 6 !== 0) ctx.fillRect(tx4, ty3, 5, 4);
+      }
+    }
+    ctx.fillStyle = "#3a4656"; ctx.fillRect(bx+bw/2-2, by-42, 4, 9);
+    // the stone banking hall below, columns and brass
     ctx.fillStyle = "#cfc8b8"; ctx.fillRect(bx, by+10, bw, bh-10);
-    // pediment
     ctx.fillStyle = "#928c7d"; ctx.fillRect(bx-4, by, bw+8, 12);
     ctx.fillStyle = "#b3ac9a"; ctx.fillRect(bx+8, by-8, bw-16, 8);
-    // columns
     ctx.fillStyle = "#efe6d2";
     for (var cx2 = bx+10; cx2 < bx+bw-12; cx2 += 28){ ctx.fillRect(cx2, by+14, 10, bh-16); }
     ctx.fillStyle = "rgba(0,0,0,.12)";
     for (var cx3 = bx+10; cx3 < bx+bw-12; cx3 += 28){ ctx.fillRect(cx3+7, by+14, 3, bh-16); }
-    // brass door glow
     ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx+bw/2-12, by+bh-26, 24, 4);
   },
   exchange1: function(b, bx, by, bw, bh){
-    ctx.fillStyle = "#3c566e"; ctx.fillRect(bx, by+6, bw, bh-6);
-    ctx.fillStyle = "#2a3a4e"; ctx.fillRect(bx-3, by, bw+6, 10);
-    // glass grid, teal glow
-    for (var gy = by+14; gy < by+bh-14; gy += 14){
-      for (var gx = bx+8; gx < bx+bw-12; gx += 16){
-        ctx.fillStyle = ((gx+gy) % 48 < 16) ? "rgba(63,184,175,.7)" : "rgba(207,226,239,.45)";
-        ctx.fillRect(gx, gy, 11, 9);
+    // the glass curtain wall with a giant abstract chart screen
+    ctx.fillStyle = "#2a3a4e"; ctx.fillRect(bx, by-12, bw, bh+6);
+    ctx.fillStyle = "#1c2734"; ctx.fillRect(bx-3, by-16, bw+6, 8);
+    for (var gy = by-6; gy < by+bh-26; gy += 12){
+      for (var gx = bx+6; gx < bx+bw-10; gx += 14){
+        ctx.fillStyle = ((gx+gy) % 42 < 14) ? "rgba(63,184,175,.7)" : "rgba(207,226,239,.45)";
+        ctx.fillRect(gx, gy, 10, 8);
       }
     }
-    // a moving ticker strip
-    ctx.fillStyle = "#0c1118"; ctx.fillRect(bx+4, by+bh-22, bw-8, 10);
+    // the market screen: a jagged line that climbs and dives, shapes only
+    ctx.fillStyle = "#0c1118"; ctx.fillRect(bx+bw/2-26, by+2, 52, 22);
+    var seg = Math.floor(G.time/400) % 4;
+    ctx.fillStyle = seg === 2 ? "#e25549" : "#43d17c";
+    var lx = bx+bw/2-22, ly = by+16;
+    for (var i3 = 0; i3 < 6; i3++){
+      var step = ((tileHash(i3, seg) % 3) - 1) * 4;
+      ctx.fillRect(lx, ly, 7, 2);
+      ly = Math.max(by+5, Math.min(by+19, ly - step));
+      lx += 7;
+    }
+    // the wraparound ticker, twin bands
+    ctx.fillStyle = "#0c1118"; ctx.fillRect(bx+2, by+bh-24, bw-4, 18);
     var toff = Math.floor(G.time/120) % 16;
-    ctx.fillStyle = "#43d17c";
-    for (var tx2 = bx+8 - toff; tx2 < bx+bw-14; tx2 += 16){
-      if (tx2 > bx+4) ctx.fillRect(tx2, by+bh-19, 8, 4);
+    for (var tx2 = bx+6 - toff; tx2 < bx+bw-12; tx2 += 16){
+      if (tx2 > bx+2){
+        ctx.fillStyle = "#43d17c"; ctx.fillRect(tx2, by+bh-21, 8, 4);
+        ctx.fillStyle = "#e25549"; ctx.fillRect(tx2+3, by+bh-13, 6, 4);
+      }
     }
   },
   garage1: function(b, bx, by, bw, bh){
-    ctx.fillStyle = "#6e6458"; ctx.fillRect(bx, by+12, bw, bh-12);
-    // corrugated roof
-    ctx.fillStyle = "#4f4763";
-    for (var rx = bx-3; rx < bx+bw+3; rx += 8){ ctx.fillRect(rx, by, 5, 14); }
-    // rollup door slats
-    ctx.fillStyle = "#54422e";
-    ctx.fillRect(bx+bw/2-26, by+22, 52, bh-24);
+    // the startup garage in the campus key: low, bright, half plywood half mural
+    ctx.fillStyle = "#d8d2c4"; ctx.fillRect(bx, by+12, bw, bh-12);
+    ctx.fillStyle = "#9a948a"; ctx.fillRect(bx-3, by+4, bw+6, 10);
+    // a rooftop solar panel and a small dish
+    ctx.fillStyle = "#27435c"; ctx.fillRect(bx+8, by-4, 26, 8);
+    ctx.fillStyle = "rgba(127,178,229,.6)"; ctx.fillRect(bx+10, by-2, 6, 4); ctx.fillRect(bx+18, by-2, 6, 4); ctx.fillRect(bx+26, by-2, 6, 4);
+    ctx.fillStyle = "#b3ac9a"; ctx.fillRect(bx+bw-18, by-6, 3, 10);
+    ctx.beginPath(); ctx.arc(bx+bw-16, by-7, 5, 0, 7); ctx.fill();
+    // the rollup door, half open after a long night
+    ctx.fillStyle = "#54422e"; ctx.fillRect(bx+bw/2-26, by+22, 52, bh-24);
+    ctx.fillStyle = "#1c1a22"; ctx.fillRect(bx+bw/2-24, by+bh-16, 48, 14);
     ctx.fillStyle = "rgba(0,0,0,.2)";
-    for (var sy2 = by+26; sy2 < by+bh-4; sy2 += 8){ ctx.fillRect(bx+bw/2-26, sy2, 52, 2); }
-    // the one bright bulb
-    ctx.fillStyle = "#ffe9b0"; ctx.fillRect(bx+bw/2-3, by+16, 6, 5);
+    for (var sy2 = by+26; sy2 < by+bh-16; sy2 += 8){ ctx.fillRect(bx+bw/2-26, sy2, 52, 2); }
+    // the mural of abstract marks where a logo would go, shapes only
+    ctx.fillStyle = "#3fb8af"; ctx.fillRect(bx+6, by+20, 10, 10);
+    ctx.fillStyle = "#e8b04b";
+    ctx.beginPath(); ctx.arc(bx+24, by+28, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#e25549"; ctx.fillRect(bx+bw-18, by+22, 8, 8);
+    // string lights along the eave and the one bright bulb
+    var gl = Math.floor(G.time/300) % 3;
+    for (var li = 0; li < Math.floor(bw/12); li++){
+      ctx.fillStyle = (li % 3 === gl) ? "#ffe9b0" : "#b09a60";
+      ctx.fillRect(bx+4+li*12, by+15, 3, 3);
+    }
+    ctx.fillStyle = "#ffe9b0"; ctx.fillRect(bx+bw/2-3, by+18, 6, 4);
   },
   bar1: function(b, bx, by, bw, bh){
     // faded paint in mismatched patches
@@ -845,57 +1209,98 @@ var BUILDING_ART = {
     }
   },
   union2: function(b, bx, by, bw, bh){
+    // the Red Vienna superblock: monumental brick, arched entry, pennants
     ctx.fillStyle = "#a3504f"; ctx.fillRect(bx, by+10, bw, bh-10);
     ctx.fillStyle = "#6e3231"; ctx.fillRect(bx-3, by, bw+6, 14);
-    // brick courses
     ctx.fillStyle = "rgba(0,0,0,.12)";
     for (var by2 = by+18; by2 < by+bh-6; by2 += 10){ ctx.fillRect(bx, by2, bw, 2); }
+    // the monumental arch over the door line
+    ctx.fillStyle = "#7d3a39"; ctx.fillRect(bx+bw/2-22, by+14, 44, bh-16);
+    ctx.fillStyle = "#e8d8bc"; ctx.fillRect(bx+bw/2-22, by+14, 4, bh-16); ctx.fillRect(bx+bw/2+18, by+14, 4, bh-16);
+    ctx.fillRect(bx+bw/2-22, by+12, 44, 4);
+    // two pennant poles, color only
+    ctx.fillStyle = "#e8d8bc"; ctx.fillRect(bx+8, by-16, 3, 18); ctx.fillRect(bx+bw-11, by-16, 3, 18);
+    var wav = Math.floor(G.time/350) % 2;
+    ctx.fillStyle = "#e25549";
+    ctx.fillRect(bx+11, by-15, 10 + wav*2, 6); ctx.fillRect(bx+bw-21 - wav*2, by-15, 10 + wav*2, 6);
     // the great banner across the facade
-    ctx.fillStyle = "#e25549"; ctx.fillRect(bx+10, by+20, bw-20, 18);
-    ctx.fillStyle = "#efe6d2"; ctx.fillRect(bx+bw/2-14, by+26, 28, 6);
-    ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.fillRect(bx+10, by+34, bw-20, 4);
+    ctx.fillStyle = "#e25549"; ctx.fillRect(bx+10, by+20, bw-20, 14);
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(bx+bw/2-14, by+25, 28, 5);
   },
   clinic2: function(b, bx, by, bw, bh){
+    // the Copenhagen civic key: white render, sedum roof, calm glass
     ctx.fillStyle = "#efe6d2"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#928c7d"; ctx.fillRect(bx-3, by, bw+6, 14);
+    ctx.fillStyle = "#928c7d"; ctx.fillRect(bx-3, by+4, bw+6, 10);
+    ctx.fillStyle = "#4a7553"; ctx.fillRect(bx-3, by, bw+6, 6);
+    ctx.fillStyle = "#5c9450"; ctx.fillRect(bx+4, by, 8, 4); ctx.fillRect(bx+20, by+1, 10, 3); ctx.fillRect(bx+bw-16, by, 8, 4);
     // the cross
     ctx.fillStyle = "#3fb8af";
     ctx.fillRect(bx+bw/2-5, by+18, 10, 26); ctx.fillRect(bx+bw/2-13, by+26, 26, 10);
-    // calm windows
+    // long calm windows with timber mullions
     ctx.fillStyle = "rgba(63,184,175,.4)";
-    ctx.fillRect(bx+12, by+26, 13, 12); ctx.fillRect(bx+bw-26, by+26, 13, 12);
+    ctx.fillRect(bx+8, by+24, 18, 14); ctx.fillRect(bx+bw-26, by+24, 18, 14);
+    ctx.fillStyle = "#b3ac9a"; ctx.fillRect(bx+16, by+24, 2, 14); ctx.fillRect(bx+bw-18, by+24, 2, 14);
+    // the door canopy
+    ctx.fillStyle = "#8a6a4c"; ctx.fillRect(bx+bw/2-16, by+bh-14, 32, 4);
   },
   coop2: function(b, bx, by, bw, bh){
+    // the Bologna portico: an arcade across the base, ochre above
     ctx.fillStyle = "#caa06a"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#5c3a25"; ctx.fillRect(bx-3, by, bw+6, 14);
-    // timber frame
+    ctx.fillStyle = "#8a5436"; ctx.fillRect(bx-3, by, bw+6, 14);
+    ctx.fillStyle = "rgba(0,0,0,.1)"; ctx.fillRect(bx, by+12, bw, 3);
+    // the upper floor: timber shutters and warm windows
+    ctx.fillStyle = "rgba(255,225,170,.6)";
+    ctx.fillRect(bx+12, by+16, 10, 10); ctx.fillRect(bx+bw/2-5, by+16, 10, 10); ctx.fillRect(bx+bw-22, by+16, 10, 10);
     ctx.fillStyle = "#5c3a25";
-    ctx.fillRect(bx, by+10, 5, bh-10); ctx.fillRect(bx+bw-5, by+10, 5, bh-10);
-    ctx.fillRect(bx, by+bh/2+2, bw, 5);
-    ctx.fillRect(bx+bw/2-3, by+10, 5, bh-10);
-    ctx.fillStyle = "rgba(242,232,213,.8)";
-    ctx.fillRect(bx+14, by+22, 12, 12); ctx.fillRect(bx+bw-28, by+22, 12, 12);
+    ctx.fillRect(bx+9, by+16, 3, 10); ctx.fillRect(bx+22, by+16, 3, 10);
+    ctx.fillRect(bx+bw-25, by+16, 3, 10); ctx.fillRect(bx+bw-12, by+16, 3, 10);
+    // the portico: arches, columns, deep shade
+    ctx.fillStyle = "#3a2a1c"; ctx.fillRect(bx+4, by+30, bw-8, bh-32);
+    ctx.fillStyle = "#e8d8bc";
+    for (var pc = bx+4; pc <= bx+bw-8; pc += Math.floor((bw-8)/4)){
+      ctx.fillRect(pc, by+30, 5, bh-32);
+    }
+    ctx.fillStyle = "#caa06a";
+    for (var pa = bx+9; pa < bx+bw-12; pa += Math.floor((bw-8)/4)){
+      ctx.fillRect(pa, by+30, Math.floor((bw-8)/4)-5, 4);
+    }
   },
   works2: function(b, bx, by, bw, bh){
-    ctx.fillStyle = "#5b7f9e"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#3c566e"; ctx.fillRect(bx-3, by, bw+6, 14);
-    // exterior pipework
-    ctx.fillStyle = "#3c566e";
-    ctx.fillRect(bx+8, by+14, 8, bh-16); ctx.fillRect(bx+8, by+22, bw-30, 6);
-    ctx.fillStyle = "#3fb8af"; ctx.fillRect(bx+12, by+30, 6, 6);
-    // the rooftop water tank
-    ctx.fillStyle = "#2a3a44"; ctx.fillRect(bx+bw-36, by-18, 26, 20);
-    ctx.fillStyle = "#3c566e"; ctx.fillRect(bx+bw-32, by+2, 4, 8); ctx.fillRect(bx+bw-18, by+2, 4, 8);
+    // the people's works: warm brick utility hall, arched window, teal pipes
+    ctx.fillStyle = "#9c5a48"; ctx.fillRect(bx, by+10, bw, bh-10);
+    ctx.fillStyle = "#6e3a30"; ctx.fillRect(bx-3, by, bw+6, 14);
+    ctx.fillStyle = "rgba(0,0,0,.1)";
+    for (var bb = by+18; bb < by+bh-4; bb += 9){ ctx.fillRect(bx, bb, bw, 2); }
+    // the great arched industrial window
+    ctx.fillStyle = "rgba(200,225,250,.45)"; ctx.fillRect(bx+bw/2-16, by+20, 32, 18);
+    ctx.fillRect(bx+bw/2-12, by+16, 24, 5);
+    ctx.fillStyle = "#6e3a30";
+    ctx.fillRect(bx+bw/2-1, by+16, 2, 22); ctx.fillRect(bx+bw/2-16, by+28, 32, 2);
+    // exterior pipework, proudly painted
+    ctx.fillStyle = "#3c566e"; ctx.fillRect(bx+6, by+14, 7, bh-16);
+    ctx.fillStyle = "#3fb8af"; ctx.fillRect(bx+6, by+24, 7, 8);
+    ctx.fillStyle = "#3c566e"; ctx.fillRect(bx+6, by+20, bw-34, 5);
+    // the civic chimney with a soft drift
+    ctx.fillStyle = "#6e3a30"; ctx.fillRect(bx+bw-20, by-16, 10, 18);
+    var dr = Math.floor(G.time/600) % 3;
+    ctx.fillStyle = "rgba(220,220,225,.35)"; ctx.fillRect(bx+bw-22 - dr*2, by-22 - dr*3, 10 + dr*2, 6);
   },
   meeting2: function(b, bx, by, bw, bh){
-    ctx.fillStyle = "#7a6f8e"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#4f4763"; ctx.fillRect(bx-3, by, bw+6, 14);
+    // the courtyard meeting hall: render, clock, and a board of color notes
+    ctx.fillStyle = "#8a7a64"; ctx.fillRect(bx, by+10, bw, bh-10);
+    ctx.fillStyle = "#5c5040"; ctx.fillRect(bx-3, by, bw+6, 14);
     // the civic clock face, hands forever near midnight
-    ctx.fillStyle = "#efe6d2"; ctx.fillRect(bx+bw/2-11, by+18, 22, 22);
-    ctx.fillStyle = "#15121c"; ctx.fillRect(bx+bw/2-1, by+22, 2, 9); ctx.fillRect(bx+bw/2-1, by+28, 7, 2);
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(bx+bw/2-11, by+16, 22, 22);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(bx+bw/2-1, by+20, 2, 9); ctx.fillRect(bx+bw/2-1, by+26, 7, 2);
+    // the notice board: paper shapes only, no text
+    ctx.fillStyle = "#5c3a25"; ctx.fillRect(bx+8, by+22, 20, 16);
+    ctx.fillStyle = "#f2e8d5"; ctx.fillRect(bx+10, by+24, 6, 7); ctx.fillRect(bx+18, by+25, 7, 6);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx+11, by+32, 7, 4);
+    ctx.fillStyle = "#3fb8af"; ctx.fillRect(bx+20, by+32, 5, 4);
     // long lit windows: the meeting is still going
     ctx.fillStyle = "rgba(232,176,75,.6)";
-    ctx.fillRect(bx+12, by+26, 11, 14); ctx.fillRect(bx+bw-24, by+26, 11, 14);
+    ctx.fillRect(bx+bw-24, by+24, 11, 14);
+    ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.fillRect(bx, by+bh-6, bw, 4);
   }
 };
 BUILDING_ART.institute2 = BUILDING_ART.institute1;
@@ -1934,13 +2339,13 @@ function talkTo(n){
 /* ---------- Roaming hazards ----------
    Each hazard embodies a real feature of the system. */
 var CH1_HAZARDS = [
-  { id:"cart1", type:"cart", x:12*TILE, y:10*TILE, w:30, h:22, dir:1, speed:120,
+  { id:"cart1", type:"cart", skin:"taxi", x:12*TILE, y:10*TILE, w:30, h:22, dir:1, speed:120,
     minX:10*TILE, maxX:25*TILE, cost:3,
-    line:"Clipped by a delivery cart. The market never stops moving. Minus 3." },
-  { id:"cart2", type:"cart", x:20*TILE, y:17*TILE, w:30, h:22, dir:-1, speed:140,
+    line:"Clipped by a cab. The meter never stops running. Minus 3." },
+  { id:"cart2", type:"cart", skin:"taxi", x:20*TILE, y:17*TILE, w:30, h:22, dir:-1, speed:140,
     minX:2*TILE, maxX:33*TILE, cost:3,
-    line:"Clipped by a delivery cart. The market never stops moving. Minus 3." },
-  { id:"collector", type:"collector", x:22*TILE, y:4*TILE, w:22, h:26, speed:70,
+    line:"Clipped by a cab. The meter never stops running. Minus 3." },
+  { id:"collector", type:"collector", skin:"suit", x:22*TILE, y:4*TILE, w:22, h:26, speed:70,
     homeX:22*TILE, homeY:4*TILE, radius:TILE*5, cost:5,
     line:"The debt collector caught up. Leverage cuts both ways. Minus 5." },
   { id:"bubble", type:"bubble", x:16*TILE, y:9*TILE, w:26, h:26, vx:60, vy:45,
@@ -3229,25 +3634,11 @@ function render(){
   var x1 = Math.min(MAP_W-1, Math.ceil((cam.x+VIEW_W)/TILE));
   var y1 = Math.min(MAP_H-1, Math.ceil((cam.y+VIEW_H)/TILE));
 
-  // ground
+  // ground, themed per chapter. Milestone 8.
   for (var y=y0;y<=y1;y++){
     for (var x=x0;x<=x1;x++){
       var sx = x*TILE-cam.x, sy = y*TILE-cam.y;
-      var c = MAP_ROWS[y][x];
-      // cobble base with subtle checker
-      ctx.fillStyle = ((x+y)%2===0) ? CUR.palette.g1 : CUR.palette.g2;
-      ctx.fillRect(sx,sy,TILE,TILE);
-      if (c==="T"){
-        ctx.fillStyle = "#1d3a2b"; ctx.fillRect(sx+4,sy+8,TILE-8,TILE-10);
-        ctx.fillStyle = "#2f5e41"; ctx.fillRect(sx+7,sy+3,TILE-14,TILE-14);
-        ctx.fillStyle = "#3f7d55"; ctx.fillRect(sx+10,sy+6,TILE-20,TILE-20);
-      } else if (c==="F"){
-        ctx.fillStyle = "#46618c"; ctx.fillRect(sx+2,sy+2,TILE-4,TILE-4);
-        ctx.fillStyle = "#7fb2e5"; ctx.fillRect(sx+7,sy+7,TILE-14,TILE-14);
-      } else if (c==="C"){
-        ctx.fillStyle = "#6e4a24"; ctx.fillRect(sx+4,sy+6,TILE-8,TILE-10);
-        ctx.strokeStyle = "#a3713c"; ctx.strokeRect(sx+4.5,sy+6.5,TILE-9,TILE-11);
-      }
+      drawGroundTile(MAP_ROWS[y][x], x, y, sx, sy);
     }
   }
 
@@ -3298,7 +3689,36 @@ function render(){
   HAZARDS.forEach(function(h){
     var hx = Math.round(h.x-cam.x), hy = Math.round(h.y-cam.y);
     if (hx<-40||hy<-40||hx>VIEW_W+40||hy>VIEW_H+40) return;
-    if (h.skin==="tram"){
+    if (h.skin==="taxi"){
+      // the yellow cab: checker band, glass, a roof light that ticks
+      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(hx+2, hy+h.h-3, h.w-4, 5);
+      ctx.fillStyle = "#d8a420"; ctx.fillRect(hx, hy+4, h.w, h.h-8);
+      ctx.fillStyle = "#b8880e"; ctx.fillRect(hx, hy+h.h-8, h.w, 4);
+      ctx.fillStyle = "#1c2734";
+      ctx.fillRect(hx+5, hy+6, 8, 6); ctx.fillRect(hx+h.w-13, hy+6, 8, 6);
+      ctx.fillStyle = "#15121c";
+      for (var ck = 0; ck < Math.floor(h.w/6); ck++){
+        if (ck % 2 === 0) ctx.fillRect(hx+ck*6, hy+13, 4, 3);
+      }
+      ctx.fillStyle = "#241a12";
+      ctx.beginPath(); ctx.arc(hx+7, hy+h.h-3, 4, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx+h.w-7, hy+h.h-3, 4, 0, 7); ctx.fill();
+      var lit = Math.floor(G.time/500) % 2 === 0;
+      ctx.fillStyle = lit ? "#ffe9b0" : "#8a7a40"; ctx.fillRect(hx+h.w/2-4, hy, 8, 4);
+    } else if (h.skin==="suit"){
+      // the debt collector in a sharp suit, briefcase swinging
+      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(hx+3, hy+h.h-3, h.w-6, 5);
+      ctx.fillStyle = "#1e2530"; ctx.fillRect(hx+2, hy+8, h.w-4, h.h-10);
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(hx+h.w/2-3, hy+9, 6, 8);
+      ctx.fillStyle = "#a32a2a"; ctx.fillRect(hx+h.w/2-1, hy+9, 2, 8);
+      ctx.fillStyle = "#e8c39e"; ctx.fillRect(hx+5, hy+2, h.w-10, 9);
+      ctx.fillStyle = "#2a2a30"; ctx.fillRect(hx+4, hy, h.w-8, 3);
+      var swg = Math.round(Math.sin(G.time/240) * 2);
+      ctx.fillStyle = "#54301a"; ctx.fillRect(hx+h.w-7, hy+14+swg, 8, 8);
+      ctx.fillStyle = "#e8b04b"; ctx.fillRect(hx+h.w-5, hy+13+swg, 4, 2);
+      ctx.fillStyle = "#e8b04b"; ctx.font="8px 'Press Start 2P', monospace"; ctx.textAlign="center";
+      ctx.fillText("$", hx+h.w/2, hy+24);
+    } else if (h.skin==="tram"){
       ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(hx+2, hy+h.h-3, h.w-4, 5);
       ctx.fillStyle = "#a3504f"; ctx.fillRect(hx, hy+3, h.w, h.h-7);
       ctx.fillStyle = "#cfc8b8";
@@ -4133,7 +4553,9 @@ var CHAPTERS = {
     charterName: "TOWN CHARTER",
     charterShort: "The Town Charter",
     logicName: "the market's own logic",
-    palette: { bg: "#262033", g1: "#332b45", g2: "#2e2740" }
+    theme: "metro",
+    streets: { roadRows: [10, 17], crossAt: [12, 23] },
+    palette: { bg: "#14161d", g1: "#2b2e38", g2: "#262932" }
   }
 };
 
@@ -4161,7 +4583,9 @@ CHAPTERS.ch2 = {
   charterName: "COMMONS COMPACT",
   charterShort: "The Commons Compact",
   logicName: "the commonweal's own logic",
-  palette: { bg: "#2a2026", g1: "#3a2b33", g2: "#34272e" }
+  theme: "commons",
+  streets: { tramRows: [10, 17], bikeRows: [20] },
+  palette: { bg: "#221b15", g1: "#41382b", g2: "#3b3327" }
 };
 
 var CHAPTER_ID = "ch1";
@@ -4220,7 +4644,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M7.S4",
+  version: "M8.S4",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -4306,6 +4730,8 @@ window.MF = {
   setRng: function(fn){ rng = fn || Math.random; },
   buildingArt: BUILDING_ART,
   drawBuildingArt: drawBuildingArt,
+  drawGroundTile: drawGroundTile,
+  render: render,
   decor: CH_DECOR,
   critters: function(){ return critters; },
   spawnCritters: spawnCritters,
