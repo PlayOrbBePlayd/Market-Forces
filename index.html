@@ -671,22 +671,24 @@ var CH_DECOR = {
     { kind: "tramstop", tx: 14, ty: 9 }, { kind: "tramstop", tx: 23, ty: 16 }
   ],
   ch3: [
-    { kind: "banner", tx: 13, ty: 7 }, { kind: "banner", tx: 22, ty: 7 },
-    { kind: "banner", tx: 13, ty: 17 }, { kind: "banner", tx: 22, ty: 17 },
-    { kind: "statue", tx: 17, ty: 9 },
-    { kind: "loudspeaker", tx: 11, ty: 11 }, { kind: "loudspeaker", tx: 24, ty: 11 },
-    { kind: "kiosk", tx: 24, ty: 16 }, { kind: "kiosk", tx: 11, ty: 16 },
-    { kind: "lamp", tx: 14, ty: 19 }, { kind: "lamp", tx: 21, ty: 19 },
-    { kind: "crates", tx: 9, ty: 9 }, { kind: "crates", tx: 26, ty: 9 }
+    { kind: "statue", tx: 17, ty: 8 },
+    { kind: "banner", tx: 15, ty: 8 }, { kind: "banner", tx: 20, ty: 8 },
+    { kind: "banner", tx: 15, ty: 15 }, { kind: "banner", tx: 20, ty: 15 },
+    { kind: "loudspeaker", tx: 12, ty: 7 }, { kind: "loudspeaker", tx: 23, ty: 7 },
+    { kind: "kiosk", tx: 12, ty: 15 }, { kind: "kiosk", tx: 23, ty: 15 },
+    { kind: "lamp", tx: 16, ty: 20 }, { kind: "lamp", tx: 19, ty: 20 },
+    { kind: "crates", tx: 11, ty: 10 }, { kind: "crates", tx: 24, ty: 10 }
   ],
   ch4: [
-    { kind: "foodcart", tx: 13, ty: 7 }, { kind: "foodcart", tx: 22, ty: 7 },
-    { kind: "kiosk", tx: 11, ty: 11 }, { kind: "kiosk", tx: 24, ty: 11 },
-    { kind: "bench", tx: 24, ty: 16 }, { kind: "bench", tx: 11, ty: 16 },
-    { kind: "planter", tx: 14, ty: 19 }, { kind: "planter", tx: 21, ty: 19 },
-    { kind: "lamp", tx: 13, ty: 17 }, { kind: "lamp", tx: 22, ty: 17 },
-    { kind: "billboard", tx: 9, ty: 9 }, { kind: "billboard", tx: 26, ty: 9 },
-    { kind: "bikes", tx: 17, ty: 9 }
+    { kind: "foodcart", tx: 11, ty: 8 }, { kind: "foodcart", tx: 13, ty: 17 },
+    { kind: "kiosk", tx: 12, ty: 14 },
+    { kind: "billboard", tx: 10, ty: 16 },
+    { kind: "bikes", tx: 8, ty: 7 },
+    { kind: "crates", tx: 11, ty: 20 },
+    { kind: "bench", tx: 24, ty: 8 }, { kind: "bench", tx: 24, ty: 11 },
+    { kind: "planter", tx: 24, ty: 16 }, { kind: "planter", tx: 23, ty: 20 },
+    { kind: "lamp", tx: 16, ty: 8 }, { kind: "lamp", tx: 19, ty: 8 },
+    { kind: "lamp", tx: 16, ty: 18 }, { kind: "lamp", tx: 19, ty: 18 }
   ]
 };
 var CH_CRITTERS = {
@@ -702,9 +704,9 @@ var CH_CRITTERS = {
     { kind: "cat", x: 24, y: 19 }
   ],
   ch3: [
-    { kind: "pigeon", x: 17, y: 11 }, { kind: "pigeon", x: 12, y: 14 },
-    { kind: "pigeon", x: 23, y: 14 },
-    { kind: "cat", x: 20, y: 20 }
+    { kind: "pigeon", x: 15, y: 18 }, { kind: "pigeon", x: 20, y: 18 },
+    { kind: "pigeon", x: 12, y: 9 },
+    { kind: "cat", x: 24, y: 18 }
   ],
   ch4: [
     { kind: "pigeon", x: 17, y: 11 }, { kind: "pigeon", x: 12, y: 14 },
@@ -1127,22 +1129,32 @@ function drawCommonsGround(c, x, y, sx, sy){
 }
 
 function drawPlannedGround(c, x, y, sx, sy){
-  // the planned city: wide concrete slabs, seams, an austere ceremonial axis
-  var h = (x * 131 + y * 31) % 7;
-  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  // The planned city: monumental concrete megaslabs in a rigid grid, and one
+  // ceremonial boulevard, a red carpet, running the length of the map to the
+  // plan's monument. Everything is symmetric, austere, and aimed at the center.
+  var slab = (Math.floor(x / 3) + Math.floor(y / 3)) % 2;   // big 3x3 megaslabs
+  ctx.fillStyle = slab ? CUR.palette.g1 : CUR.palette.g2;
   ctx.fillRect(sx, sy, TILE, TILE);
-  // slab seams
-  ctx.fillStyle = "rgba(0,0,0,.18)";
-  ctx.fillRect(sx, sy, TILE, 1); ctx.fillRect(sx, sy, 1, TILE);
+  // deep cast seams between slabs, hairline highlight within
+  ctx.fillStyle = "rgba(0,0,0,.24)";
+  if (x % 3 === 0) ctx.fillRect(sx, sy, 2, TILE);
+  if (y % 3 === 0) ctx.fillRect(sx, sy, TILE, 2);
   ctx.fillStyle = "rgba(255,255,255,.03)";
-  ctx.fillRect(sx + 1, sy + 1, TILE - 2, 1);
-  if (h % 6 === 0){ ctx.fillStyle = "rgba(0,0,0,.10)"; ctx.fillRect(sx + 7, sy + 9, 9, 6); }
-  // the central parade axis: rows the streets config marks as the boulevard
-  var axis = CUR.streets && CUR.streets.axisRows && CUR.streets.axisRows.indexOf(y) >= 0;
-  if (axis && c === "."){
-    ctx.fillStyle = "#54555e"; ctx.fillRect(sx, sy, TILE, TILE);
-    ctx.fillStyle = "#9a2f2a"; ctx.fillRect(sx, sy + TILE/2 - 2, TILE, 4);
-    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(sx, sy + 2, TILE, 1);
+  ctx.fillRect(sx + 2, sy + 2, TILE - 4, 1);
+  // the ceremonial axis: a wide central boulevard, cols 16 to 19
+  var onAxis = (x >= 16 && x <= 19);
+  if (onAxis && c === "."){
+    ctx.fillStyle = "#4c4e57"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(sx, sy, TILE, 1);
+    if (x === 17 || x === 18){                 // the red carpet down the middle
+      ctx.fillStyle = "#8f2c27"; ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.fillStyle = "#b0413a"; ctx.fillRect(sx + 2, sy, TILE - 4, TILE);
+      ctx.fillStyle = "rgba(0,0,0,.20)"; ctx.fillRect(sx, sy, 2, TILE);
+      if (y % 2 === 0){                          // gold chevrons aimed at the monument
+        ctx.fillStyle = "rgba(232,176,75,.55)";
+        ctx.fillRect(sx + TILE/2 - 4, sy + TILE/2 - 1, 8, 2);
+      }
+    }
   }
   if (c === "T"){
     // a concrete barrier block, the parade route's edge
@@ -1171,25 +1183,32 @@ function drawPlannedGround(c, x, y, sx, sy){
 }
 
 function drawMixedGround(c, x, y, sx, sy){
-  // the mixed city: cool slate pavers, a warm market boulevard down the
-  // middle, brass studs at the seams. Market and civic, side by side.
-  var h = (x * 113 + y * 37) % 7;
+  // The mixed city, split down the middle: a warm market quarter to the west,
+  // a cool civic quarter to the east, and a two-way avenue between them. The
+  // divide is the whole lesson, so it is painted into the very pavement.
   ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
   ctx.fillRect(sx, sy, TILE, TILE);
-  // paver seams
   ctx.fillStyle = "rgba(0,0,0,.16)";
   ctx.fillRect(sx, sy, TILE, 1); ctx.fillRect(sx, sy, 1, TILE);
   ctx.fillStyle = "rgba(255,255,255,.04)";
   ctx.fillRect(sx + 1, sy + 1, TILE - 2, 1);
-  // an occasional brass stud
-  if (h === 0){ ctx.fillStyle = "rgba(232,176,75,.45)"; ctx.fillRect(sx + TILE - 7, sy + TILE - 7, 3, 3); }
-  // the central civic boulevard, the rows the streets config marks
-  var plaza = CUR.streets && CUR.streets.plazaRows && CUR.streets.plazaRows.indexOf(y) >= 0;
-  if (plaza && c === "."){
-    ctx.fillStyle = "#3a4a52"; ctx.fillRect(sx, sy, TILE, TILE);
-    ctx.fillStyle = "#3f6e6a"; ctx.fillRect(sx, sy + TILE/2 - 2, TILE, 4);
-    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + TILE/2 - 8, sy + TILE/2 - 1, 16, 2);
-    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(sx, sy + 2, TILE, 1);
+  var market = (x <= 15), civic = (x >= 20);
+  if (market){
+    ctx.fillStyle = "rgba(180,118,58,.16)"; ctx.fillRect(sx, sy, TILE, TILE);   // warm wash
+    var hm = (x * 113 + y * 37) % 7;
+    if (hm === 0){ ctx.fillStyle = "rgba(232,176,75,.4)"; ctx.fillRect(sx + TILE - 7, sy + TILE - 7, 3, 3); }
+    if ((x + y) % 5 === 0){ ctx.fillStyle = "rgba(176,90,60,.20)"; ctx.fillRect(sx, sy + TILE - 4, TILE, 2); } // awning shadow
+  } else if (civic){
+    ctx.fillStyle = "rgba(58,108,120,.16)"; ctx.fillRect(sx, sy, TILE, TILE);   // cool wash
+    if ((x * 7 + y) % 6 === 0){ ctx.fillStyle = "rgba(232,176,75,.3)"; ctx.fillRect(sx + TILE - 7, sy + TILE - 7, 3, 3); } // brass stud
+  }
+  // the central avenue, cols 16 to 19: asphalt with dashed lane lines, two ways
+  var avenue = (x >= 16 && x <= 19);
+  if (avenue && c === "."){
+    ctx.fillStyle = "#33414a"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(sx, sy, TILE, 1);
+    if ((x === 17 || x === 18) && (y % 2 === 0)){ ctx.fillStyle = "rgba(232,200,90,.7)"; ctx.fillRect(sx + (x===17?TILE-2:0), sy + 4, 2, TILE - 8); } // twin center line
+    if ((x === 16 || x === 19) && (y % 2 === 1)){ ctx.fillStyle = "rgba(255,255,255,.38)"; ctx.fillRect(sx + TILE/2 - 1, sy + 6, 2, TILE - 12); }    // lane dashes
   }
   if (c === "T"){
     var border = (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1);
@@ -2549,7 +2568,7 @@ var CH1_NPCS = [
     lines:["Paper! Prices up, wages up, rents up! Everything moves in a market town, and the paper just keeps score."] },
   { id:"shay", name:"VENDOR SHAY", tx:7,  ty:9,  hue:"#3fb8af",
     lines:["I set my cart where the foot traffic is thickest.","Location is just another price. The busy corner costs more because it earns more."] },
-  { id:"bo",   name:"OFF SHIFT WORKER BO", tx:12, ty:7, hue:"#7a9e5b",
+  { id:"bo",   name:"OFF SHIFT WORKER BO", tx:13, ty:8, hue:"#7a9e5b",
     lines:["The factory pays double what the farm did. Hard hours, but I chose them.","That choice is the whole point. And, some say, the whole argument."] }
 ];
 var LESSONS = CH1_LESSONS;
@@ -6435,22 +6454,21 @@ var CH3_MAP = [
   "T..................................T",
   "T..................................T",
   "T..................................T",
+  "T..........C............C..........T",
   "T..................................T",
   "T..................................T",
   "T..................................T",
-  "T...........T..........T...........T",
-  "T..........C......C................T",
-  "T................C.................T",
   "T..................................T",
   "T..................................T",
-  "T...............FF.................T",
-  "T...............FF.................T",
   "T..................................T",
   "T..................................T",
-  "T...........T..........C..T........T",
   "T..................................T",
   "T..................................T",
-  "T........T........C................T",
+  "T..................................T",
+  "T..................................T",
+  "T..........C.....FF.....C..........T",
+  "T................FF................T",
+  "T..................................T",
   "T..................................T",
   "T..................................T",
   "T..................................T",
@@ -6461,13 +6479,13 @@ var CH3_MAP = [
 ];
 
 var CH3_BUILDINGS = [
-  { id:"planbureau",  name:"THE PLANNING BUREAU", kind:"lesson",     x:3,  y:2,  w:7, h:4, door:{x:6,  y:5},  hue:"#8a4a3c", roof:"#5c2f25", sign:"BUREAU" },
-  { id:"rationoffice",name:"THE RATION OFFICE",   kind:"lesson",     x:26, y:2,  w:7, h:4, door:{x:29, y:5},  hue:"#9a8a5a", roof:"#6a5d3a", sign:"RATIONS" },
-  { id:"statefactory",name:"THE STATE FACTORY",   kind:"lesson",     x:2,  y:10, w:8, h:4, door:{x:6,  y:13}, hue:"#5a6e7e", roof:"#3a4a56", sign:"WORKS NO 1" },
-  { id:"breadqueue",  name:"THE BREAD SHOP",      kind:"temptation", x:27, y:10, w:7, h:4, door:{x:30, y:13}, hue:"#b08a4a", roof:"#7a5d28", sign:"BREAD" },
-  { id:"blackmarket", name:"THE BACK ROOM",       kind:"temptation", x:26, y:18, w:8, h:4, door:{x:29, y:21}, hue:"#5d3a4a", roof:"#3d2530", sign:"GOODS" },
-  { id:"cinema",      name:"THE PEOPLE'S CINEMA",  kind:"temptation", x:2,  y:18, w:7, h:4, door:{x:5,  y:21}, hue:"#7a3a3a", roof:"#4f2525", sign:"CINEMA" },
-  { id:"institute",   name:"THE INSTITUTE",        kind:"institute",  x:15, y:2,  w:7, h:4, door:{x:18, y:5},  hue:"#3f6e5a", roof:"#2a4a3c", sign:"INSTITUTE" }
+  { id:"planbureau",  name:"THE PLANNING BUREAU", kind:"lesson",     x:13, y:2,  w:10, h:5, door:{x:17, y:6},  hue:"#8a4a3c", roof:"#5c2f25", sign:"BUREAU" },
+  { id:"blackmarket", name:"THE BACK ROOM",        kind:"temptation", x:2,  y:2,  w:5,  h:4, door:{x:4,  y:5},  hue:"#5d3a4a", roof:"#3d2530", sign:"GOODS" },
+  { id:"rationoffice",name:"THE RATION OFFICE",    kind:"lesson",     x:2,  y:8,  w:9,  h:5, door:{x:6,  y:12}, hue:"#9a8a5a", roof:"#6a5d3a", sign:"RATIONS" },
+  { id:"statefactory",name:"THE STATE FACTORY",    kind:"lesson",     x:25, y:8,  w:9,  h:5, door:{x:29, y:12}, hue:"#5a6e7e", roof:"#3a4a56", sign:"WORKS NO 1" },
+  { id:"institute",   name:"THE INSTITUTE",         kind:"institute",  x:14, y:10, w:8,  h:4, door:{x:17, y:13}, hue:"#3f6e5a", roof:"#2a4a3c", sign:"INSTITUTE" },
+  { id:"breadqueue",  name:"THE BREAD SHOP",       kind:"temptation", x:3,  y:19, w:7,  h:4, door:{x:6,  y:22}, hue:"#b08a4a", roof:"#7a5d28", sign:"BREAD" },
+  { id:"cinema",      name:"THE PEOPLE'S CINEMA",   kind:"temptation", x:26, y:19, w:7,  h:4, door:{x:29, y:22}, hue:"#7a3a3a", roof:"#4f2525", sign:"CINEMA" }
 ];
 
 var CH3_LESSONS = {
@@ -6519,26 +6537,26 @@ var CH3_LESSONS = {
 };
 
 var CH3_NPCS = [
-  { id:"pava", name:"QUEUE VETERAN PAVA", tx:10, ty:8, hue:"#9a8a5a",
+  { id:"pava", name:"QUEUE VETERAN PAVA", tx:11, ty:8, hue:"#9a8a5a",
     lines:["Forty minutes for soap today. A short line, that. I knew which window to stand at.","You learn the lines like a second trade. Free at the price, dear at the wait."] },
-  { id:"rego", name:"DISPATCHER REGO", tx:20, ty:8, hue:"#5a6e7e",
+  { id:"rego", name:"DISPATCHER REGO", tx:24, ty:8, hue:"#5a6e7e",
     lines:["We sent ten thousand tractors east, on schedule, signed and sealed.","Whether the east had asked for tractors, the form did not say. The shelf at the Institute argues both sides of that, fairly."] },
-  { id:"luka", name:"SHOPKEEPER LUKA", tx:24, ty:19, hue:"#5d3a4a",
+  { id:"luka", name:"SHOPKEEPER LUKA", tx:17, ty:20, hue:"#5d3a4a",
     lines:["Official shelf is bare. My back room is not. I do not say which.","Some call the back room theft, some call it the only thing that works. Both arguments are on the shelf inside."] }
 ];
 
 var CH3_HAZARDS = [
-  { id:"truck1", type:"cart", skin:"truck", x:12*TILE, y:8*TILE, w:36, h:22, dir:1, speed:120,
-    minX:10*TILE, maxX:25*TILE, cost:3,
+  { id:"truck1", type:"cart", skin:"truck", x:12*TILE, y:7*TILE, w:36, h:22, dir:1, speed:120,
+    minX:2*TILE, maxX:33*TILE, cost:3,
     line:"Clipped by a supply truck running the plan's route. It stops for the schedule, not for you. Minus 3." },
-  { id:"truck2", type:"cart", skin:"truck", x:22*TILE, y:16*TILE, w:36, h:22, dir:-1, speed:140,
-    minX:9*TILE, maxX:25*TILE, cost:3,
+  { id:"truck2", type:"cart", skin:"truck", x:22*TILE, y:18*TILE, w:36, h:22, dir:-1, speed:140,
+    minX:2*TILE, maxX:33*TILE, cost:3,
     line:"Clipped by a supply truck running the plan's route. It stops for the schedule, not for you. Minus 3." },
-  { id:"warden", type:"collector", skin:"warden", x:20*TILE, y:6*TILE, w:22, h:26, speed:80,
-    homeX:20*TILE, homeY:6*TILE, radius:TILE*5, cost:5,
+  { id:"warden", type:"collector", skin:"warden", x:17*TILE, y:20*TILE, w:22, h:26, speed:80,
+    homeX:17*TILE, homeY:20*TILE, radius:TILE*5, cost:5,
     line:"The block warden checked your papers and your purpose, slowly. Minus 5." },
-  { id:"directive", type:"bubble", skin:"directive", x:16*TILE, y:10*TILE, w:26, h:24, vx:60, vy:48,
-    minX:11*TILE, maxX:25*TILE, minY:8*TILE, maxY:20*TILE, cost:4,
+  { id:"directive", type:"bubble", skin:"directive", x:16*TILE, y:16*TILE, w:26, h:24, vx:60, vy:48,
+    minX:11*TILE, maxX:24*TILE, minY:14*TILE, maxY:22*TILE, cost:4,
     line:"A fresh directive fluttered down and contradicted the last one. Minus 4. File both." }
 ];
 
@@ -6798,19 +6816,18 @@ var CH4_MAP = [
   "T..................................T",
   "T..................................T",
   "T..................................T",
-  "T...........T..........T...........T",
-  "T..........C......C................T",
-  "T................C.................T",
+  "T...........C..........C...........T",
   "T..................................T",
   "T..................................T",
-  "T...............FF.................T",
-  "T...............FF.................T",
   "T..................................T",
   "T..................................T",
-  "T...........T..........C..T........T",
+  "T..................................T",
+  "T................FF................T",
+  "T................FF................T",
+  "T..................................T",
+  "T...........C..........C...........T",
   "T..................................T",
   "T..................................T",
-  "T........T........C................T",
   "T..................................T",
   "T..................................T",
   "T..................................T",
@@ -6821,12 +6838,12 @@ var CH4_MAP = [
 ];
 
 var CH4_BUILDINGS = [
-  { id:"centralbank", name:"THE CENTRAL BANK",   kind:"lesson",     x:3,  y:2,  w:7, h:4, door:{x:6,  y:5},  hue:"#4a6276", roof:"#2f4150", sign:"CENTRAL BANK" },
-  { id:"regulator",   name:"THE REGULATOR",      kind:"lesson",     x:26, y:2,  w:7, h:4, door:{x:29, y:5},  hue:"#3f6e6a", roof:"#274a47", sign:"REGULATOR" },
-  { id:"welfare",     name:"THE WELFARE OFFICE", kind:"lesson",     x:2,  y:10, w:8, h:4, door:{x:6,  y:13}, hue:"#9a7a4a", roof:"#6a5230", sign:"WELFARE" },
-  { id:"smallbiz",    name:"GOODS AND CO",       kind:"lesson",     x:27, y:10, w:7, h:4, door:{x:30, y:13}, hue:"#a3593f", roof:"#6e3a27", sign:"GOODS AND CO" },
-  { id:"permit",      name:"THE PERMIT OFFICE",  kind:"temptation", x:2,  y:18, w:7, h:4, door:{x:5,  y:21}, hue:"#6e6a4a", roof:"#494630", sign:"PERMITS" },
-  { id:"institute",   name:"THE INSTITUTE",      kind:"institute",  x:15, y:2,  w:7, h:4, door:{x:18, y:5},  hue:"#3f6e5a", roof:"#2a4a3c", sign:"INSTITUTE" }
+  { id:"institute",   name:"THE INSTITUTE",       kind:"institute",  x:14, y:2,  w:8, h:4, door:{x:17, y:5},  hue:"#3f6e5a", roof:"#2a4a3c", sign:"INSTITUTE" },
+  { id:"smallbiz",    name:"GOODS AND CO",        kind:"lesson",     x:3,  y:9,  w:7, h:4, door:{x:6,  y:12}, hue:"#a3593f", roof:"#6e3a27", sign:"GOODS AND CO" },
+  { id:"permit",      name:"THE PERMIT OFFICE",   kind:"temptation", x:3,  y:18, w:7, h:4, door:{x:6,  y:21}, hue:"#6e6a4a", roof:"#494630", sign:"PERMITS" },
+  { id:"centralbank", name:"THE CENTRAL BANK",    kind:"lesson",     x:25, y:3,  w:9, h:4, door:{x:29, y:6},  hue:"#4a6276", roof:"#2f4150", sign:"CENTRAL BANK" },
+  { id:"regulator",   name:"THE REGULATOR",       kind:"lesson",     x:26, y:11, w:8, h:4, door:{x:29, y:14}, hue:"#3f6e6a", roof:"#274a47", sign:"REGULATOR" },
+  { id:"welfare",     name:"THE WELFARE OFFICE",  kind:"lesson",     x:25, y:18, w:9, h:4, door:{x:29, y:21}, hue:"#9a7a4a", roof:"#6a5230", sign:"WELFARE" }
 ];
 
 var CH4_LESSONS = {
@@ -6893,26 +6910,26 @@ var CH4_LESSONS = {
 };
 
 var CH4_NPCS = [
-  { id:"nora", name:"ANALYST NORA", tx:10, ty:8, hue:"#4a6276",
+  { id:"nora", name:"ANALYST NORA", tx:12, ty:11, hue:"#4a6276",
     lines:["Pure market or pure plan? This city quietly chose neither, then argued about the dial ever since.","Every line on my chart is a tug of war between the shop and the rule. The shelf inside argues both ends, fairly."] },
-  { id:"tilly", name:"VENDOR TILLY", tx:20, ty:8, hue:"#a3593f",
+  { id:"tilly", name:"VENDOR TILLY", tx:6, ty:16, hue:"#a3593f",
     lines:["My stall pays a tax, follows a code, and still sets its own prices. Three masters, and somehow it works.","Some of the rules saved my customers, some just cost me a morning. Knowing which is which is the whole trick."] },
-  { id:"hale", name:"INSPECTOR HALE", tx:24, ty:19, hue:"#3f6e6a",
+  { id:"hale", name:"INSPECTOR HALE", tx:23, ty:15, hue:"#3f6e6a",
     lines:["Half my forms protect somebody. The other half protect the form. I will let you guess which line is longer.","People love the rule that saved them and curse the rule that delayed them. Usually it is the same rule."] }
 ];
 
 var CH4_HAZARDS = [
-  { id:"bus", type:"cart", skin:"truck", x:12*TILE, y:8*TILE, w:38, h:22, dir:1, speed:130,
-    minX:10*TILE, maxX:25*TILE, cost:3,
+  { id:"bus", type:"cart", skin:"truck", x:12*TILE, y:7*TILE, w:38, h:22, dir:1, speed:130,
+    minX:2*TILE, maxX:33*TILE, cost:3,
     line:"Clipped by the city bus running its public route. It keeps a timetable, not an eye out for you. Minus 3." },
   { id:"van", type:"cart", skin:"truck", x:22*TILE, y:16*TILE, w:34, h:22, dir:-1, speed:150,
-    minX:9*TILE, maxX:25*TILE, cost:3,
+    minX:2*TILE, maxX:33*TILE, cost:3,
     line:"Clipped by a delivery van chasing a private deadline the other way. The market does not slow for jaywalkers. Minus 3." },
-  { id:"auditor", type:"collector", skin:"warden", x:20*TILE, y:6*TILE, w:22, h:26, speed:80,
-    homeX:20*TILE, homeY:6*TILE, radius:TILE*5, cost:5,
+  { id:"auditor", type:"collector", skin:"warden", x:17*TILE, y:18*TILE, w:22, h:26, speed:80,
+    homeX:17*TILE, homeY:18*TILE, radius:TILE*5, cost:5,
     line:"A compliance auditor stopped you to check three forms you did not know you needed. Minus 5." },
-  { id:"notice", type:"bubble", skin:"directive", x:16*TILE, y:10*TILE, w:26, h:24, vx:58, vy:46,
-    minX:11*TILE, maxX:25*TILE, minY:8*TILE, maxY:20*TILE, cost:4,
+  { id:"notice", type:"bubble", skin:"directive", x:16*TILE, y:12*TILE, w:26, h:24, vx:58, vy:46,
+    minX:11*TILE, maxX:24*TILE, minY:7*TILE, maxY:21*TILE, cost:4,
     line:"A public notice drifted into you, amending a rule you had only just learned. Minus 4. Read both versions." }
 ];
 
@@ -7232,14 +7249,14 @@ CHAPTERS.ch3 = {
   desk: CH3_DESK,
   arcade: CH3_ARCADE,
   freeplay: CH3_FREEPLAY,
-  gate: { tx: 16.5, ty: 12.5 },
-  spawn: { x: 18, y: 16 },
+  gate: { tx: 17.5, ty: 16.5 },
+  spawn: { x: 17, y: 23 },
   gatePlace: "the plan",
   charterName: "THE FIVE YEAR CHARTER",
   charterShort: "The Five Year Charter",
   logicName: "the plan's own logic",
   theme: "planned",
-  streets: { axisRows: [12, 13] },
+  streets: { axisRows: [16, 17] },
   palette: { bg: "#1b1f23", g1: "#2b3036", g2: "#262b30" }
 };
 
@@ -7261,14 +7278,14 @@ CHAPTERS.ch4 = {
   desk: CH4_DESK,
   arcade: CH4_ARCADE,
   freeplay: CH4_FREEPLAY,
-  gate: { tx: 16.5, ty: 12.5 },
-  spawn: { x: 18, y: 16 },
+  gate: { tx: 17.5, ty: 13.5 },
+  spawn: { x: 17, y: 23 },
   gatePlace: "the city hall",
   charterName: "THE CIVIC CHARTER",
   charterShort: "The Civic Charter",
   logicName: "the mixed economy's own logic",
   theme: "mixed",
-  streets: { plazaRows: [12, 13] },
+  streets: { plazaRows: [13, 14] },
   palette: { bg: "#181d1b", g1: "#2c322e", g2: "#272d29" }
 };
 
