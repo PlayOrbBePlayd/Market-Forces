@@ -63,6 +63,18 @@
   #dialogue .who{font-family:var(--display);font-size:9px;color:var(--brass);margin-bottom:8px}
   #dialogue .txt{font-size:17px;line-height:1.45}
   #dialogue .hint{font-family:var(--display);font-size:7px;color:var(--teal);margin-top:10px;text-align:right}
+  #arrival{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:min(480px,92%);
+    background:rgba(13,10,18,.92);border:1px solid rgba(255,255,255,.16);border-radius:10px;
+    padding:14px 16px;z-index:22;display:none;text-align:left;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #arrival.on{display:block}
+  #arrival .who{font-family:var(--display);font-size:9px;color:var(--brass);margin-bottom:8px}
+  #arrival .line{font-size:15px;line-height:1.45;margin-bottom:12px;color:var(--paper)}
+  #arrival .row{display:flex;gap:10px;justify-content:flex-end}
+  #arrival button{font-family:var(--display);font-size:8px;padding:11px 14px;border-radius:8px;cursor:pointer;
+    background:#2a2240;border:2px solid #4d445f;color:var(--paper)}
+  #arrival button:active{background:#3a2f57}
+  #arrival #arrival-go{border-color:var(--teal);color:var(--teal)}
+  body.touch #arrival{bottom:170px}
 
   /* ---------- The cinematic scene stage. Milestone 7. ----------
      A full screen photo behind the dialogue or interior UI, in THE CLOSER
@@ -263,6 +275,11 @@
     <div id="toast"></div>
     <div id="dialogue">
       <div class="who"></div><div class="txt"></div><div class="hint">SPACE or A to continue</div>
+    </div>
+
+    <div id="arrival">
+      <div class="who"></div><div class="line"></div>
+      <div class="row"><button id="arrival-go"></button><button id="arrival-bye">LEAVE</button></div>
     </div>
 
     <div id="touch">
@@ -1640,10 +1657,173 @@ function advanceDialogue(){
     elTxt.textContent = G.dialogueQueue.shift();
   } else {
     elDialogue.style.display = "none";
+    if (pendingFarewell){
+      var fk = pendingFarewell;
+      pendingFarewell = null;
+      showFarewell(fk);
+      return;
+    }
     G.scene = "WALK";
     sceneHide();
   }
 }
+
+/* ---------- The arrival layer. Milestone 9. ----------
+   Every entry point greets the player over the scene photo with a small
+   card in the darker lower third: who is here, one line in their voice,
+   the action on offer, and the freedom to leave. Farewells match. */
+var ARRIVALS = {
+  ch1: {
+    factory: { who: "FOREWOMAN ADA",
+      hello: "Ear protection is optional. Curiosity is not. Want the tour?",
+      action: "WALK THE LINE",
+      bye: "Mind the forklifts on the way out. The quota waits for nobody." },
+    bank: { who: "BANKER OKONKWO",
+      hello: "Welcome to First Town. Savings sleep here so investments can wake. Shall we talk credit?",
+      action: "TALK CREDIT",
+      bye: "A pleasure. Compound interest never sleeps, and neither do I." },
+    exchange: { who: "TRADER VEGA",
+      hello: "You picked a loud day. The board votes every second. Want it decoded?",
+      action: "READ THE BOARD",
+      bye: "There is no closing bell on information. Watch your step out there." },
+    garage: { who: "FOUNDER JUN",
+      hello: "Careful where you stand, that pile is the prototype. Got a minute for the pitch?",
+      action: "HEAR THE PITCH",
+      bye: "Thanks for stopping by. Attempt three ships any week now. Probably." },
+    bar: { who: "THE GILDED TAP",
+      hello: "The barkeep nods at an empty stool. Nobody in here is in a hurry, least of all him.",
+      action: "ORDER A DRINK",
+      bye: "He lifts the glass he is polishing, half a salute. Your time. You spent it how you liked." },
+    casino: { who: "THE LUCKY BULL",
+      hello: "Welcome, welcome! The floor is hot tonight and the bull is feeling generous. Care to test him?",
+      action: "PLAY THE SLOTS",
+      bye: "Come back when fortune itches! The bull never forgets a player." },
+    institute: { who: "THE DEAN",
+      hello: "You hold the town's working parts. Inside, we bolt them into a machine. Ready?",
+      action: "STEP INSIDE",
+      bye: "Go apply it. The town is the real exam." },
+    pip: { who: "NEWSBOY PIP",
+      hello: "Hot off the press! Got a second for the headlines?",
+      action: "CHAT WITH PIP",
+      bye: "Read it before it changes! Everything does around here." },
+    shay: { who: "VENDOR SHAY",
+      hello: "Smell that? The best corner in town does that. Hungry for the trade secret?",
+      action: "CHAT WITH SHAY",
+      bye: "Off you go. This griddle pays rent by the minute." },
+    bo: { who: "OFF SHIFT WORKER BO",
+      hello: "Just clocked out. Got time to hear what the whistle buys?",
+      action: "CHAT WITH BO",
+      bye: "See you around. The shift starts early and so do I." },
+    desk: { who: "THE DECISION DESK",
+      hello: "Four needles. Five storms on the way. The chair is pulled out and the town is watching.",
+      action: "TAKE THE DESK",
+      bye: "The needles hold their breath. The chair will wait. The storms may not." }
+  },
+  ch2: {
+    union: { who: "STEWARD ANSEL",
+      hello: "Door is open, friend. Always is. Want to hear what one voice times four hundred sounds like?",
+      action: "HEAR THE CASE",
+      bye: "Solidarity travels. Tell the next town the door was open." },
+    coop: { who: "CHAIR OBI",
+      hello: "Mind the sawdust! We are mid vote, but there is always room for one more pair of eyes.",
+      action: "JOIN THE FLOOR",
+      bye: "Motion carried, visitor noted in the minutes. Come back for the next one." },
+    clinic: { who: "DR. AMARA",
+      hello: "Take a number if you need one. Nobody pays at this door. Curious how that works?",
+      action: "SEE THE WARD",
+      bye: "Rest, water, and come back if it worsens. The door stays free either way." },
+    works: { who: "ENGINEER TESS",
+      hello: "Hard hat is on the hook. The whole town runs through these pipes. Want the pressure tour?",
+      action: "TOUR THE PIPES",
+      bye: "Mind the threshold. The gauges will hold till you visit again. They always do." },
+    meeting: { who: "THE MEETING HALL",
+      hello: "Warm light, full agenda. The floor recognizes a newcomer, if the newcomer has the time.",
+      action: "TAKE A SEAT",
+      bye: "Let the minutes show you left at a sensible hour. Not everyone manages it." },
+    institute: { who: "THE DEAN",
+      hello: "You hold the commons' working parts. Inside, we bolt them into a system. Ready?",
+      action: "STEP INSIDE",
+      bye: "Go weigh it for yourself. The town is the real exam." },
+    ima: { who: "NURSE IMA",
+      hello: "Just off shift. Sit a minute, the bench is shared like everything else here.",
+      action: "CHAT WITH IMA",
+      bye: "Go gently. And drink some water, that one is free advice everywhere." },
+    rosa: { who: "MACHINIST ROSA",
+      hello: "Careful, fresh paint on the lathe. Got a minute for how a floor votes?",
+      action: "CHAT WITH ROSA",
+      bye: "Back to it. The lathe will not bolt itself down, and I would know." },
+    eli: { who: "SHOPKEEPER ELI",
+      hello: "Shop is quiet this hour. Plenty of time to weigh two towns against each other.",
+      action: "CHAT WITH ELI",
+      bye: "Safe travels, whichever town you choose. The shelf holds both halves, remember." },
+    desk: { who: "THE DECISION DESK",
+      hello: "Four needles. Five storms on the agenda. The commons pulled the chair out for you, together.",
+      action: "TAKE THE CHAIR",
+      bye: "The chair stays warm and the agenda stays patient. The commons less so." }
+  }
+};
+
+var arrivalEl = document.getElementById("arrival");
+var arrivalWho = arrivalEl.querySelector(".who");
+var arrivalLine = arrivalEl.querySelector(".line");
+var arrivalGoBtn = document.getElementById("arrival-go");
+var arrivalByeBtn = document.getElementById("arrival-bye");
+var arrival = null;
+var pendingFarewell = null;
+
+function arrivalCfg(key){
+  var t = ARRIVALS[CHAPTER_ID] || {};
+  return t[key] || null;
+}
+function showArrival(key, onGo){
+  var cfg = arrivalCfg(key);
+  if (!cfg){ onGo(); return false; }
+  arrival = { key: key, cfg: cfg, onGo: onGo, phase: "hello" };
+  arrivalWho.textContent = cfg.who;
+  arrivalLine.textContent = cfg.hello;
+  arrivalGoBtn.textContent = cfg.action;
+  arrivalGoBtn.style.display = "";
+  arrivalByeBtn.textContent = "LEAVE";
+  arrivalEl.classList.add("on");
+  G.scene = "ARRIVAL";
+  return true;
+}
+function showFarewell(key){
+  var cfg = arrivalCfg(key);
+  if (!cfg){ G.scene = "WALK"; sceneHide(); return false; }
+  arrival = { key: key, cfg: cfg, phase: "bye" };
+  arrivalWho.textContent = cfg.who;
+  arrivalLine.textContent = cfg.bye;
+  arrivalGoBtn.style.display = "none";
+  arrivalByeBtn.textContent = "WALK ON";
+  arrivalEl.classList.add("on");
+  G.scene = "ARRIVAL";
+  return true;
+}
+function hideArrival(){
+  arrivalEl.classList.remove("on");
+  arrival = null;
+}
+function arrivalGo(){
+  if (!arrival || arrival.phase !== "hello") return;
+  var go = arrival.onGo;
+  hideArrival();
+  go();
+}
+function arrivalLeave(){
+  if (!arrival) return;
+  if (arrival.phase === "hello"){
+    var key = arrival.key;
+    hideArrival();
+    showFarewell(key);
+  } else {
+    hideArrival();
+    G.scene = "WALK";
+    sceneHide();
+  }
+}
+arrivalGoBtn.addEventListener("click", arrivalGo);
+arrivalByeBtn.addEventListener("click", arrivalLeave);
 
 /* ---------- Input ---------- */
 var KEYMAP = {
@@ -1679,6 +1859,11 @@ if (typeof window.ontouchstart !== "undefined") document.body.classList.add("tou
 function action(){
   if (G.scene==="TITLE"){ startGame(); return; }
   if (G.scene==="DIALOGUE"){ advanceDialogue(); return; }
+  if (G.scene==="ARRIVAL"){
+    if (arrival && arrival.phase === "hello") arrivalGo();
+    else arrivalLeave();
+    return;
+  }
   if (G.scene==="ARCADE"){ if (arcade) arcade.fire(); return; }
   if (G.scene==="WALK"){
     if (G.nearGate){
@@ -1790,17 +1975,20 @@ function openInterior(){
 function closeInterior(){
   panelInterior.classList.remove("open");
   interiorInner.innerHTML = "";
-  G.scene = "WALK";
-  if (currentRoom === "bar" && barDrank){
+  var room = currentRoom;
+  currentRoom = null;
+  if (room === "bar" && barDrank){
     barDrank = false;
     G.slowUntil = G.time + 30000;
     toast("Your legs disagree with your ambition.<br>SLOWED for 30 seconds.");
   }
   sceneFlash();
   document.body.classList.remove("interior-live");
-  sceneHide();
-  currentRoom = null;
   refreshHUD();
+  if (!showFarewell(room)){
+    G.scene = "WALK";
+    sceneHide();
+  }
 }
 
 function awardInsight(id){
@@ -1827,10 +2015,13 @@ function enterBuilding(b){
     ]);
     return;
   }
-  currentRoom = b.id;
   sceneFlash();
-  document.body.classList.add("interior-live");
   sceneShow(b.id + chapterDigit());
+  showArrival(b.id, function(){ openBuildingInterior(b); });
+}
+function openBuildingInterior(b){
+  currentRoom = b.id;
+  document.body.classList.add("interior-live");
   interiorInner.innerHTML = "";
   if (b.kind === "lesson") buildLessonRoom(b);
   else if (b.id === "bar") buildBarRoom(b);
@@ -2328,12 +2519,15 @@ function buildMeetingRoom(b){
 /* ---------- NPC talk ---------- */
 function talkTo(n){
   sceneShow(n.id + chapterDigit());
-  if (!n.met){
-    n.met = true;
-    G.runPoints += NPC_POINTS;
-    refreshHUD();
-  }
-  say(n.name, n.lines);
+  showArrival(n.id, function(){
+    if (!n.met){
+      n.met = true;
+      G.runPoints += NPC_POINTS;
+      refreshHUD();
+    }
+    pendingFarewell = n.id;
+    say(n.name, n.lines);
+  });
 }
 
 /* ---------- Roaming hazards ----------
@@ -2594,20 +2788,23 @@ function deskOpen(){
 function openDesk(){
   if (!deskOpen()) return;
   if (!desk) desk = DeskEngine(DESK_CFG);
-  G.scene = "DESK";
   sceneFlash();
   sceneShow("desk" + chapterDigit());
-  panelDesk.classList.add("open");
-  if (desk.beat === 0 && desk.log.length === 0) renderDeskIntro();
-  else renderDeskBeat();
+  showArrival("desk", function(){
+    G.scene = "DESK";
+    panelDesk.classList.add("open");
+    if (desk.beat === 0 && desk.log.length === 0) renderDeskIntro();
+    else renderDeskBeat();
+  });
 }
 
 function closeDesk(){
   panelDesk.classList.remove("open");
   deskInner.innerHTML = "";
+  refreshHUD();
+  if (desk && !desk.done && !desk.collapsed && showFarewell("desk")) return;
   G.scene = "WALK";
   sceneHide();
-  refreshHUD();
 }
 
 function deskHeader(room, sub){
@@ -4644,7 +4841,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M8.S4",
+  version: "M9.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -4722,11 +4919,18 @@ window.MF = {
   tileOf: function(){ var p=G.player; return {x:Math.floor((p.x+p.w/2)/TILE), y:Math.floor((p.y+p.h/2)/TILE)}; },
   refreshHUD: refreshHUD,
   enter: function(id){ var b=BUILDINGS.filter(function(x){return x.id===id;})[0]; if (b) enterBuilding(b); },
+  arrival: function(){ return arrival ? { key: arrival.key, phase: arrival.phase } : null; },
+  talk: function(id){ var n=NPCS.filter(function(x){return x.id===id;})[0]; if (n) talkTo(n); },
+  runPoints: function(){ return G.runPoints; },
+  arrivalGo: arrivalGo,
+  arrivalLeave: arrivalLeave,
+  arrivals: ARRIVALS,
   choose: function(i){ if (currentRoom && LESSONS[currentRoom]) pickLesson(currentRoom, i); },
   leave: closeInterior,
   currentRoom: function(){ return currentRoom; },
   insightCount: insightCount,
   talk: function(id){ var n=NPCS.filter(function(x){return x.id===id;})[0]; if (n) talkTo(n); },
+  runPoints: function(){ return G.runPoints; },
   setRng: function(fn){ rng = fn || Math.random; },
   buildingArt: BUILDING_ART,
   drawBuildingArt: drawBuildingArt,
