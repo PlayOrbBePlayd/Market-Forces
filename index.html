@@ -2627,6 +2627,9 @@ function openBuildingInterior(b){
   else if (b.id === "bar") buildBarRoom(b);
   else if (b.id === "casino") buildCasinoRoom(b);
   else if (b.id === "meeting") buildMeetingRoom(b);
+  else if (b.id === "breadqueue") buildBreadQueueRoom(b);
+  else if (b.id === "blackmarket") buildBlackMarketRoom(b);
+  else if (b.id === "cinema") buildCinemaRoom(b);
   else if (b.id === "permit") buildPermitRoom(b);
   else if (b.kind === "institute") buildInstituteRoom(b);
   openInterior();
@@ -3114,6 +3117,175 @@ function buildMeetingRoom(b){
   });
 
   room.appendChild(stay); room.appendChild(leave); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- Chapter 3 temptations: every building teaches, even when it costs you.
+   The command economy's optional rooms are the shortage made playable. The bread
+   shop is the queue, time as the real price. The back room is the second market,
+   fast goods at real risk. The cinema is the lull, free uplift paid for in attention. */
+
+/* THE BREAD SHOP: a fixed low price, a long line, and a shelf that sometimes
+   runs out before your turn. The wait is the rationing, paid in real seconds. */
+var BREAD_HOLD_MS = 18000;
+var breadQueued = false;
+function buildBreadQueueRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "SHOPKEEPER VERA"));
+  room.appendChild(el("div", "speech",
+    "Price is fixed, friend, same as yesterday and same as the plan says. The line is out the door for the same reason. You may stand in it, or you may know somebody."));
+  var verdict = el("div", "verdict");
+
+  var back = el("button", "btn ghost", "BACK TO THE STREET");
+  back.addEventListener("click", closeInterior);
+
+  var line = el("button", "choice",
+    "Stand in the line  (the wait is the price, about " + Math.round(BREAD_HOLD_MS/1000) + " real seconds)");
+  line.addEventListener("click", function(){
+    if (breadQueued || room._chose) return;
+    breadQueued = true;
+    line.disabled = true; line.style.opacity = .4;
+    curb.disabled = true; curb.style.opacity = .4;
+    back.disabled = true; back.style.opacity = .4;
+    verdict.style.display = "block";
+    verdict.classList.add("bad");
+    var left = Math.round(BREAD_HOLD_MS / 1000);
+    verdict.innerHTML = "You take your place. The price on the board never moved, so the shortage moved into the queue instead. The front is " + left + "s away.";
+    var iv = setInterval(function(){
+      left--;
+      if (left > 0){ verdict.innerHTML = "You take your place. The price on the board never moved, so the shortage moved into the queue instead. The front is " + left + "s away."; return; }
+      clearInterval(iv);
+      back.disabled = false; back.style.opacity = 1;
+      var gotBread = rng() < 0.6;
+      if (gotBread){
+        G.runPoints += 8;
+        verdict.classList.remove("bad");
+        verdict.innerHTML = "A warm loaf, at last, for the posted price. +8 pts. You paid the rest in time, which is how this whole economy quietly charges everyone.";
+      } else {
+        verdict.classList.add("bad");
+        verdict.innerHTML = "The shelf emptied two people ahead of you. The wait was real and the bread was not. That gap is the lesson, and it is nobody's mistake but the fixed price's.";
+      }
+      refreshHUD();
+    }, 1000);
+  });
+
+  var curb = el("button", "choice", "Know somebody, pay the curb trader triple  (costs 12 run pts, no wait)");
+  curb.addEventListener("click", function(){
+    if (breadQueued || room._chose) return;
+    if (G.runPoints < 12){
+      verdict.style.display = "block"; verdict.classList.add("bad");
+      verdict.innerHTML = "The curb trader deals in points, not promises. You need 12 to skip the line.";
+      return;
+    }
+    room._chose = true;
+    G.runPoints -= 12;
+    line.disabled = true; line.style.opacity = .4;
+    curb.disabled = true; curb.style.opacity = .4;
+    refreshHUD();
+    verdict.style.display = "block";
+    verdict.classList.add("bad");
+    verdict.innerHTML = "Warm bread, no wait, triple the price. The fixed price made one loaf at the counter and a second, higher price out the back. Both are the same shortage.";
+  });
+
+  var leave = el("button", "choice", "Walk on, you will manage  (no cost)");
+  leave.addEventListener("click", function(){
+    if (breadQueued || room._chose) return;
+    room._chose = true;
+    line.disabled = true; line.style.opacity = .4;
+    curb.disabled = true; curb.style.opacity = .4;
+    verdict.style.display = "block";
+    verdict.classList.remove("bad");
+    verdict.innerHTML = "You keep your time and your points and go without. The cheapest move, and the one the plan never counts.";
+  });
+
+  room.appendChild(line); room.appendChild(curb); room.appendChild(leave);
+  room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* THE BACK ROOM: the second economy. Scarce goods move fast and cheap here,
+   and the warden is a real risk. Better odds than pure chance, harsher loss. */
+function buildBlackMarketRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "THE FIXER"));
+  room.appendChild(el("div", "speech",
+    "What the plan cannot supply, I can, today, for a price. Most days the goods move clean. Some days the warden is already inside. That risk is the markup."));
+  var verdict = el("div", "verdict");
+
+  [10, 20, 40].forEach(function(stake){
+    var btn = el("button", "choice", "Flip " + stake + " run points of scarce goods");
+    btn.addEventListener("click", function(){
+      if (G.runPoints < stake){
+        verdict.style.display = "block"; verdict.classList.add("bad");
+        verdict.innerHTML = "No stake, no deal. You need " + stake + " points to put goods on the table.";
+        return;
+      }
+      var clean = rng() < 0.55;
+      verdict.style.display = "block";
+      if (clean){
+        G.runPoints += stake;
+        verdict.classList.remove("bad");
+        verdict.innerHTML = "Sold on, clean. +" + stake + " pts. The plan left a gap and you filled it, this once, without getting caught.";
+      } else {
+        var fine = 5;
+        G.runPoints -= (stake + fine);
+        verdict.classList.add("bad");
+        verdict.innerHTML = "The warden was waiting. Goods seized, and a " + fine + " point fine on top. Lose " + (stake + fine) + " pts. The second market runs on exactly this risk.";
+      }
+      refreshHUD();
+    });
+    room.appendChild(btn);
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE STREET");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* THE PEOPLE'S CINEMA: the lull. The newsreel is free and uplifting, and it is
+   paid for in time and attention. Staying leaves you SLOWED on the walk after. */
+var cinemaWatched = false;
+function buildCinemaRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "THE USHER"));
+  room.appendChild(el("div", "speech",
+    "Free seats, comrade, and the harvest came in glorious again this year on the screen. Stay as long as you like. The hours are the only ticket we ask."));
+  var verdict = el("div", "verdict");
+
+  var stay = el("button", "choice", "Stay for the full triumphant newsreel  (+8 pts, but LULLED, SLOWED for 30s after you leave)");
+  stay.addEventListener("click", function(){
+    if (cinemaWatched || room._left) return;
+    cinemaWatched = true;
+    G.runPoints += 8;
+    G.slowUntil = G.time + 30000;
+    stay.disabled = true; stay.style.opacity = .4;
+    short.disabled = true; short.style.opacity = .4;
+    verdict.style.display = "block";
+    verdict.classList.add("bad");
+    verdict.innerHTML = "Record harvests, smiling crowds, numbers that only ever rise. +8 pts of good cheer, and your feet will be slow on the street, because the reel was long and the day is gone.";
+    refreshHUD();
+  });
+
+  var short = el("button", "choice", "Catch the short and slip out  (+4 pts)");
+  short.addEventListener("click", function(){
+    if (cinemaWatched || room._left) return;
+    room._left = true;
+    G.runPoints += 4;
+    stay.disabled = true; stay.style.opacity = .4;
+    short.disabled = true; short.style.opacity = .4;
+    verdict.style.display = "block";
+    verdict.classList.remove("bad");
+    verdict.innerHTML = "A few minutes of the spectacle, then back to the street with your afternoon intact. The reel is free; your attention is not.";
+    refreshHUD();
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE STREET");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(stay); room.appendChild(short); room.appendChild(verdict); room.appendChild(back);
   interiorInner.appendChild(room);
 }
 
@@ -4886,6 +5058,8 @@ function resetRun(){
   G.balanceBonus = false;
   barDrank = false;
   permitHeld = false;
+  breadQueued = false;
+  cinemaWatched = false;
   NPCS.forEach(function(n){ n.met = false; });
   HAZARDS.forEach(function(h, i){
     var s = HAZARD_SNAPSHOT[i];
