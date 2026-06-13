@@ -579,7 +579,17 @@ var SCENES = {
   pava3:        "Images/pava3.jpg",
   rego3:        "Images/rego3.jpg",
   luka3:        "Images/luka3.jpg",
-  desk3:        "Images/desk3.jpg"
+  desk3:        "Images/desk3.jpg",
+  centralbank4: "Images/centralbank4.jpg",
+  regulator4:   "Images/regulator4.jpg",
+  welfare4:     "Images/welfare4.jpg",
+  smallbiz4:    "Images/smallbiz4.jpg",
+  permit4:      "Images/permit4.jpg",
+  institute4:   "Images/institute4.jpg",
+  nora4:        "Images/nora4.jpg",
+  tilly4:       "Images/tilly4.jpg",
+  hale4:        "Images/hale4.jpg",
+  desk4:        "Images/desk4.jpg"
 };
 var fadeEl = document.getElementById("fade");
 var fadeTimer = null;
@@ -668,6 +678,15 @@ var CH_DECOR = {
     { kind: "kiosk", tx: 24, ty: 16 }, { kind: "kiosk", tx: 11, ty: 16 },
     { kind: "lamp", tx: 14, ty: 19 }, { kind: "lamp", tx: 21, ty: 19 },
     { kind: "crates", tx: 9, ty: 9 }, { kind: "crates", tx: 26, ty: 9 }
+  ],
+  ch4: [
+    { kind: "foodcart", tx: 13, ty: 7 }, { kind: "foodcart", tx: 22, ty: 7 },
+    { kind: "kiosk", tx: 11, ty: 11 }, { kind: "kiosk", tx: 24, ty: 11 },
+    { kind: "bench", tx: 24, ty: 16 }, { kind: "bench", tx: 11, ty: 16 },
+    { kind: "planter", tx: 14, ty: 19 }, { kind: "planter", tx: 21, ty: 19 },
+    { kind: "lamp", tx: 13, ty: 17 }, { kind: "lamp", tx: 22, ty: 17 },
+    { kind: "billboard", tx: 9, ty: 9 }, { kind: "billboard", tx: 26, ty: 9 },
+    { kind: "bikes", tx: 17, ty: 9 }
   ]
 };
 var CH_CRITTERS = {
@@ -685,6 +704,12 @@ var CH_CRITTERS = {
   ch3: [
     { kind: "pigeon", x: 17, y: 11 }, { kind: "pigeon", x: 12, y: 14 },
     { kind: "pigeon", x: 23, y: 14 },
+    { kind: "cat", x: 20, y: 20 }
+  ],
+  ch4: [
+    { kind: "pigeon", x: 17, y: 11 }, { kind: "pigeon", x: 12, y: 14 },
+    { kind: "pigeon", x: 23, y: 14 },
+    { kind: "duck", x: 18, y: 15 },
     { kind: "cat", x: 20, y: 20 }
   ]
 };
@@ -1145,10 +1170,59 @@ function drawPlannedGround(c, x, y, sx, sy){
   }
 }
 
+function drawMixedGround(c, x, y, sx, sy){
+  // the mixed city: cool slate pavers, a warm market boulevard down the
+  // middle, brass studs at the seams. Market and civic, side by side.
+  var h = (x * 113 + y * 37) % 7;
+  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  // paver seams
+  ctx.fillStyle = "rgba(0,0,0,.16)";
+  ctx.fillRect(sx, sy, TILE, 1); ctx.fillRect(sx, sy, 1, TILE);
+  ctx.fillStyle = "rgba(255,255,255,.04)";
+  ctx.fillRect(sx + 1, sy + 1, TILE - 2, 1);
+  // an occasional brass stud
+  if (h === 0){ ctx.fillStyle = "rgba(232,176,75,.45)"; ctx.fillRect(sx + TILE - 7, sy + TILE - 7, 3, 3); }
+  // the central civic boulevard, the rows the streets config marks
+  var plaza = CUR.streets && CUR.streets.plazaRows && CUR.streets.plazaRows.indexOf(y) >= 0;
+  if (plaza && c === "."){
+    ctx.fillStyle = "#3a4a52"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#3f6e6a"; ctx.fillRect(sx, sy + TILE/2 - 2, TILE, 4);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + TILE/2 - 8, sy + TILE/2 - 1, 16, 2);
+    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(sx, sy + 2, TILE, 1);
+  }
+  if (c === "T"){
+    var border = (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1);
+    if (border){
+      ctx.fillStyle = "#202830"; ctx.fillRect(sx, sy, TILE, TILE);
+      ctx.fillStyle = "#2f3a44"; ctx.fillRect(sx + 3, sy + 3, TILE - 6, TILE - 6);
+      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(sx, sy + TILE - 4, TILE, 4);
+    } else {
+      // a planter bollard: civic greenery on a stone base
+      ctx.fillStyle = "#3a4650"; ctx.fillRect(sx + 4, sy + 10, TILE - 8, TILE - 14);
+      ctx.fillStyle = "#2f5e41"; ctx.fillRect(sx + 6, sy + 4, TILE - 12, 10);
+      ctx.fillStyle = "#3f7d55"; ctx.fillRect(sx + 9, sy + 2, TILE - 18, 8);
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx + 4, sy + TILE - 6, TILE - 8, 2);
+    }
+  } else if (c === "F"){
+    // the civic plinth at the city's heart: the gate beacon stands here
+    ctx.fillStyle = "#34424a"; ctx.fillRect(sx, sy + 4, TILE, TILE - 4);
+    ctx.fillStyle = "#465862"; ctx.fillRect(sx + 3, sy + 2, TILE - 6, TILE - 6);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 7, sy + 8, TILE - 14, 5);
+    ctx.fillStyle = "#3f6e6a"; ctx.fillRect(sx + 7, sy + 15, TILE - 14, 3);
+  } else if (c === "C"){
+    // a low civic marker with a brass cap
+    ctx.fillStyle = "#3a4650"; ctx.fillRect(sx + 5, sy + 7, TILE - 10, TILE - 12);
+    ctx.fillStyle = "#4a5a64"; ctx.fillRect(sx + 7, sy + 4, TILE - 14, 8);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + TILE/2 - 2, sy + 9, 4, 4);
+  }
+}
+
 function drawGroundTile(c, x, y, sx, sy){
   if (CUR.theme === "metro") return drawMetroGround(c, x, y, sx, sy);
   if (CUR.theme === "commons") return drawCommonsGround(c, x, y, sx, sy);
   if (CUR.theme === "planned") return drawPlannedGround(c, x, y, sx, sy);
+  if (CUR.theme === "mixed") return drawMixedGround(c, x, y, sx, sy);
   // the old cobble checker, kept as the fallback for future chapters
   ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
   ctx.fillRect(sx, sy, TILE, TILE);
@@ -1491,6 +1565,24 @@ var ROOM_THEMES = {
                 props:["board","beam","candles"],
                 bust:{ skin:"#caa06a", top:"#4f2525", collar:"#9a2f2a", hair:"short", hairC:"#1d1610", acc:"none" } },
   institute3:   { back:"#1f3329", floor:"#2a4032", counter:"#3a5444", accent:"#3fb8af",
+                props:["bookshelves","board","beam"],
+                bust:{ skin:"#caa06a", top:"#2a4a3c", collar:"#3fb8af", hair:"short", hairC:"#cfc8b8", acc:"glasses" } },
+  centralbank4: { back:"#23303a", floor:"#2e3c46", counter:"#cfc8b8", accent:"#e8b04b",
+                props:["board","windowrow"],
+                bust:{ skin:"#caa06a", top:"#2f4150", collar:"#e8b04b", hair:"short", hairC:"#3a3026", acc:"glasses" } },
+  regulator4:   { back:"#1f332e", floor:"#2a4038", counter:"#3a5448", accent:"#3fb8af",
+                props:["board","gauges"],
+                bust:{ skin:"#a86a48", top:"#274a47", collar:"#cfe2ef", hair:"short", hairC:"#15121c", acc:"glasses" } },
+  welfare4:     { back:"#312b22", floor:"#3e3528", counter:"#cfc8b8", accent:"#e8b04b",
+                props:["windowrow","benchrow"],
+                bust:{ skin:"#d79a6e", top:"#6a5230", collar:"#efe6d2", hair:"bun", hairC:"#2a1c12", acc:"none" } },
+  smallbiz4:    { back:"#332a22", floor:"#42372a", counter:"#54462e", accent:"#e8b04b",
+                props:["barrels","board"],
+                bust:{ skin:"#8a5a3c", top:"#6e3a27", collar:"#caa06a", hair:"short", hairC:"#1d1610", acc:"apron" } },
+  permit4:      { back:"#2b2a22", floor:"#36352a", counter:"#46452e", accent:"#9a8a5a",
+                props:["board","benchrow"],
+                bust:{ skin:"#caa06a", top:"#494630", collar:"#9a8a5a", hair:"short", hairC:"#2a2218", acc:"none" } },
+  institute4:   { back:"#1f3329", floor:"#2a4032", counter:"#3a5444", accent:"#3fb8af",
                 props:["bookshelves","board","beam"],
                 bust:{ skin:"#caa06a", top:"#2a4a3c", collar:"#3fb8af", hair:"short", hairC:"#cfc8b8", acc:"glasses" } }
 };
@@ -1926,6 +2018,48 @@ var ARRIVALS = {
       hello: "Four needles. Five decisions, labels off this time. The city hands you the plan and holds its breath.",
       action: "TAKE THE DESK",
       bye: "The plan waits in the tray and the city waits in the cold. Neither waits forever." }
+  },
+  ch4: {
+    centralbank: { who: "GOVERNOR FENN",
+      hello: "Mind the marble, it carries every footstep. We set one price in this whole city, the price of money. Curious how that steadies the rest?",
+      action: "READ THE RATE",
+      bye: "Rate is set for the quarter. Whether the quarter behaves is the part nobody controls. Off you go." },
+    regulator: { who: "COMMISSIONER VANCE",
+      hello: "Forms to your left, harms to your right. I spend my day deciding which is which. Want to see where a market needs a hand?",
+      action: "OPEN A CASE",
+      bye: "Case filed, river a little cleaner, somebody a little crosser. That is the job most days." },
+    welfare: { who: "CASEWORKER DELLA",
+      hello: "Take a number, nobody is turned away at this door. The market sent these folks here. Curious how the floor gets built?",
+      action: "SEE THE FLOOR",
+      bye: "Claim approved, dignity intact. The market made the wealth, the desk passed a little of it back. Mind the step." },
+    smallbiz: { who: "OWNER MARCO",
+      hello: "Shop is open, prices are mine, taxes are theirs. Three institutions up the hill and still I post my own numbers. Want to know how that holds?",
+      action: "MIND THE SHOP",
+      bye: "Thanks for stopping. The frame is the city's, the shelf is mine, and the coin in the till still decides everything." },
+    permit: { who: "THE PERMIT OFFICE",
+      hello: "Three windows, three lines, and only some of them protect a soul. The clock is yours to spend. Which line is worth it?",
+      action: "READ THE BOARD",
+      bye: "Paper in hand, an hour weighed. Some of it guarded your customers, some of it guarded the queue. You judged it." },
+    institute: { who: "THE DEAN",
+      hello: "You hold the city's four working parts. Inside, we bolt them into one system and weigh it honestly. Ready?",
+      action: "STEP INSIDE",
+      bye: "Go weigh it for yourself. The city is the real exam." },
+    nora: { who: "ANALYST NORA",
+      hello: "Between meetings, between charts. Sit a second. Got time for the argument the whole city is having with itself?",
+      action: "CHAT WITH NORA",
+      bye: "Back to the dashboard. The dial between shop and rule never does sit still." },
+    tilly: { who: "VENDOR TILLY",
+      hello: "Slow hour at the stall, plenty of time to talk three masters and one till. A word?",
+      action: "CHAT WITH TILLY",
+      bye: "Custom is picking up. Tax man, code man, and the customer, all paid in turn. Such is the trade." },
+    hale: { who: "INSPECTOR HALE",
+      hello: "Clipboard is heavy, route is long. A minute on which rules earn their keep and which just keep me busy?",
+      action: "CHAT WITH HALE",
+      bye: "On to the next premises. Half my stops save someone, half just stamp a form. I rarely know which in advance." },
+    desk: { who: "THE DECISION DESK",
+      hello: "Four needles. Five storms on the city's desk, labels off. Markets and rules both pull the chair. Take it.",
+      action: "TAKE THE DESK",
+      bye: "The agenda holds and the city does not. The chair will be warm when you return." }
   }
 };
 
@@ -2193,6 +2327,7 @@ function openBuildingInterior(b){
   else if (b.id === "bar") buildBarRoom(b);
   else if (b.id === "casino") buildCasinoRoom(b);
   else if (b.id === "meeting") buildMeetingRoom(b);
+  else if (b.id === "permit") buildPermitRoom(b);
   else if (b.kind === "institute") buildInstituteRoom(b);
   openInterior();
 }
@@ -2679,6 +2814,78 @@ function buildMeetingRoom(b){
   });
 
   room.appendChild(stay); room.appendChild(leave); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- The Permit Office: some paperwork protects, some is pure friction.
+   The lesson is judging which line is worth standing in. The friction window
+   holds you in real time, once per run, like the bar and the long meeting. */
+var PERMIT_HOLD_MS = 25000;
+var permitHeld = false;
+function buildPermitRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "CLERK OZ"));
+  room.appendChild(el("div", "speech",
+    "Three windows, friend. One keeps your customers safe, one keeps a cabinet full, and one is just a line about a line. The law makes you guess which is which."));
+  var verdict = el("div", "verdict");
+
+  var back = el("button", "btn ghost", "BACK TO THE STREET");
+  back.addEventListener("click", closeInterior);
+
+  var inspect = el("button", "choice", "File the food safety inspection  (+8 pts. This line protects your customers)");
+  inspect.addEventListener("click", function(){
+    if (room._chose) return;
+    room._chose = true;
+    G.runPoints += 8;
+    refreshHUD();
+    inspect.disabled = true; inspect.style.opacity = .5;
+    verdict.style.display = "block";
+    verdict.classList.remove("bad");
+    verdict.innerHTML = "Worth every minute. Some paperwork is a guardrail, and this is the rule that keeps a kitchen honest. The line earned its keep.";
+  });
+
+  var skip = el("button", "choice", "Read the board and skip the line that protects no one  (+5 pts)");
+  skip.addEventListener("click", function(){
+    if (room._chose) return;
+    room._chose = true;
+    G.runPoints += 5;
+    refreshHUD();
+    skip.disabled = true; skip.style.opacity = .5;
+    verdict.style.display = "block";
+    verdict.classList.remove("bad");
+    verdict.innerHTML = "You read which line was worth standing in and walked past the one that was not. Judging that gap is the whole civic skill.";
+  });
+
+  var duplicate = el("button", "choice",
+    "Queue for the duplicate stamp, just to be safe  (the clerk holds you for " + Math.round(PERMIT_HOLD_MS/1000) + " real seconds, +0 pts)");
+  duplicate.addEventListener("click", function(){
+    if (permitHeld || room._chose) return;
+    permitHeld = true;
+    room._chose = true;
+    inspect.disabled = true; inspect.style.opacity = .5;
+    skip.disabled = true; skip.style.opacity = .5;
+    duplicate.disabled = true; duplicate.style.opacity = .5;
+    back.disabled = true; back.style.opacity = .5;
+    verdict.style.display = "block";
+    verdict.classList.add("bad");
+    var left = Math.round(PERMIT_HOLD_MS / 1000);
+    verdict.innerHTML = "Window four certifies the certificate from window three. Pure friction, paid in evenings. The clerk will call you in " + left + "s.";
+    var iv = setInterval(function(){
+      left--;
+      if (left > 0){
+        verdict.innerHTML = "Window four certifies the certificate from window three. Pure friction, paid in evenings. The clerk will call you in " + left + "s.";
+        return;
+      }
+      clearInterval(iv);
+      verdict.classList.remove("bad");
+      verdict.innerHTML = "Stamped, filed, and pointless. An evening spent proving you exist. That is the line worth skipping, and now you know the difference.";
+      back.disabled = false; back.style.opacity = 1;
+    }, 1000);
+  });
+
+  room.appendChild(inspect); room.appendChild(skip); room.appendChild(duplicate);
+  room.appendChild(verdict); room.appendChild(back);
   interiorInner.appendChild(room);
 }
 
@@ -4233,6 +4440,7 @@ function resetRun(){
   G.booksRead = {};
   G.balanceBonus = false;
   barDrank = false;
+  permitHeld = false;
   NPCS.forEach(function(n){ n.met = false; });
   HAZARDS.forEach(function(h, i){
     var s = HAZARD_SNAPSHOT[i];
@@ -5860,6 +6068,293 @@ CH3_FREEPLAY.collapseTitle = CH3_DESK.collapseTitle;
 CH3_FREEPLAY.collapseLines = CH3_DESK.collapseLines;
 
 
+/* =====================================================
+   CHAPTER 4: THE MIXED ECONOMY. The walk content. Milestone 13.
+   A modern city that runs on markets and frames them with
+   public institutions. Built from the Section 4 template on
+   the established data patterns. Four lesson buildings, one
+   temptation, the Institute. Desk labels stay off.
+   ===================================================== */
+
+var CH4_MAP = [
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T...........T..........T...........T",
+  "T..........C......C................T",
+  "T................C.................T",
+  "T..................................T",
+  "T..................................T",
+  "T...............FF.................T",
+  "T...............FF.................T",
+  "T..................................T",
+  "T..................................T",
+  "T...........T..........C..T........T",
+  "T..................................T",
+  "T..................................T",
+  "T........T........C................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+];
+
+var CH4_BUILDINGS = [
+  { id:"centralbank", name:"THE CENTRAL BANK",   kind:"lesson",     x:3,  y:2,  w:7, h:4, door:{x:6,  y:5},  hue:"#4a6276", roof:"#2f4150", sign:"CENTRAL BANK" },
+  { id:"regulator",   name:"THE REGULATOR",      kind:"lesson",     x:26, y:2,  w:7, h:4, door:{x:29, y:5},  hue:"#3f6e6a", roof:"#274a47", sign:"REGULATOR" },
+  { id:"welfare",     name:"THE WELFARE OFFICE", kind:"lesson",     x:2,  y:10, w:8, h:4, door:{x:6,  y:13}, hue:"#9a7a4a", roof:"#6a5230", sign:"WELFARE" },
+  { id:"smallbiz",    name:"GOODS AND CO",       kind:"lesson",     x:27, y:10, w:7, h:4, door:{x:30, y:13}, hue:"#a3593f", roof:"#6e3a27", sign:"GOODS AND CO" },
+  { id:"permit",      name:"THE PERMIT OFFICE",  kind:"temptation", x:2,  y:18, w:7, h:4, door:{x:5,  y:21}, hue:"#6e6a4a", roof:"#494630", sign:"PERMITS" },
+  { id:"institute",   name:"THE INSTITUTE",      kind:"institute",  x:15, y:2,  w:7, h:4, door:{x:18, y:5},  hue:"#3f6e5a", roof:"#2a4a3c", sign:"INSTITUTE" }
+];
+
+var CH4_LESSONS = {
+  centralbank: {
+    host: "GOVERNOR FENN",
+    speech: "We do not set the price of bread here. We set the price of money. Move that one number and the whole economy leans, toward a boom or away from one. The trick is leaning the right way at the right time.",
+    question: "The economy is running hot, credit is cheap, and prices are climbing across the board. What is the mixed move from this chair?",
+    choices: [
+      { t: "Raise the interest rate to cool borrowing and lean against the boom", ok: true,
+        why: "Countercyclical policy. The bank moves the price of credit to smooth the cycle, easing in slumps and tightening in booms. Keynes argued the state should steady demand, and the lender of last resort tradition handed the bank the tools." },
+      { t: "Freeze every price in the city by decree until the climbing stops", ok: false,
+        why: "That is a different chapter's instrument. The mixed economy steers the cycle through money and credit, it does not freeze the market's prices. Try again." },
+      { t: "Do nothing and trust the boom to cool itself", ok: false,
+        why: "The pure hands off answer, and the one the mixed economy was built to question after the busts of the last century. Leaning against the cycle is the reason the chair exists. Try again." }
+    ],
+    insight: { title: "INSIGHT: COUNTERCYCLICAL POLICY",
+      body: "The mixed economy keeps the market and steadies its cycle. The central bank eases credit in slumps and tightens it in booms, and stands as lender of last resort when panic hits." }
+  },
+  regulator: {
+    host: "COMMISSIONER VANCE",
+    speech: "I do not run the businesses. I price the harms they forget to count. A market gets most prices right on its own, and a few badly wrong. My whole job lives in that gap.",
+    question: "A tannery's runoff costs the tannery nothing on its own books, and costs the families downstream plenty. What is the mixed move?",
+    choices: [
+      { t: "Charge the tannery for the damage so the cost lands on whoever makes it", ok: true,
+        why: "Pricing the externality, the idea Pigou is known for. The market keeps running, now with the true cost built into the price, so the tannery cleans up exactly as far as cleaning is cheaper than the charge." },
+      { t: "Ban the tannery outright", ok: false,
+        why: "Sometimes warranted, usually blunt. The mixed move corrects the failure and keeps the useful trade, rather than ending it. The ban is for harms that cannot be priced at all. Try again." },
+      { t: "Leave it be, the market knows best", ok: false,
+        why: "The market priced everything except the river, which is the failure. Where a cost falls on a third party with no say in the deal, the unaided market gets the price wrong. Try again." }
+    ],
+    insight: { title: "INSIGHT: CORRECTING MARKET FAILURE",
+      body: "Markets misprice some things: pollution that falls on others, monopoly that throttles supply, hidden information. The mixed economy adds a rule or a price so the market keeps working with the real cost included." }
+  },
+  welfare: {
+    host: "CASEWORKER DELLA",
+    speech: "The market made this city rich and it drops people without ceremony. We do not stop the dropping. We put a floor under it, paid for by taxing a slice of all that wealth in the years it flows.",
+    question: "A laid off worker and her family hit a hard year through no fault of their own. What is the mixed move?",
+    choices: [
+      { t: "Pay out from the insurance and transfer system that taxes funded in the good years", ok: true,
+        why: "The safety net. The market still generates the wealth, and the state taxes a share to fund a floor of pensions, insurance, and transfers. Beveridge built a whole system on that division of labor." },
+      { t: "Abolish the market that laid her off and assign her a state post", ok: false,
+        why: "That replaces the market rather than catching the people it drops, which is a different chapter entirely. The mixed economy keeps the engine and softens the landing. Try again." },
+      { t: "Nothing, private charity will sort it out", ok: false,
+        why: "The answer from before the welfare state, the one the mixed economy was built to improve on. Charity is real and uneven, and the net exists so the floor does not depend on luck. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE SAFETY NET",
+      body: "The mixed economy keeps the market and taxes part of its yield to fund a floor: pensions, unemployment insurance, transfers. The market generates, the state catches. Every transfer needs a tax, so the edges are always argued." }
+  },
+  smallbiz: {
+    host: "OWNER MARCO",
+    speech: "Bank up the hill, regulator across the square, welfare office two streets over. And still, every morning, I set my own prices and the customers vote with their coins. The frame is theirs. The shop is mine.",
+    question: "In this mixed city, where does the price on your shelf actually come from?",
+    choices: [
+      { t: "From supply and demand in a competitive market, inside the rules the state sets", ok: true,
+        why: "Just so. The market still sets most prices and allocates most goods. The state supplies the frame: sound money, a safety net, rules against fraud and harm. The mix is market plus correction, not one replacing the other." },
+      { t: "A planning bureau sets it from the capital", ok: false,
+        why: "That is the command chapter. Here the shopkeeper still posts the price and the customer still answers with a coin. Try again." },
+      { t: "The welfare office sets it to keep things fair", ok: false,
+        why: "The welfare office funds a floor, it does not price the bread. Redistributing a slice of the yield is not the same act as setting the price. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE MARKET STILL CLEARS",
+      body: "In a mixed economy the market still does the daily work, with prices, profit, and competition allocating most goods. The public layer is the frame around the market, not a substitute for it." }
+  }
+};
+
+var CH4_NPCS = [
+  { id:"nora", name:"ANALYST NORA", tx:10, ty:8, hue:"#4a6276",
+    lines:["Pure market or pure plan? This city quietly chose neither, then argued about the dial ever since.","Every line on my chart is a tug of war between the shop and the rule. The shelf inside argues both ends, fairly."] },
+  { id:"tilly", name:"VENDOR TILLY", tx:20, ty:8, hue:"#a3593f",
+    lines:["My stall pays a tax, follows a code, and still sets its own prices. Three masters, and somehow it works.","Some of the rules saved my customers, some just cost me a morning. Knowing which is which is the whole trick."] },
+  { id:"hale", name:"INSPECTOR HALE", tx:24, ty:19, hue:"#3f6e6a",
+    lines:["Half my forms protect somebody. The other half protect the form. I will let you guess which line is longer.","People love the rule that saved them and curse the rule that delayed them. Usually it is the same rule."] }
+];
+
+var CH4_HAZARDS = [
+  { id:"bus", type:"cart", skin:"truck", x:12*TILE, y:8*TILE, w:38, h:22, dir:1, speed:130,
+    minX:10*TILE, maxX:25*TILE, cost:3,
+    line:"Clipped by the city bus running its public route. It keeps a timetable, not an eye out for you. Minus 3." },
+  { id:"van", type:"cart", skin:"truck", x:22*TILE, y:16*TILE, w:34, h:22, dir:-1, speed:150,
+    minX:9*TILE, maxX:25*TILE, cost:3,
+    line:"Clipped by a delivery van chasing a private deadline the other way. The market does not slow for jaywalkers. Minus 3." },
+  { id:"auditor", type:"collector", skin:"warden", x:20*TILE, y:6*TILE, w:22, h:26, speed:80,
+    homeX:20*TILE, homeY:6*TILE, radius:TILE*5, cost:5,
+    line:"A compliance auditor stopped you to check three forms you did not know you needed. Minus 5." },
+  { id:"notice", type:"bubble", skin:"directive", x:16*TILE, y:10*TILE, w:26, h:24, vx:58, vy:46,
+    minX:11*TILE, maxX:25*TILE, minY:8*TILE, maxY:20*TILE, cost:4,
+    line:"A public notice drifted into you, amending a rule you had only just learned. Minus 4. Read both versions." }
+];
+
+/* ---------- Chapter 4 Institute: lesson cards, practice, gate ---------- */
+var CH4_LESSON_CARDS = [
+  { t: "WHAT THE MIX MIXES",
+    b: "The mixed economy is not a halfway house between two systems so much as two layers running at once. Underneath, the market does the daily work: prices, profit, and competition allocate most goods, exactly as in the first chapter. Over the top sits a public frame of money, rules, and transfers. You met both in the town, the shop setting its own price beneath a bank, a regulator, and a welfare office that none of them replaces." },
+  { t: "WHERE THE STATE STEPS IN",
+    b: "The frame is not general control but a short list of specific jobs the unaided market does badly. It corrects market failures, pricing the harms and curbing the monopolies the market misses. It steadies the cycle, leaning against booms and busts through money and the budget. And it funds a floor, taxing a share of the yield to insure people against the risks the market hands out. Each is a named task, not a takeover." },
+  { t: "BOTH EDGES",
+    b: "Strengths first: the mix is the arrangement most rich democracies actually run, pairing the market's drive with a buffer against its worst swings and a floor under its losers. Now the failure modes, argued at full strength: the corrections can be captured by the firms they target, the rules and taxes can pile into dead weight that never retreats, and the macro levers, overused, can tip into deficits and inflation. The deepest argument is not whether to mix but where the line sits, and that line is never finally settled." }
+];
+
+var CH4_PRACTICE = {
+  q: "PRACTICE REP. A new loom throws a quarter of the town's weavers out of work in a single year. Under the mixed economy, what is the move?",
+  choices: [
+    { t: "Let the market reallocate the work, and fund insurance and retraining to carry the weavers across", ok: true,
+      why: "Right. The mix keeps the engine that raises output and softens the landing for the people it throws. The market adjusts, the floor catches, and the adjustment is helped along rather than blocked." },
+    { t: "Ban the new loom to protect the jobs as they are", ok: false,
+      why: "That freezes the market to spare the disruption, which is a different system's instinct. The mix lets the change happen and cushions it, rather than forbidding the change. Run it again." },
+    { t: "Do nothing, the market will reabsorb them in time", ok: false,
+      why: "The pure answer, and the one the mixed economy was built to improve on after the hard decades of the last century. In time can be a very long time for the family out of work this month. Run it again." }
+  ]
+};
+
+var CH4_GATE_QS = [
+  { q: "GATE 1 OF 2. Two mixed economies, both prosperous, draw the line between market and state in very different places. By this system's own logic, what does that tell you?",
+    choices: [
+      { t: "That the mix is a dial, not a recipe, and the right setting is a standing argument rather than a solved equation", ok: true,
+        why: "The chapter's thesis. The mixed economy spans a wide band, and where to sit on it turns on values as much as on data, which is why capable democracies land in different places and keep debating it." },
+      { t: "That one of the two has simply got the economics wrong", ok: false,
+        why: "Too quick. Both arrangements clear the market and fund a frame, and both can prosper. Treating a genuine disagreement over the dial as a plain error is the easy answer the chapter resists. The gate resets." },
+      { t: "That neither one is really a mixed economy at all", ok: false,
+        why: "Both keep markets and a public frame, so both sit squarely in the band. The mix is broad by nature, not a single point. Read the claim before judging it. The gate resets." }
+    ]},
+  { q: "GATE 2 OF 2. A regulator created to check a powerful industry spends a decade mostly shielding that industry from competition. In the critics' strongest form, what does this illustrate?",
+    choices: [
+      { t: "Regulatory capture: the watched can come to steer the watchdog, so a correction curdles into the protection it was meant to prevent", ok: true,
+        why: "The sharpest critique the shelf holds, from Stigler and the public choice tradition. The state's tools are not neutral once concentrated interests learn to work them, and designing against capture is half the job." },
+      { t: "That regulation is always useless and should never be attempted", ok: false,
+        why: "Overstated, and false. Many corrections do their job; capture is a risk to design against, not a law that voids the whole enterprise. No straw men here. The gate resets." },
+      { t: "That the regulators in question were simply dishonest people", ok: false,
+        why: "The serious version assumes able, honest officials and still finds the pull of concentrated interests. Making it about bad character is the straw man this game refuses. The gate resets." }
+    ]}
+];
+
+var CH4_BOOKS = [
+  { id:"keynes4", side:"for", title:"The General Theory of Employment, Interest and Money", author:"John Maynard Keynes, 1936",
+    link:"https://en.wikipedia.org/wiki/The_General_Theory_of_Employment,_Interest_and_Money",
+    summary:"Keynes wrote in the wreckage of the Great Depression to answer a question the older economics could not: why an economy can sit stuck with idle factories and willing workers for years rather than righting itself. His answer is that total demand can fall short and stay short, so output settles at a low level with no automatic force to lift it. The remedy is for the state to make up the missing demand, through cheaper money and public spending, until private spending recovers. It is the founding case for the active management half of the mixed economy, and the book that gave the postwar consensus its tools." },
+  { id:"galbraith4", side:"for", title:"The Affluent Society", author:"John Kenneth Galbraith, 1958",
+    link:"https://en.wikipedia.org/wiki/The_Affluent_Society",
+    summary:"Galbraith argues that a rich society keeps measuring itself by the old yardstick of private production while starving the shared goods that wealth makes both possible and necessary. Advertising manufactures wants for private things, he claims, while schools, parks, clean air, and public services go underfunded, a contrast he called private opulence beside public squalor. His prescription is a deliberate rebalancing toward the public side, funded by taxing the surplus the market throws off. It is an elegant case for why an affluent market economy still needs a generous public hand, and a favorite target of the shelf's other half." },
+  { id:"friedman4", side:"against", title:"Free to Choose", author:"Milton Friedman and Rose Friedman, 1980",
+    link:"https://en.wikipedia.org/wiki/Free_to_Choose",
+    summary:"The Friedmans make the case that the market, left free, coordinates the wants of millions better than any official can, and that most state corrections do more harm than the failures they target. Each intervention, they argue, breeds the next, builds a constituency that defends it, and quietly trades the citizen's freedom for a promise of security that often goes undelivered. They would shrink the frame to a few clear functions and let voluntary exchange do the rest, replacing many programs with simple cash and choice. It is the most readable modern argument that the mix leans too far toward the state, and that the cost lands on liberty." },
+  { id:"higgs4", side:"against", title:"Crisis and Leviathan", author:"Robert Higgs, 1987",
+    link:"https://en.wikipedia.org/wiki/Crisis_and_Leviathan",
+    summary:"Higgs studies how government actually grows and finds a pattern: each war, depression, or panic brings emergency powers that expand the state, and when the crisis passes the state shrinks back only partway, leaving a permanent ratchet upward. The mix, in his account, does not settle at a chosen balance but drifts toward more control one emergency at a time, with each step defended by the interests it created. He marshals a century of American history to make the case. It is the strongest argument that the line between market and state will not hold where it is drawn, but creeps, and that the creep is the system's real tendency." }
+];
+
+var CH4_DESK = {
+  chapter: "CHAPTER 4: THE MIXED ECONOMY",
+  labelsOn: false,
+  intro: "The city hands you the chair. Five decisions are waiting, and the desk names no principles. Weigh each option on its merits, run the city by the mixed economy's own logic, keeping the market working and the frame around it sound. Keep all four needles off the floor. Any needle at zero and the balance breaks.",
+  collapseTitle: "THE BALANCE BREAKS",
+  collapseLines: {
+    prosperity: "The engine stalled. Taxed and ruled past the point of drive, or starved of the steadying it needed, the market stopped producing the surplus that paid for everything else. The mix lived on that surplus, and the surplus is gone.",
+    equality:   "The floor gave way. The gap widened until the city split into two publics that no longer shared an interest, and a social contract with half its signatories gone is no contract at all.",
+    freedom:    "Correction piled on correction until the permit office swallowed the market it was meant to guide. Every exchange now waits on a stamp, and the ratchet only ever turned one way.",
+    stability:  "The levers were pulled too hard too often. Prices climbed while growth stalled, the deficit outran the plan to pay it, and confidence broke all at once. The steadying hand became the shock."
+  },
+  beats: [
+    { id:"slump",
+      prompt: "BEAT 1. Orders dry up across the city, layoffs spread, and spending falls as fast as confidence. The council wants the mixed economy's answer to a slump.",
+      options: [
+        { t:"Cut interest rates and run a temporary deficit to hold demand up until hiring returns", fit:2,
+          fx:{ prosperity:6, stability:6, equality:2, freedom:-2 },
+          why:"The Keynesian core of the mix. The state steadies demand in the slump so the downturn does not feed on itself, and the deficit is the deliberate cost, meant to be repaid when the boom returns." },
+        { t:"Hold rates and let the automatic stabilizers, jobless pay and a lighter tax take, do the work", fit:1,
+          fx:{ stability:4, equality:2, prosperity:-2 },
+          why:"The lighter touch built into the budget itself, cushioning the fall with no fresh decision. Slower than active stimulus, and far less likely to overshoot." },
+        { t:"Balance the budget at once to keep the state's credit sound, slump or not", fit:1,
+          fx:{ prosperity:-6, stability:-4, freedom:2 },
+          why:"The instinct from before Keynes, austerity into a downturn. It guards the public balance sheet and can deepen the very slump it meets, which is the hard lesson the mix took from the 1930s." },
+        { t:"Freeze wages and prices by decree until confidence comes back", fit:0,
+          fx:{ freedom:-8, prosperity:-10, stability:-12 },
+          why:"Controls jam the signal the market runs on and treat only the symptom. This is a command instrument borrowed into the wrong chapter, and the shortages and distortions arrive on schedule." }
+      ]},
+    { id:"monopoly",
+      prompt: "BEAT 2. One firm now owns every water main in the city and has begun pricing like it. No rival can lay a second network, so the market has nothing to discipline it with. The regulator awaits your ruling.",
+      options: [
+        { t:"License it as a regulated utility: it keeps running while an agency holds the price near cost", fit:2,
+          fx:{ prosperity:4, equality:4, freedom:-2 },
+          why:"The mixed answer to a natural monopoly. Where competition cannot exist, a public rule stands in for the missing rival, holding the price near the cost a market would have found." },
+        { t:"Take the waterworks into public ownership and run it at cost", fit:1,
+          fx:{ equality:4, stability:2, prosperity:-4, freedom:-2 },
+          why:"A standard tool for water and rail, common across mixed economies. It removes the motive to gouge, and takes on the weaker spur a public body has to run lean." },
+        { t:"Break the network into competing suppliers and let them fight for customers", fit:1,
+          fx:{ prosperity:4, freedom:4, stability:-4 },
+          why:"Competition is the first best fix wherever it can be built. For a single pipe network the duplication is sheer waste, so this suits some monopolies and not a grid that is cheapest run once." },
+        { t:"Leave it be, since any seller that overcharges will draw a competitor in time", fit:0,
+          fx:{ prosperity:-10, equality:-6, freedom:2, stability:-6 },
+          why:"The reply that works for ordinary markets and fails for this one. A pipe network is a barrier no rival can vault quickly, and the wait for discipline is paid by every household in the meantime." }
+      ]},
+    { id:"floor",
+      prompt: "BEAT 3. The downturn has left a tenth of the city out of work through no fault of their own. The welfare office asks how high to set the floor, and who is to pay for it.",
+      options: [
+        { t:"Fund insurance and retraining from a broad tax, aimed at carrying people back to work", fit:2,
+          fx:{ equality:6, stability:4, prosperity:-2, freedom:-2 },
+          why:"The Beveridge design: insurance against the risks the market hands out, paid for in the good years and pointed at a return to work. The floor is real, and so is the tax that holds it up." },
+        { t:"Pay a flat benefit to everyone, simple and universal, and tax it back from the well off", fit:1,
+          fx:{ equality:4, freedom:2, prosperity:-4 },
+          why:"The universal grant: easy to run and free of the means test trap, at the cost of paying many who do not need it. Economists across the spectrum argue both its appeal and its price." },
+        { t:"Keep the floor low and lean on charity and family to fill the gap", fit:1,
+          fx:{ prosperity:2, freedom:2, equality:-6 },
+          why:"The minimal net, lighter on the budget and the taxpayer. It also leaves the catch uneven and dependent on luck, which is the gap the welfare state was built to close." },
+        { t:"Pay a generous benefit with no limit and no path back, funded by borrowing alone", fit:0,
+          fx:{ equality:4, prosperity:-10, stability:-12 },
+          why:"A floor with no funding and no exit is a kindness that eats itself. The bill moves to the deficit, and the help meant to be a bridge hardens into a trap." }
+      ]},
+    { id:"rules",
+      prompt: "BEAT 4. The permit code has grown for thirty years and never once shrunk. Some rules guard the public, some guard the firms already inside, and the same office writes them all. Two factions want your verdict.",
+      options: [
+        { t:"Audit the rules one by one, keep the ones that price a real harm, clear the rest", fit:2,
+          fx:{ prosperity:4, freedom:4, stability:-2 },
+          why:"The unglamorous discipline the mix needs. A rule earns its place by correcting a failure, not by seniority, and the audit is the only guard against the code becoming its own purpose." },
+        { t:"Add an independent watchdog to check the regulators against capture", fit:1,
+          fx:{ stability:4, equality:2, freedom:-2 },
+          why:"Stigler warned that the watched can capture the watchdog. A check on the checkers helps, and it raises the same question one level up: who is to guard that guard?" },
+        { t:"Freeze all new rules and let the old ones expire automatically after a set term", fit:1,
+          fx:{ freedom:4, prosperity:2, stability:-4 },
+          why:"A blunt brake on the ratchet Higgs described, where rules only ever accumulate. It clears dead weight and also clears live protections that simply lacked a champion at renewal." },
+        { t:"Trust the agency to police itself and keep writing rules as it sees fit", fit:0,
+          fx:{ freedom:-6, prosperity:-10, equality:-2 },
+          why:"The path that grew the overgrown code in the first place. An office asked to judge its own work tends to find more work, and the firms inside learn to love the wall around them." }
+      ]},
+    { id:"limit",
+      prompt: "BEAT 5. Years of leaning on the levers have left prices climbing and the debt high. The market wants discipline, the public wants the floor kept, and both are standing at your desk at once.",
+      options: [
+        { t:"Tighten money to break the inflation, and protect the floor with targeted aid through the squeeze", fit:2,
+          fx:{ stability:6, equality:2, prosperity:-2, freedom:-2 },
+          why:"The hard mixed answer of the early 1980s: a central bank willing to cause a recession to stop inflation, paired with a net to carry those it hurts. Costly, credible, and the reason the spiral broke." },
+        { t:"Raise taxes and trim spending together to close the gap slowly, without a shock", fit:1,
+          fx:{ stability:4, prosperity:-2, equality:-2 },
+          why:"The gradual consolidation, sharing the bill across the budget to avoid a sharp downturn. It works if confidence holds long enough for slow to count as fast enough." },
+        { t:"Hold rates and try to grow out of the debt with investment in new capacity", fit:1,
+          fx:{ prosperity:4, equality:2, stability:-4 },
+          why:"The optimistic route, betting growth outruns the debt. Sometimes it does. With inflation already loose, the bet can feed the very fire it hopes to outrun." },
+        { t:"Print to cover the deficit and keep every program whole", fit:0,
+          fx:{ prosperity:-12, stability:-16, equality:-2 },
+          why:"The exit that looks painless and ends in the steepest bill of all. Financing the state from the printing press is how a stable mix tips into the spiral this desk exists to avoid." }
+      ]}
+  ]
+};
+
 
 /* =====================================================
    THE CHAPTER REGISTRY. Milestone 6.
@@ -6146,6 +6641,18 @@ window.MF = {
     desk: CH3_DESK,
     freeplay: CH3_FREEPLAY,
     arcade: CH3_ARCADE
+  },
+  ch4raw: {
+    map: CH4_MAP,
+    buildings: CH4_BUILDINGS,
+    lessons: CH4_LESSONS,
+    npcs: CH4_NPCS,
+    hazards: CH4_HAZARDS,
+    lessonCards: CH4_LESSON_CARDS,
+    practice: CH4_PRACTICE,
+    gateQs: CH4_GATE_QS,
+    books: CH4_BOOKS,
+    desk: CH4_DESK
   }
 };
 })();
