@@ -3169,6 +3169,178 @@ function ArcadeEngine(cfg){
   return E;
 }
 
+/* =====================================================
+   THE SAFETY NET. Milestone 11. The Chapter 2 cabinet.
+   A lane catcher in the classic catch game tradition:
+   needs fall from the courtyard windows, the player
+   slides the collective net to catch them, urgent cases
+   pay triage, and grievance forms must not be caught.
+   Pure state, no DOM, seeded rng, stepped by update(dt).
+   Public API mirrors ArcadeEngine: input, fire, update,
+   score, over, banked, hits, playerHits, elapsed.
+   ===================================================== */
+function CatchEngine(cfg){
+  var W = VIEW_W, H = VIEW_H;
+  var floorY = H - 70;
+  var E = {
+    kind: "catch",
+    cfg: cfg, W: W, H: H, floorY: floorY,
+    wave: 0, spawned: 0, spawnTimer: 800, itemSeq: 0,
+    items: [], fx: [],
+    net: { x: W/2 - cfg.net.w/2, y: floorY - 4, w: cfg.net.w, h: cfg.net.h,
+           boostUntil: 0, cooldown: 0, invulnUntil: 0, flash: 0 },
+    input: { left: false, right: false },
+    elapsed: 0,
+    hits: 0, damagePts: 0, urgentCaught: 0,
+    combo: 0, bestCombo: 0, comboPts: 0,
+    playerHits: 0,
+    over: false, banked: false
+  };
+
+  function waveCfg(){ return cfg.waves[E.wave]; }
+
+  function spawnItem(){
+    var wc = waveCfg();
+    E.itemSeq++;
+    var grievance = rng() < wc.griefShare;
+    var urgent = !grievance && wc.urgentEvery > 0 && (E.itemSeq % wc.urgentEvery === 0);
+    var kinds = ["bread", "med", "parcel"];
+    var type = grievance ? "grievance" : (urgent ? "urgent" : kinds[Math.floor(rng() * kinds.length)]);
+    var w = grievance ? 18 : 20, h = grievance ? 22 : 18;
+    var baseX = 26 + rng() * (W - 52 - w);
+    E.items.push({
+      x: baseX, y: -h, w: w, h: h, baseX: baseX, type: type,
+      fall: wc.fall * (urgent ? 1.45 : 0.85 + rng() * 0.3),
+      sway: type === "grievance" ? wc.sway * 1.8 : wc.sway * 0.5,
+      phase: rng() * 6.28
+    });
+    E.spawned++;
+  }
+
+  function addFx(text, x, y, bad){
+    E.fx.push({ text: text, x: x, y: y, t: 950, bad: !!bad });
+  }
+
+  function takeHit(reason, x, y){
+    E.playerHits++;
+    E.combo = 0;
+    E.net.invulnUntil = E.elapsed + 700;
+    E.net.flash = 700;
+    addFx(reason, x, y, true);
+  }
+
+  // FIRE is the hustle: a short burst of net speed on a cooldown
+  E.fire = function(){
+    if (E.over) return false;
+    if (E.net.cooldown > 0) return false;
+    E.net.cooldown = cfg.hustle.cooldown;
+    E.net.boostUntil = E.elapsed + cfg.hustle.duration;
+    addFx("HUSTLE", E.net.x + E.net.w/2, E.net.y - 26, false);
+    return true;
+  };
+
+  E.update = function(dt){
+    if (E.over) return;
+    E.elapsed += dt;
+    var s = dt / 1000;
+    var wc = waveCfg();
+
+    // the net slides, faster on a hustle
+    var sp = cfg.net.speed * (E.elapsed < E.net.boostUntil ? cfg.hustle.mult : 1);
+    if (E.input.left)  E.net.x -= sp * s;
+    if (E.input.right) E.net.x += sp * s;
+    E.net.x = Math.max(8, Math.min(E.net.x, W - 8 - E.net.w));
+    if (E.net.cooldown > 0) E.net.cooldown -= dt;
+    if (E.net.flash > 0) E.net.flash -= dt;
+
+    // the windows keep sending needs
+    if (E.spawned < wc.count){
+      E.spawnTimer -= dt;
+      if (E.spawnTimer <= 0){ spawnItem(); E.spawnTimer = wc.spawnGap; }
+    }
+
+    // items fall and drift; the net catches, the cobbles judge
+    for (var i = E.items.length - 1; i >= 0; i--){
+      var it = E.items[i];
+      it.y += it.fall * s;
+      it.x = it.baseX + Math.sin(E.elapsed / 600 + it.phase) * it.sway;
+
+      if (rectsOverlap(it.x, it.y, it.w, it.h, E.net.x, E.net.y - 8, E.net.w, E.net.h + 8)){
+        E.items.splice(i, 1);
+        if (it.type === "grievance"){
+          if (E.elapsed >= E.net.invulnUntil)
+            takeHit((cfg.lines && cfg.lines.drop) || "A GRIEVANCE STUCK TO THE NET",
+              it.x + it.w/2, E.net.y - 20);
+          continue;
+        }
+        var pts = cfg.hitPts * (it.type === "urgent" ? 2 : 1);
+        if (it.type === "urgent") E.urgentCaught++;
+        E.hits++;
+        E.damagePts += pts;
+        E.combo++;
+        if (E.combo > E.bestCombo) E.bestCombo = E.combo;
+        var line = (it.type === "urgent" ? "URGENT +" : "+") + pts;
+        if (E.combo % cfg.comboEvery === 0){
+          E.comboPts += cfg.comboBonus;
+          line = "STREAK x" + E.combo + " +" + cfg.comboBonus;
+        }
+        addFx(line, it.x + it.w/2, E.net.y - 22, false);
+        continue;
+      }
+
+      if (it.y + it.h >= floorY + 18){
+        E.items.splice(i, 1);
+        if (it.type === "grievance"){
+          addFx("FILED", it.x + it.w/2, floorY - 8, false);
+        } else {
+          takeHit((cfg.lines && cfg.lines.through) || "A NEED HIT THE COBBLES",
+            it.x + it.w/2, floorY - 18);
+        }
+      }
+    }
+
+    // floating feedback decays
+    for (var f = E.fx.length - 1; f >= 0; f--){
+      E.fx[f].t -= dt; E.fx[f].y -= 20 * s;
+      if (E.fx[f].t <= 0) E.fx.splice(f, 1);
+    }
+
+    // wave and game progression
+    if (E.spawned >= wc.count && E.items.length === 0){
+      if (E.wave < cfg.waves.length - 1){
+        E.wave++; E.spawned = 0; E.spawnTimer = 900; E.itemSeq = 0;
+        addFx("SHIFT " + (E.wave + 1), W/2, H/2 - 40, false);
+      } else {
+        E.over = true;
+      }
+    }
+  };
+
+  E.score = function(){
+    var noHit = (E.playerHits === 0) ? cfg.noHitBonus : 0;
+    var speed = E.over
+      ? Math.max(0, Math.min(cfg.speedCap, Math.round(cfg.par - E.elapsed / 1000)))
+      : 0;
+    return {
+      damage: E.damagePts,
+      comboPts: E.comboPts,
+      bestCombo: E.bestCombo,
+      noHit: noHit,
+      speed: speed,
+      total: E.damagePts + E.comboPts + noHit + speed
+    };
+  };
+
+  return E;
+}
+
+/* One dispatcher: each chapter names its engine in its arcade config,
+   per the roadmap. Unknown or missing engines fall back to the shooter. */
+function makeArcade(cfg){
+  if (cfg.engine === "catch") return CatchEngine(cfg);
+  return ArcadeEngine(cfg);
+}
+
 /* ---------- Arcade UI and flow ---------- */
 var panelArcade = document.getElementById("panel-arcade");
 var arcadeInner = document.getElementById("arcade-inner");
@@ -3194,12 +3366,12 @@ function renderArcadeIntro(){
   room.appendChild(el("div", "place", ARCADE_CFG.title));
   room.appendChild(el("div", "beatno", CUR.name.split(":")[0] + " ARCADE \u2022 THE BONUS ROUND"));
   room.appendChild(el("div", "speech", ARCADE_CFG.intro));
-  room.appendChild(el("div", "rules",
-    "<b>" + ARCADE_CFG.hitVerb + "</b> +" + ARCADE_CFG.hitPts + " per blow<br>"
+  room.appendChild(el("div", "rules", ARCADE_CFG.rulesHtml ||
+    ("<b>" + ARCADE_CFG.hitVerb + "</b> +" + ARCADE_CFG.hitPts + " per blow<br>"
     + "<b>STREAK OF " + ARCADE_CFG.comboEvery + "</b> +" + ARCADE_CFG.comboBonus + " each time, dodge everything to keep it alive<br>"
     + "<b>CLEAN SHEET</b> +" + ARCADE_CFG.noHitBonus + " if nothing touches you and nothing gets through<br>"
     + "<b>THE CLOCK</b> up to +" + ARCADE_CFG.speedCap + " for finishing fast<br>"
-    + "MOVE: LEFT and RIGHT \u2022 FIRE: SPACE or A"));
+    + "MOVE: LEFT and RIGHT \u2022 FIRE: SPACE or A")));
   var go = el("button", "btn tick", ARCADE_CFG.startLabel);
   go.addEventListener("click", startArcade);
   room.appendChild(go);
@@ -3215,7 +3387,7 @@ function renderArcadeIntro(){
 }
 
 function startArcade(){
-  arcade = ArcadeEngine(ARCADE_CFG);
+  arcade = makeArcade(ARCADE_CFG);
   panelArcade.classList.remove("open");
   arcadeInner.innerHTML = "";
   if (elHud) elHud.style.display = "none";
@@ -3256,9 +3428,9 @@ function renderArcadeSummary(s){
     tr.appendChild(el("td", "", String(val)));
     tbl.appendChild(tr);
   }
-  row("Damage dealt", arcade.hits + " hits  (+" + s.damage + ")");
+  row(ARCADE_CFG.sumLabel || "Damage dealt", arcade.hits + " " + (ARCADE_CFG.sumUnit || "hits") + "  (+" + s.damage + ")");
   row("Best streak", "x" + s.bestCombo + "  (+" + s.comboPts + ")");
-  row("Clean sheet", s.noHit ? "+" + s.noHit : "spoiled (" + arcade.playerHits + " taken)");
+  row("Clean sheet", s.noHit ? "+" + s.noHit : "spoiled (" + arcade.playerHits + " " + (ARCADE_CFG.spoilUnit || "taken") + ")");
   row("Speed bonus", "+" + s.speed + "  (" + Math.round(arcade.elapsed/1000) + "s, par " + ARCADE_CFG.par + ")");
   row("ARCADE TOTAL", "+" + s.total, "total");
   room.appendChild(tbl);
@@ -3269,6 +3441,11 @@ function renderArcadeSummary(s){
   var again = el("button", "btn tick", "PLAY AGAIN");
   again.addEventListener("click", startArcade);
   room.appendChild(again);
+  if (nextChapterId()){
+    var onward = el("button", "btn tick", "ONWARD TO " + CHAPTERS[nextChapterId()].name);
+    onward.addEventListener("click", goNextChapter);
+    room.appendChild(onward);
+  }
   var fp = el("button", "btn", "FREE PLAY: RUN THE TOWN");
   fp.addEventListener("click", function(){ openFreePlay(); });
   room.appendChild(fp);
@@ -3278,6 +3455,9 @@ function renderArcadeSummary(s){
     resetRun();
   });
   room.appendChild(walk);
+  var all = el("button", "btn ghost", "ALL CHAPTERS");
+  all.addEventListener("click", backToChapterSelect);
+  room.appendChild(all);
   arcadeInner.appendChild(room);
 }
 
@@ -3588,6 +3768,27 @@ function gateOpen(){
   return insightCount() === LESSON_IDS.length && G.institutePassed && G.deskPassed && !G.chapterDone;
 }
 
+function nextChapterId(){
+  var i = CHAPTER_ORDER.indexOf(CHAPTER_ID);
+  var nid = CHAPTER_ORDER[i + 1];
+  return (nid && CHAPTERS[nid] && chapterUnlocked(nid)) ? nid : null;
+}
+function goNextChapter(){
+  var nid = nextChapterId();
+  if (!nid) return;
+  panelComplete.classList.remove("open");
+  closeArcade();
+  startChapter(nid);
+}
+function backToChapterSelect(){
+  panelComplete.classList.remove("open");
+  closeArcade();
+  sceneHide();
+  panelTitle.classList.add("open");
+  G.scene = "TITLE";
+  refreshTitle();
+}
+
 function completeChapter(){
   G.chapterDone = true;
   G.scene = "COMPLETE";
@@ -3627,11 +3828,19 @@ function completeChapter(){
   completeInner.appendChild(el("div", "banked",
     "LIFETIME TOTAL: " + G.lifetime + (Store.usingMemory() ? "<br>(saved for this session)" : "<br>(saved on this device)")));
   completeInner.appendChild(el("div", "sub",
-    "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Two doors are open now: the arcade is pure candy, and Free Play hands you the chair with no script and no clock."));
+    nextChapterId()
+      ? "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Three doors are open now: the arcade is pure candy, Free Play hands you the chair with no script and no clock, and the next town just unlocked its gates."
+      : "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Two doors are open now: the arcade is pure candy, and Free Play hands you the chair with no script and no clock."));
 
   var play = el("button", "btn tick", "PLAY THE ARCADE");
   play.addEventListener("click", openArcade);
   completeInner.appendChild(play);
+
+  if (nextChapterId()){
+    var onward = el("button", "btn tick", "ONWARD TO " + CHAPTERS[nextChapterId()].name);
+    onward.addEventListener("click", goNextChapter);
+    completeInner.appendChild(onward);
+  }
 
   var fp = el("button", "btn", "FREE PLAY: RUN THE TOWN");
   fp.addEventListener("click", function(){ openFreePlay(); });
@@ -4359,7 +4568,116 @@ function renderArcadeDispatch(){
   }
 }
 
+/* The courtyard at dusk: the SAFETY NET frame. Warm brick, lit windows
+   the needs fall from, a laundry line, the waiting folk, and the net. */
+function renderCatchNet(){
+  if (!ctx || !arcade) return;
+  var A = arcade, W = A.W, H = A.H;
+  // dusk air
+  ctx.fillStyle = "#241b14"; ctx.fillRect(0, 0, W, H);
+  // the courtyard wall and its window rows
+  ctx.fillStyle = "#3a241c"; ctx.fillRect(0, 0, W, 130);
+  ctx.fillStyle = "#6e3231"; ctx.fillRect(0, 126, W, 6);
+  for (var wx = 24; wx < W - 30; wx += 56){
+    for (var wy = 18; wy < 110; wy += 46){
+      var lit = tileHash(wx, wy) % 4 !== 0;
+      ctx.fillStyle = lit ? "rgba(255,225,170,.55)" : "rgba(20,14,10,.8)";
+      ctx.fillRect(wx, wy, 22, 28);
+      ctx.fillStyle = "rgba(20,14,10,.5)";
+      ctx.fillRect(wx + 10, wy, 2, 28); ctx.fillRect(wx, wy + 13, 22, 2);
+      ctx.fillStyle = "#241a12"; ctx.fillRect(wx - 3, wy + 28, 28, 4);
+    }
+  }
+  // the laundry line, still working the night shift
+  ctx.strokeStyle = "rgba(220,215,200,.35)";
+  ctx.beginPath(); ctx.moveTo(0, 148); ctx.lineTo(W, 142); ctx.stroke();
+  var swy = Math.round(Math.sin(G.time / 420) * 2);
+  var lcols = ["#efe6d2", "#3fb8af", "#e8b04b", "#a3504f"];
+  for (var lc = 0; lc < 8; lc++){
+    ctx.fillStyle = lcols[lc % 4];
+    ctx.fillRect(40 + lc * (W - 90) / 8 + (lc % 2 === 0 ? swy : -swy), 144, 14, 16);
+  }
+  // the cobbled floor and the waiting folk the net protects
+  ctx.fillStyle = "#2c211a"; ctx.fillRect(0, A.floorY + 18, W, H - A.floorY - 18);
+  ctx.fillStyle = "rgba(255,255,255,.05)";
+  for (var cb = 0; cb < W; cb += 26){ ctx.fillRect(cb, A.floorY + 26, 13, 2); }
+  for (var p = 0; p < 9; p++){
+    var px = 30 + p * (W - 60) / 9, ph = tileHash(p, 7) % 5;
+    ctx.fillStyle = ["#8a6a4c","#5b7f9e","#a3504f","#7a9e5b","#cfc8b8"][p % 5];
+    ctx.fillRect(px, A.floorY + 34 - ph, 14, 22 + ph);
+    ctx.fillStyle = "#e8c39e"; ctx.fillRect(px + 3, A.floorY + 26 - ph, 8, 8);
+  }
+  // falling items
+  for (var i = 0; i < A.items.length; i++){
+    var it = A.items[i];
+    if (it.type === "grievance"){
+      var flut = Math.sin(A.elapsed / 160 + it.phase) * 3;
+      ctx.fillStyle = "#cfc8c0"; ctx.fillRect(it.x + flut, it.y, it.w, it.h);
+      ctx.fillStyle = "rgba(60,60,70,.6)";
+      ctx.fillRect(it.x + flut + 3, it.y + 4, it.w - 6, 2);
+      ctx.fillRect(it.x + flut + 3, it.y + 9, it.w - 6, 2);
+      ctx.fillRect(it.x + flut + 3, it.y + 14, it.w - 9, 2);
+      ctx.fillStyle = "#a3504f"; ctx.fillRect(it.x + flut + it.w - 7, it.y + it.h - 6, 5, 4);
+    } else if (it.type === "urgent"){
+      var pulse = Math.floor(A.elapsed / 180) % 2 === 0;
+      ctx.fillStyle = pulse ? "#e25549" : "#a83a32";
+      ctx.fillRect(it.x, it.y, it.w, it.h);
+      ctx.fillStyle = "#efe6d2";
+      ctx.fillRect(it.x + it.w/2 - 2, it.y + 3, 4, it.h - 6);
+      ctx.fillRect(it.x + 3, it.y + it.h/2 - 2, it.w - 6, 4);
+    } else if (it.type === "bread"){
+      ctx.fillStyle = "#caa06a"; ctx.fillRect(it.x, it.y + 4, it.w, it.h - 6);
+      ctx.fillStyle = "#e8b04b"; ctx.fillRect(it.x + 2, it.y + 2, it.w - 4, 6);
+      ctx.fillStyle = "rgba(0,0,0,.15)";
+      ctx.fillRect(it.x + 4, it.y + 6, 2, it.h - 10); ctx.fillRect(it.x + it.w - 7, it.y + 6, 2, it.h - 10);
+    } else if (it.type === "med"){
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(it.x, it.y, it.w, it.h);
+      ctx.fillStyle = "#3fb8af";
+      ctx.fillRect(it.x + it.w/2 - 2, it.y + 3, 4, it.h - 6);
+      ctx.fillRect(it.x + 3, it.y + it.h/2 - 2, it.w - 6, 4);
+    } else {
+      ctx.fillStyle = "#8a5a3c"; ctx.fillRect(it.x, it.y, it.w, it.h);
+      ctx.fillStyle = "#5c3a25"; ctx.fillRect(it.x, it.y + it.h/2 - 2, it.w, 4);
+      ctx.fillStyle = "#e8d8bc"; ctx.fillRect(it.x + it.w/2 - 2, it.y, 4, it.h);
+    }
+  }
+  // the net: two poles and the woven mesh between
+  var N = A.net;
+  var flash = N.flash > 0 && Math.floor(N.flash / 90) % 2 === 0;
+  ctx.fillStyle = flash ? "#e25549" : "#5c4632";
+  ctx.fillRect(N.x - 4, N.y - 14, 4, 28); ctx.fillRect(N.x + N.w, N.y - 14, 4, 28);
+  ctx.strokeStyle = flash ? "rgba(226,85,73,.9)" : "rgba(232,216,188,.85)";
+  ctx.beginPath(); ctx.moveTo(N.x, N.y - 10);
+  ctx.quadraticCurveTo(N.x + N.w/2, N.y + N.h + 6, N.x + N.w, N.y - 10); ctx.stroke();
+  for (var mx = 1; mx < 5; mx++){
+    ctx.beginPath();
+    ctx.moveTo(N.x + (N.w/5) * mx, N.y - 10);
+    ctx.lineTo(N.x + N.w/2 + (mx - 2.5) * 8, N.y + N.h + 2);
+    ctx.stroke();
+  }
+  // hustle readiness pip on the left pole
+  ctx.fillStyle = N.cooldown <= 0 ? "#3fb8af" : "rgba(63,184,175,.25)";
+  ctx.fillRect(N.x - 4, N.y - 20, 4, 4);
+  // floating feedback
+  ctx.textAlign = "center"; ctx.font = "8px 'Press Start 2P', monospace";
+  for (var f = 0; f < A.fx.length; f++){
+    var x = A.fx[f];
+    ctx.fillStyle = x.bad ? "#e25549" : "#7fe5b0";
+    ctx.globalAlpha = Math.min(1, x.t / 500);
+    ctx.fillText(x.text, x.x, x.y);
+    ctx.globalAlpha = 1;
+  }
+  // the shift HUD
+  ctx.textAlign = "left"; ctx.fillStyle = "#e8d8bc";
+  ctx.fillText("NEEDS " + A.hits, 14, 18);
+  ctx.fillText("STREAK x" + A.combo, 14, 34);
+  ctx.textAlign = "right";
+  ctx.fillText("SHIFT " + (A.wave + 1) + "/" + A.cfg.waves.length, W - 14, 18);
+  ctx.fillText(Math.floor(A.elapsed / 1000) + "s", W - 14, 34);
+}
+
 function renderArcade(){
+  if (arcade && arcade.kind === "catch"){ renderCatchNet(); return; }
   if (arcade && arcade.cfg.skin === "dispatch") renderArcadeDispatch();
   else renderArcadeTerminal();
 }
@@ -4649,29 +4967,36 @@ var CH2_DESK = {
    Same pure engine, the difficulty dialed up: four waves,
    faster falls, heavier grievance weather. */
 var CH2_ARCADE = {
-  title: "MEET THE NEED",
-  skin: "dispatch",
-  startLabel: "START THE SHIFT",
+  engine: "catch",
+  title: "THE SAFETY NET",
+  skin: "courtyard",
+  startLabel: "TAKE THE NET",
   endTitle: "END OF SHIFT",
-  hitVerb: "FILL A NEED",
-  intro: "The dispatch board is lighting up. Needs are coming down the line toward the people waiting at the bottom, and you are the courier with the parcels. Fill every need before it reaches the waiting line, and dodge the grievance forms on the way. The plan is only as good as its delivery.",
-  cleanLine: "Every need met, every grievance dodged. The board goes quiet and the town sleeps fed.",
-  hitLine: "The paperwork left a mark, and the needs got met anyway. That is the shift.",
-  lines: { through: "A NEED WENT UNMET", drop: "A GRIEVANCE LANDED" },
+  hitVerb: "CATCH A NEED",
+  sumLabel: "Needs caught",
+  sumUnit: "catches",
+  spoilUnit: "slipped or stuck",
+  intro: "The courtyard windows are open and the needs are coming down: bread, medicine, parcels, and the urgent cases that cannot wait. You hold the net the whole town wove together. Catch every need before it hits the cobbles, let the grievance forms flutter past, and remember that the urgent ones fall fastest. The commons is only as strong as its net.",
+  cleanLine: "Every need caught, every grievance dodged. The courtyard sleeps fed, and the net goes up dry.",
+  hitLine: "A few slipped and some paperwork stuck, and the courtyard got fed anyway. That is the shift.",
+  lines: { through: "A NEED HIT THE COBBLES", drop: "A GRIEVANCE STUCK TO THE NET" },
+  rulesHtml: "<b>CATCH A NEED</b> +2, urgent cases +4 and they fall fastest<br>"
+    + "<b>STREAK OF 5</b> +5 each time, miss nothing and catch no paperwork to keep it alive<br>"
+    + "<b>CLEAN SHEET</b> +25 if no need hits the cobbles and no grievance sticks<br>"
+    + "<b>THE CLOCK</b> up to +25 for finishing fast<br>"
+    + "MOVE: LEFT and RIGHT \u2022 HUSTLE: SPACE or A, a burst of speed on a cooldown",
   par: 80,
   speedCap: 25,
   noHitBonus: 25,
   hitPts: 2,
   comboEvery: 5,
   comboBonus: 5,
-  bull: { w: 40, h: 26, speed: 270 },
-  shot: { w: 8, h: 14, speed: 440, cooldown: 230 },
-  drop: { w: 12, h: 14 },
+  net: { w: 64, h: 14, speed: 250 },
+  hustle: { mult: 1.9, duration: 700, cooldown: 2200 },
   waves: [
-    { count: 10, hp: 1, fatEvery: 0, fatHp: 2, fall: 44, sway: 18, spawnGap: 900, dropPerSec: 0.14, dropFall: 150 },
-    { count: 12, hp: 1, fatEvery: 5, fatHp: 2, fall: 54, sway: 24, spawnGap: 780, dropPerSec: 0.20, dropFall: 180 },
-    { count: 13, hp: 1, fatEvery: 4, fatHp: 2, fall: 62, sway: 28, spawnGap: 680, dropPerSec: 0.26, dropFall: 205 },
-    { count: 14, hp: 1, fatEvery: 3, fatHp: 3, fall: 70, sway: 32, spawnGap: 600, dropPerSec: 0.30, dropFall: 230 }
+    { count: 10, fall: 50, sway: 14, spawnGap: 950, griefShare: 0.14, urgentEvery: 5 },
+    { count: 12, fall: 62, sway: 18, spawnGap: 800, griefShare: 0.20, urgentEvery: 4 },
+    { count: 14, fall: 74, sway: 22, spawnGap: 660, griefShare: 0.26, urgentEvery: 4 }
   ]
 };
 
@@ -4841,7 +5166,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M9.S3",
+  version: "M11.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -4886,6 +5211,11 @@ window.MF = {
     if (btns[0]) btns[0].click();
   },
   arcade: function(){ return arcade; },
+  CatchEngine: CatchEngine,
+  makeArcade: makeArcade,
+  nextChapterId: nextChapterId,
+  startChapter: startChapter,
+  goNextChapter: goNextChapter,
   arcadeUnlocked: arcadeUnlocked,
   openArcade: openArcade,
   startArcade: startArcade,
@@ -4922,6 +5252,7 @@ window.MF = {
   arrival: function(){ return arrival ? { key: arrival.key, phase: arrival.phase } : null; },
   talk: function(id){ var n=NPCS.filter(function(x){return x.id===id;})[0]; if (n) talkTo(n); },
   runPoints: function(){ return G.runPoints; },
+  lifetime: function(){ return G.lifetime; },
   arrivalGo: arrivalGo,
   arrivalLeave: arrivalLeave,
   arrivals: ARRIVALS,
@@ -4931,6 +5262,7 @@ window.MF = {
   insightCount: insightCount,
   talk: function(id){ var n=NPCS.filter(function(x){return x.id===id;})[0]; if (n) talkTo(n); },
   runPoints: function(){ return G.runPoints; },
+  lifetime: function(){ return G.lifetime; },
   setRng: function(fn){ rng = fn || Math.random; },
   buildingArt: BUILDING_ART,
   drawBuildingArt: drawBuildingArt,
