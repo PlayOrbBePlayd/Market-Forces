@@ -2052,19 +2052,19 @@ var ROOM_THEMES = {
                 props:["bookshelves","beam"],
                 bust:{ skin:"#caa06a", top:"#2a4a3c", collar:"#3fb8af", hair:"short", hairC:"#cfc8b8", acc:"glasses" } },
   union2:     { back:"#3a2222", floor:"#4a2e2a", counter:"#5c3a32", accent:"#e25549",
-                props:["banner","crowd"],
+                props:["strikebanner","showofhands"],
                 bust:{ skin:"#d79a6e", top:"#a3504f", collar:"#efe6d2", hair:"short", hairC:"#2a1c12", acc:"beard" } },
   clinic2:    { back:"#33362e", floor:"#4a4c42", counter:"#cfc8b8", accent:"#3fb8af",
-                props:["windowrow","benchrow"],
+                props:["triagedesk","careboard"],
                 bust:{ skin:"#a86a48", top:"#efe6d2", collar:"#3fb8af", hair:"curls", hairC:"#15121c", acc:"steth" } },
   coop2:      { back:"#33291f", floor:"#42352a", counter:"#54422e", accent:"#e8b04b",
-                props:["machines","handsup"],
+                props:["workbench","votetally"],
                 bust:{ skin:"#8a5a3c", top:"#5c5046", collar:"#caa06a", hair:"short", hairC:"#1d1610", acc:"none" } },
   works2:     { back:"#23323a", floor:"#2e404a", counter:"#3a505c", accent:"#3fb8af",
-                props:["pipes","gauges"],
+                props:["controlpanel"],
                 bust:{ skin:"#e0a06a", top:"#3c566e", collar:"#cfe2ef", hair:"cap",   hairC:"#22303a", acc:"none" } },
   meeting2:   { back:"#2e2a36", floor:"#3a3446", counter:"#4f4763", accent:"#b9a0d8",
-                props:["agendaboard","candles"],
+                props:["agendaeasel","coffeeurn"],
                 bust:{ skin:"#caa06a", top:"#4f4763", collar:"#e6dff2", hair:"short", hairC:"#3a2a1a", acc:"none" } },
   institute2: { back:"#1f3329", floor:"#2a4032", counter:"#3a5444", accent:"#3fb8af",
                 props:["bookshelves","banner","beam"],
@@ -2552,6 +2552,169 @@ function propRoulette(th){
   ctx.fillRect(cxp-2, cyp-R+6, 4, R*2-12);
 }
 
+/* ---------- Custom Socialism interior props. M17.S2. ---------- */
+function propStrikeBanner(th){
+  // the union wall: a row of raised banners and placards, color only, swaying
+  ctx.fillStyle = "#2a1818"; ctx.fillRect(40, 44, VIEW_W-80, 10);
+  var bsw = Math.round(Math.sin(G.time/650) * 3);
+  var bcols = ["#e25549","#a3504f","#efe6d2","#e8b04b","#e25549","#a3504f"];
+  for (var i = 0; i < 6; i++){
+    var bxp = 58 + i*92;
+    ctx.fillStyle = "#5c3a25"; ctx.fillRect(bxp+24, 54, 4, 150);
+    var tilt = (i % 2 === 0) ? bsw : -bsw;
+    ctx.fillStyle = bcols[i]; ctx.fillRect(bxp + tilt, 60, 54, 66);
+    ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.fillRect(bxp + tilt, 60, 54, 7);
+    ctx.fillStyle = (i % 2 === 0) ? "#efe6d2" : "#e8b04b";
+    ctx.fillRect(bxp + tilt + 19, 80, 16, 16);
+    ctx.fillStyle = "rgba(0,0,0,.12)"; ctx.fillRect(bxp + tilt + 8, 104, 38, 6);
+  }
+}
+function propShowOfHands(th){
+  // the hall votes: members at the back, arms rising out of phase, a count lamp
+  for (var i = 0; i < 7; i++){
+    var hx = 36 + i*84;
+    var lift = Math.round(Math.sin(G.time/300 + i) * 7);
+    ctx.fillStyle = ["#a3504f","#5c5046","#3c566e","#6e3231","#4a7553","#7a5d28","#5d3a4a"][i % 7];
+    ctx.fillRect(hx, 250, 44, 46);
+    ctx.fillStyle = ["#e8b48a","#caa06a","#8a5a3c","#d79a6e","#a86a48"][i % 5];
+    ctx.fillRect(hx+13, 232, 20, 20);
+    ctx.fillStyle = ["#2a1c12","#1d1610","#3a2a1a","#15121c"][i % 4];
+    ctx.fillRect(hx+11, 228, 24, 7);
+    ctx.fillStyle = ["#e8b48a","#caa06a","#8a5a3c","#d79a6e","#a86a48"][i % 5];
+    ctx.fillRect(hx+30, 220 - lift, 7, 34);
+    ctx.fillRect(hx+28, 208 - lift, 11, 11);
+  }
+  var lit = Math.floor(G.time/500) % 6;
+  for (var t2 = 0; t2 < 5; t2++){
+    ctx.fillStyle = t2 <= lit ? "#43d17c" : "#1f3a2a";
+    ctx.fillRect(250 + t2*30, 196, 22, 12);
+  }
+}
+function propWorkbench(th){
+  // the cooperative floor: a shared workbench, a pegboard, a vise, a turning grinder
+  ctx.fillStyle = "#3a2c1e"; ctx.fillRect(40, 250, VIEW_W-80, 16);
+  ctx.fillStyle = "#2c2016"; ctx.fillRect(40, 264, VIEW_W-80, 6);
+  ctx.fillStyle = "#241a12"; ctx.fillRect(70, 266, 12, 28); ctx.fillRect(VIEW_W-90, 266, 12, 28);
+  ctx.fillStyle = "#54422e"; ctx.fillRect(80, 120, 200, 100);
+  ctx.fillStyle = "#3a2c1e"; ctx.fillRect(86, 126, 188, 88);
+  ctx.fillStyle = "#cfc8b8";
+  ctx.fillRect(96, 134, 6, 40); ctx.fillRect(120, 138, 30, 6); ctx.fillRect(170, 134, 8, 34);
+  ctx.fillStyle = "#8a6a4c"; ctx.fillRect(210, 140, 40, 10); ctx.fillRect(224, 150, 12, 30);
+  ctx.fillStyle = "#5a5e66"; ctx.fillRect(150, 234, 30, 18);
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(156, 230, 6, 22);
+  ctx.fillStyle = th.accent; ctx.fillRect(300, 240, 14, 10); ctx.fillRect(330, 242, 10, 8);
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(440, 224, 40, 28);
+  var gspin = Math.floor(G.time/60) % 2 === 0;
+  ctx.fillStyle = "#6a6e76"; ctx.fillRect(470, 220, 26, 26);
+  ctx.fillStyle = "#2a2c33";
+  if (gspin){ ctx.fillRect(478, 224, 10, 18); } else { ctx.fillRect(474, 230, 18, 6); }
+  if (Math.floor(G.time/120) % 2 === 0){
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(496, 238, 6, 2); ctx.fillRect(502, 242, 4, 2);
+  }
+}
+function propVoteTally(th){
+  // a tally board: one member one vote, ticks accruing, a yes split that breathes
+  ctx.fillStyle = "#2a2118"; ctx.fillRect(180, 50, 280, 150);
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(190, 60, 260, 130);
+  var marks = 6 + (Math.floor(G.time/700) % 14);
+  ctx.fillStyle = "#3f6e3a";
+  for (var m = 0; m < marks; m++){
+    var mx = 202 + (m % 10) * 24, my = 74 + Math.floor(m / 10) * 22;
+    ctx.fillRect(mx, my, 3, 16);
+  }
+  var yes = 150 + Math.round(Math.sin(G.time/900) * 30);
+  ctx.fillStyle = "#3fb8af"; ctx.fillRect(196, 164, yes, 16);
+  ctx.fillStyle = "#a3504f"; ctx.fillRect(196 + yes, 164, 248 - yes, 16);
+  ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(196, 164, 248, 3);
+}
+function propTriageDesk(th){
+  // the clinic triage desk: a green cross, a calm vitals trace, a desk slab
+  ctx.fillStyle = "#cfc8b8"; ctx.fillRect(60, 70, 180, 120);
+  ctx.fillStyle = "#3fb8af"; ctx.fillRect(135, 92, 30, 76); ctx.fillRect(112, 116, 76, 28);
+  ctx.fillStyle = "#11161a"; ctx.fillRect(280, 80, 220, 100);
+  ctx.fillStyle = "#0a0e12"; ctx.fillRect(288, 88, 204, 84);
+  var bp = Math.floor(G.time/140) % 204;
+  ctx.fillStyle = "#43d17c";
+  for (var px = 0; px < 200; px += 4){
+    var beat = (Math.abs(px - bp) < 8) ? Math.round(Math.sin((px-bp)*0.8) * 22) : 0;
+    ctx.fillRect(290 + px, 130 - beat, 3, 3);
+  }
+  ctx.fillStyle = "#b3ac9a"; ctx.fillRect(40, 250, VIEW_W-80, 16);
+  ctx.fillStyle = "#928c7d"; ctx.fillRect(40, 264, VIEW_W-80, 6);
+}
+function propCareBoard(th){
+  // a free care board: color slots, no readable text, a now serving lamp moving
+  ctx.fillStyle = "#33362e"; ctx.fillRect(150, 54, 340, 150);
+  ctx.fillStyle = "#22261e"; ctx.fillRect(160, 64, 320, 130);
+  var serving = Math.floor(G.time/900) % 6;
+  for (var r = 0; r < 6; r++){
+    ctx.fillStyle = (r === serving) ? "#3fb8af" : "#3a4038";
+    ctx.fillRect(172, 74 + r*20, 16, 12);
+    ctx.fillStyle = "rgba(207,200,184,.5)";
+    ctx.fillRect(198, 77 + r*20, 240 - (r % 3) * 30, 6);
+    if (r === serving){ ctx.fillStyle = "#e8b04b"; ctx.fillRect(452, 76 + r*20, 14, 10); }
+  }
+}
+function propControlPanel(th){
+  // the people's works: pipes across the wall, a bank of gauges, switches, a valve
+  ctx.fillStyle = "#3a505c"; ctx.fillRect(0, 64, VIEW_W, 20); ctx.fillRect(0, 110, VIEW_W, 14);
+  ctx.fillStyle = "#2a3a44"; ctx.fillRect(90, 64, 14, 230); ctx.fillRect(470, 84, 14, 210);
+  ctx.fillStyle = th.accent; ctx.fillRect(180, 58, 22, 32); ctx.fillRect(540, 104, 22, 32);
+  for (var g = 0; g < 4; g++){
+    var gx = 150 + g*90;
+    ctx.fillStyle = "#15121c"; ctx.fillRect(gx, 150, 50, 50);
+    ctx.fillStyle = "#cfe2ef"; ctx.fillRect(gx+6, 156, 38, 38);
+    var nd = Math.round(Math.sin(G.time/300 + g) * 10);
+    ctx.fillStyle = "#e25549"; ctx.fillRect(gx+24, 162, 3, 16 + nd);
+  }
+  for (var s = 0; s < 6; s++){
+    var sx2 = 150 + s*64;
+    ctx.fillStyle = "#2a2c33"; ctx.fillRect(sx2, 230, 40, 30);
+    var up = (Math.floor(G.time/400) + s) % 2 === 0;
+    ctx.fillStyle = "#5a5e66"; ctx.fillRect(sx2+14, up ? 232 : 244, 12, 14);
+    ctx.fillStyle = up ? "#43d17c" : "#7a231f"; ctx.fillRect(sx2+16, 224, 8, 5);
+  }
+  var va = Math.floor(G.time/600) % 4;
+  ctx.fillStyle = "#3fb8af"; ctx.fillRect(540, 200, 44, 44);
+  ctx.fillStyle = "#2a3a44";
+  if (va === 0 || va === 2){ ctx.fillRect(558, 204, 8, 36); ctx.fillRect(544, 218, 36, 8); }
+  else { ctx.fillRect(548, 208, 28, 28); }
+}
+function propAgendaEasel(th){
+  // the long meeting: a flip easel of color bullet rows, and a clock near midnight
+  ctx.fillStyle = "#5c4632"; ctx.fillRect(150, 60, 6, 220); ctx.fillRect(330, 60, 6, 220);
+  ctx.fillStyle = "#2e2a36"; ctx.fillRect(150, 56, 190, 150);
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(158, 64, 174, 134);
+  for (var r2 = 0; r2 < 6; r2++){
+    ctx.fillStyle = ["#e25549","#3fb8af","#e8b04b","#4a7553","#b9a0d8","#a3504f"][r2];
+    ctx.fillRect(170, 76 + r2*20, 12, 12);
+    ctx.fillStyle = "rgba(20,18,24,.4)"; ctx.fillRect(190, 80 + r2*20, 124 - (r2 % 3)*18, 6);
+  }
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(430, 70, 70, 70);
+  ctx.fillStyle = "#2e2a36"; ctx.fillRect(438, 78, 54, 54);
+  var ha = (G.time / 1500) % 6.283;
+  ctx.fillStyle = "#e25549";
+  ctx.fillRect(465, 105, 2 + Math.round(Math.abs(Math.cos(ha))*18), 3);
+  ctx.fillStyle = "#cfc8b8"; ctx.fillRect(464, 86, 3, 22);
+}
+function propCoffeeUrn(th){
+  // the urn that keeps the meeting alive: a drip, a rising steam wisp, stacked cups
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(40, 252, VIEW_W-80, 14);
+  ctx.fillStyle = "#6a6e76"; ctx.fillRect(250, 196, 60, 60);
+  ctx.fillStyle = "#5a5e66"; ctx.fillRect(256, 190, 48, 10);
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(304, 224, 12, 6);
+  var urnOn = Math.floor(G.time/700) % 2 === 0;
+  ctx.fillStyle = urnOn ? "#e25549" : "#5a201c"; ctx.fillRect(262, 210, 8, 6);
+  var drip = Math.floor(G.time/200) % 5;
+  ctx.fillStyle = "#3a2418"; ctx.fillRect(308, 232 + drip*3, 3, 4);
+  ctx.fillStyle = "#cfc8b8"; ctx.fillRect(304, 246, 14, 8);
+  var usw = Math.round(Math.sin(G.time/240) * 4);
+  ctx.fillStyle = "rgba(220,220,225,.4)";
+  ctx.fillRect(276 + usw, 176, 5, 12); ctx.fillRect(280 - usw, 162, 5, 12);
+  ctx.fillStyle = "#e8d8bc";
+  ctx.fillRect(360, 240, 16, 14); ctx.fillRect(362, 232, 12, 10); ctx.fillRect(364, 226, 8, 8);
+}
+
 var ROOM_PROPS = {
   windowrow: propWindowRow, machines: propMachines, columns: propColumns,
   vault: propVault, board: propBoard, bulb: propBulb, bench: propBench,
@@ -2566,7 +2729,11 @@ var ROOM_PROPS = {
   assemblyline: propAssemblyLine, tellercage: propTellerCage, vaultdoor: propVaultDoor,
   tradingpit: propTradingPit, tickerwall: propTickerWall, whiteboard: propWhiteboard,
   beanbags: propBeanbags, bottleshelf: propBottleShelf, neonsign: propNeonSign,
-  roulette: propRoulette
+  roulette: propRoulette,
+  strikebanner: propStrikeBanner, showofhands: propShowOfHands,
+  workbench: propWorkbench, votetally: propVoteTally,
+  triagedesk: propTriageDesk, careboard: propCareBoard,
+  controlpanel: propControlPanel, agendaeasel: propAgendaEasel, coffeeurn: propCoffeeUrn
 };
 
 function drawRoomBust(cx2, midY, cfg){
@@ -9296,7 +9463,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M17.S1",
+  version: "M17.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
