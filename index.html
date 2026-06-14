@@ -442,7 +442,7 @@ function isSolid(tx,ty){
    so a returning player keeps Free Play and cleared chapter state
    across sessions. Short runs, permanent progress. */
 var PROGRESS_KEY = "mf_progress";
-var CHAPTER_ORDER = ["ch0", "chF", "ch1", "ch2", "ch3", "chP"];
+var CHAPTER_ORDER = ["ch0", "chF", "ch1", "ch2", "ch3", "chP", "chV"];
 function blankChapterProgress(){ return { cleared: false, clears: 0, bestDesk: 0, bestArcade: 0 }; }
 function freshProgress(){
   var p = {};
@@ -804,7 +804,7 @@ function updateCritters(dt){
     var dx = c.tx - c.x, dy = c.ty - c.y;
     var d = Math.sqrt(dx*dx + dy*dy);
     if (d > 2){
-      var sp = c.kind === "rat" ? 92 : c.kind === "seagull" ? 48 : c.kind === "sparrow" ? 66 : c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : c.kind === "swan" ? 22 : c.kind === "robin" ? 70 : c.kind === "patroldog" ? 58 : c.kind === "paradeflock" ? 30 : c.kind === "kestrel" ? 24 : c.kind === "dolphin" ? 64 : c.kind === "gull" ? 52 : c.kind === "flyingfish" ? 88 : c.kind === "seaturtle" ? 16 : c.kind === "frigatebird" ? 30 : c.kind === "pelican" ? 38 : 52;
+      var sp = c.kind === "rat" ? 92 : c.kind === "seagull" ? 48 : c.kind === "sparrow" ? 66 : c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : c.kind === "swan" ? 22 : c.kind === "robin" ? 70 : c.kind === "patroldog" ? 58 : c.kind === "paradeflock" ? 30 : c.kind === "kestrel" ? 24 : c.kind === "dolphin" ? 64 : c.kind === "gull" ? 52 : c.kind === "flyingfish" ? 88 : c.kind === "seaturtle" ? 16 : c.kind === "frigatebird" ? 30 : c.kind === "pelican" ? 38 : c.kind === "skydrone" ? 66 : c.kind === "servobot" ? 40 : c.kind === "butterdrone" ? 50 : c.kind === "robird" ? 70 : c.kind === "petbot" ? 58 : c.kind === "spheredroid" ? 30 : 52;
       c.x += dx/d * sp * dt/1000;
       c.y += dy/d * sp * dt/1000;
       c.flip = dx < 0 ? -1 : 1;
@@ -826,6 +826,7 @@ function drawDecorItem(d, sx, sy){
   if (CUR.theme === "stoneage") return drawStoneAgeDecor(d, sx, sy);
   if (CUR.theme === "feudal") return drawFeudalDecor(d, sx, sy);
   if (CUR.theme === "pirate") return drawPirateDecor(d, sx, sy);
+  if (CUR.theme === "future") return drawVenusDecor(d, sx, sy);
   if (d.kind === "billboard"){
     // a digital board cycling abstract color bars, no readable text
     ctx.fillStyle = "#26282e"; ctx.fillRect(sx+4, sy-30, 5, 48); ctx.fillRect(sx+52, sy-30, 5, 48);
@@ -1328,6 +1329,7 @@ function drawDecorItem(d, sx, sy){
 function drawCritter(c, sx, sy){
   if (CUR.theme === "stoneage") return drawStoneAgeCritter(c, sx, sy);
   if (CUR.theme === "pirate") return drawPirateCritter(c, sx, sy);
+  if (CUR.theme === "future") return drawVenusCritter(c, sx, sy);
   if (c.kind === "pigeon"){
     var peck = Math.floor(G.time/420) % 3 === 0 ? 2 : 0;
     ctx.fillStyle = "#7a8494"; ctx.fillRect(sx, sy+4, 10, 7);
@@ -1805,6 +1807,7 @@ function drawGroundTile(c, x, y, sx, sy){
   if (CUR.theme === "planned") return drawPlannedGround(c, x, y, sx, sy);
   if (CUR.theme === "feudal") return drawFeudalGround(c, x, y, sx, sy);
   if (CUR.theme === "pirate") return drawPirateGround(c, x, y, sx, sy);
+  if (CUR.theme === "future") return drawVenusGround(c, x, y, sx, sy);
   // the old cobble checker, kept as the fallback for future chapters
   ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
   ctx.fillRect(sx, sy, TILE, TILE);
@@ -6633,6 +6636,42 @@ function render(){
       ctx.fillStyle = "#efe6d2"; ctx.fillRect(hx+h.w/2-11+bil2, hy-4, 22, 14);
       ctx.fillStyle = "#9a2f2a"; ctx.fillRect(hx+h.w/2+2, hy-12, 8, 5);
       ctx.fillStyle = "rgba(214,238,245,.45)"; ctx.fillRect(hx+2, hy+h.h-2, h.w-4, 3);
+    } else if (h.skin==="freightsled"){
+      // an automated freight sled: a low chassis with a glowing cargo block
+      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(hx+3, hy+h.h-3, h.w-6, 5);
+      ctx.fillStyle = "#3a5260"; ctx.fillRect(hx+2, hy+8, h.w-4, h.h-10);
+      ctx.fillStyle = "#4a6a7a"; ctx.fillRect(hx+4, hy+8, h.w-8, 3);
+      ctx.fillStyle = "rgba(120,225,224,.5)"; ctx.fillRect(hx+6, hy+12, h.w-12, 6);
+      var fdir = (h.dir !== undefined && h.dir < 0) ? -1 : 1;
+      var lit = Math.floor(G.time/300)%2===0;
+      ctx.fillStyle = lit ? "#78e9e0" : "#2a6a64";
+      ctx.fillRect(fdir>0 ? hx+h.w-4 : hx, hy+11, 4, 5);
+      ctx.fillStyle = "rgba(120,225,224,.25)"; ctx.fillRect(hx+2, hy+h.h-2, h.w-4, 2);
+    } else if (h.skin==="diagfield"){
+      // a drifting diagnostic field: a soft scanning bubble with a cross
+      var dr = h.w/2;
+      ctx.fillStyle = "rgba(120,225,224,.18)";
+      ctx.beginPath(); ctx.arc(hx+dr, hy+dr, dr, 0, 7); ctx.fill();
+      ctx.strokeStyle = "rgba(190,235,240,.7)";
+      ctx.beginPath(); ctx.arc(hx+dr, hy+dr, dr-1, 0, 7); ctx.stroke();
+      var sc = (G.time/30) % (h.h);
+      ctx.fillStyle = "rgba(190,255,235,.5)"; ctx.fillRect(hx+4, hy+sc, h.w-8, 1);
+      ctx.fillStyle = "rgba(120,225,224,.8)";
+      ctx.fillRect(hx+dr-1, hy+dr-6, 2, 12); ctx.fillRect(hx+dr-6, hy+dr-1, 12, 2);
+    } else if (h.skin==="tidyswarm"){
+      // a tidy swarm: a cluster of tiny bots orbiting a soft core
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(hx+4, hy+h.h-3, h.w-8, 4);
+      ctx.fillStyle = "rgba(150,200,235,.25)";
+      ctx.beginPath(); ctx.arc(hx+h.w/2, hy+h.h/2, h.w/2, 0, 7); ctx.fill();
+      var oa = G.time/200;
+      for (var sb=0; sb<5; sb++){
+        var a = oa + sb*1.256;
+        var ox = hx+h.w/2 + Math.cos(a)*(h.w/2-4);
+        var oy = hy+h.h/2 + Math.sin(a)*(h.h/2-4);
+        ctx.fillStyle = sb%2===0 ? "#cfd8e0" : "#78e9e0";
+        ctx.fillRect(ox-2, oy-2, 4, 4);
+      }
+      ctx.fillStyle = "#bfe9ea"; ctx.beginPath(); ctx.arc(hx+h.w/2, hy+h.h/2, 4, 0, 7); ctx.fill();
     } else if (h.type==="cart"){
       ctx.fillStyle = "#a3713c"; ctx.fillRect(hx+3, hy, h.w-6, 8);
       ctx.fillStyle = "#241a12";
@@ -6742,6 +6781,8 @@ function render(){
     drawFeudalPlayer(px, py, bobp);
   } else if (CUR.theme === "pirate"){
     drawShipPlayer(px, py, bobp);
+  } else if (CUR.theme === "future"){
+    drawVenusPlayer(px, py, bobp);
   } else {
   ctx.fillStyle = "#2c4f7c"; ctx.fillRect(px, py+8+bobp, p.w, p.h-8);     // coat
   ctx.fillStyle = "#e8c39e"; ctx.fillRect(px+4, py+bobp, p.w-8, 12);      // face
@@ -11348,6 +11389,519 @@ CHAPTERS.chP = {
 };
 
 
+
+/* =====================================================
+   CHAPTER THE VENUS PROJECT. Chapter 6, internal id chV.
+   The finale. Milestone 20. A Resource Based Economy
+   rendered five hundred years on: a circular city of flying
+   cars, robots, and automated abundance, where resources are
+   allocated by need and there is no money. Order by total
+   design, the opposite pole from the stateless pirate sea it
+   follows. The speculative finale, flagged as informed
+   speculation throughout. Built to the Level 0 quality bar
+   from day one. Stage 1 lays the luminous city: the plaza,
+   the sites, the resident bots and microdrones, the decor,
+   the hazards, and the player on a hover plate. The shared
+   engines carry the lesson, the desk, the arcade, and free
+   play in the stages that follow.
+   ===================================================== */
+
+var CHV_MAP = [
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..........................T.......T",
+  "T.........C..TT....................T",
+  "T.....................TT...........T",
+  "T........T..............C..........T",
+  "T..............C...................T",
+  "T..................................T",
+  "T..........TT......................T",
+  "T...................C...T..........T",
+  "T..................................T",
+  "T............C.....................T",
+  "T................TT......T.........T",
+  "T.....................C............T",
+  "T..................................T",
+  "T...............C..................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+];
+
+/* The ring of sites around the central plaza. Four lesson
+   pavilions, two temptations, and the Institute, each a
+   luminous structure on its own light plinth. */
+var CHV_BUILDINGS = [
+  { id:"institute", name:"THE INSTITUTE",         kind:"institute",  x:14, y:2,  w:8, h:5, door:{x:17, y:6},  hue:"#2f6e7a", roof:"#1f4f5a", sign:"INSTITUTE" },
+  { id:"allochub",  name:"THE ALLOCATION HUB",    kind:"lesson",     x:2,  y:3,  w:8, h:5, door:{x:6,  y:7},  hue:"#3a6e8a", roof:"#244c63", sign:"ALLOCATION" },
+  { id:"designlab", name:"THE DESIGN LAB",        kind:"lesson",     x:26, y:3,  w:8, h:5, door:{x:29, y:7},  hue:"#4a6e9e", roof:"#314e72", sign:"DESIGN" },
+  { id:"fabfarm",   name:"FARM AND FABRICATION",  kind:"lesson",     x:2,  y:12, w:8, h:5, door:{x:6,  y:16}, hue:"#3f7a5a", roof:"#28543c", sign:"FAB AND FARM" },
+  { id:"archive",   name:"THE FRESCO ARCHIVE",    kind:"lesson",     x:26, y:12, w:8, h:5, door:{x:29, y:16}, hue:"#6e6a9e", roof:"#474472", sign:"ARCHIVE" },
+  { id:"immersion", name:"THE IMMERSION COMMONS", kind:"temptation", x:3,  y:20, w:7, h:4, door:{x:6,  y:23}, hue:"#5a4a8a", roof:"#3a3060", sign:"IMMERSION" },
+  { id:"status",    name:"THE STATUS COURT",      kind:"temptation", x:26, y:20, w:7, h:4, door:{x:29, y:23}, hue:"#8a6a3c", roof:"#5d4524", sign:"STATUS" }
+];
+
+var CHV_NPCS = [
+  { id:"ansa", name:"STEWARD ANSA", tx:11, ty:9, hue:"#3a6e8a",
+    lines:["No one here buys a thing. You state a need and the city's design answers it, the way water answers a slope. The hard part was never the giving. It was knowing how much to make.",
+           "We have no prices to tell us what is scarce. So we measure, and we model, and we argue. The Institute keeps a whole shelf on whether that can ever be enough."] },
+  { id:"ori", name:"TENDER ORI", tx:23, ty:11, hue:"#3f7a5a",
+    lines:["The farms and the fabs run themselves, mostly. My work is to tend what tends us, and to ask what all this free time is for.",
+           "Abundance is real. So is boredom, and so is the quiet pull to do nothing at all. The Commons down the way is honest about that trap."] },
+  { id:"vesh", name:"ARCHIVIST VESH", tx:16, ty:19, hue:"#6e6a9e",
+    lines:["Fresco drew a city with no money in it and asked us to take the drawing seriously. The Archive keeps the dream and the doubts side by side.",
+           "Five hundred years on and it still has never run at full scale. We call that honestly. The shelf inside argues both edges at their strongest."] }
+];
+
+/* City frictions reuse the shared movement types, skinned to
+   the future: a freight sled on a fixed logistics lane, a
+   drifting diagnostic field, and a tidy swarm that converges
+   on a hard sweep. Honest frictions of a dense automated city,
+   never menace. */
+var CHV_HAZARDS = [
+  { id:"sled1", type:"cart", skin:"freightsled", x:12*TILE, y:6*TILE, w:42, h:20, dir:1, speed:120,
+    minX:2*TILE, maxX:33*TILE, cost:3,
+    line:"An automated freight sled held its lane and you stepped aside. The city's logistics never wait on a person. Minus 3." },
+  { id:"sled2", type:"cart", skin:"freightsled", x:24*TILE, y:18*TILE, w:42, h:20, dir:-1, speed:134,
+    minX:2*TILE, maxX:33*TILE, cost:3,
+    line:"An automated freight sled held its lane and you stepped aside. The city's logistics never wait on a person. Minus 3." },
+  { id:"diag", type:"bubble", skin:"diagfield", x:16*TILE, y:11*TILE, w:48, h:44, vx:52, vy:40,
+    minX:5*TILE, maxX:28*TILE, minY:8*TILE, maxY:20*TILE, cost:4,
+    line:"A diagnostic field swept over you and paused to log your vitals. Helpful, and a little airless. Minus 4." },
+  { id:"swarm", type:"collector", skin:"tidyswarm", x:18*TILE, y:14*TILE, w:30, h:30, speed:76,
+    homeX:18*TILE, homeY:14*TILE, radius:TILE*5, cost:5,
+    line:"A tidy swarm converged to optimize the path you were standing in and shooed you along. Minus 5. The design has opinions about loitering." }
+];
+
+CH_DECOR.chV = [
+  { kind:"beacon",       tx:9,  ty:7 },  { kind:"beacon",      tx:25, ty:9 },
+  { kind:"holotree",     tx:13, ty:12 }, { kind:"holotree",    tx:21, ty:16 }, { kind:"holotree", tx:7, ty:18 },
+  { kind:"lightfountain",tx:18, ty:8 },
+  { kind:"hologlobe",    tx:20, ty:13 },
+  { kind:"vinewall",     tx:6,  ty:10 }, { kind:"vinewall",    tx:30, ty:13 }, { kind:"vinewall", tx:14, ty:21 },
+  { kind:"solartree",    tx:13, ty:9 },  { kind:"solartree",   tx:17, ty:18 },
+  { kind:"mistjet",      tx:11, ty:16 }, { kind:"mistjet",     tx:24, ty:6 },  { kind:"mistjet", tx:19, ty:21 },
+  { kind:"benchpod",     tx:15, ty:12 }, { kind:"benchpod",    tx:24, ty:11 },
+  { kind:"skytraffic",   tx:12, ty:5 },  { kind:"skytraffic",  tx:27, ty:17 }
+];
+
+CH_CRITTERS.chV = [
+  { kind:"skydrone",   x:14, y:5 },  { kind:"skydrone",   x:23, y:7 }, { kind:"skydrone", x:10, y:13 },
+  { kind:"servobot",   x:16, y:10 }, { kind:"servobot",   x:21, y:15 },
+  { kind:"butterdrone",x:12, y:16 }, { kind:"butterdrone",x:19, y:7 },
+  { kind:"robird",     x:8,  y:11 },
+  { kind:"petbot",     x:18, y:4 },
+  { kind:"spheredroid",x:27, y:13 }
+];
+
+/* ---------- The luminous plaza: ground ---------- */
+function drawVenusGround(c, x, y, sx, sy){
+  if (c === "."){
+    // a clean plaza: cool slate panels with glowing seams and a slow light sweep
+    var base = ((x + y) % 2 === 0) ? "#1b3450" : "#18304a";
+    ctx.fillStyle = base; ctx.fillRect(sx, sy, TILE, TILE);
+    // panel seams in soft teal
+    ctx.fillStyle = "rgba(90,200,210,.10)";
+    ctx.fillRect(sx, sy, TILE, 1); ctx.fillRect(sx, sy, 1, TILE);
+    // a pulsing light node on a subset of panels
+    if ((x * 3 + y * 5) % 6 === 0){
+      var pul = (Math.sin(G.time / 700 + x * 0.6 + y * 0.4) + 1) / 2;
+      ctx.fillStyle = "rgba(120,225,224," + (0.06 + pul * 0.12).toFixed(3) + ")";
+      ctx.fillRect(sx + 12, sy + 12, 8, 8);
+    }
+    // a diagonal light sweep drifting across the floor
+    var sweep = (G.time / 22 + x * 9 - y * 5) % 96;
+    if (sweep < 10){ ctx.fillStyle = "rgba(190,235,240,.07)"; ctx.fillRect(sx, sy, TILE, TILE); }
+  } else if (c === "T"){
+    // a biome column: a translucent glass tube of greenery with a glowing rim
+    ctx.fillStyle = "#152a40"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "rgba(90,200,210,.14)"; ctx.fillRect(sx + 5, sy + 2, TILE - 10, TILE - 2);
+    ctx.fillStyle = "#2f7a52"; ctx.fillRect(sx + 8, sy + 5, TILE - 16, TILE - 8);
+    ctx.fillStyle = "#46a06a"; ctx.fillRect(sx + 10, sy + 7, TILE - 20, TILE - 14);
+    var gl = Math.floor(G.time / 360 + x + y) % 2 === 0;
+    ctx.fillStyle = gl ? "rgba(120,225,224,.6)" : "rgba(120,225,224,.3)";
+    ctx.fillRect(sx + 5, sy + 2, TILE - 10, 2);
+    ctx.fillStyle = "#bfe9ea"; ctx.fillRect(sx + 14, sy + 9, 3, 6);
+  } else if (c === "C"){
+    // a light well: a circular glow set into the floor with rising motes
+    ctx.fillStyle = "#16304a"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "rgba(120,225,224,.16)"; ctx.beginPath(); ctx.arc(sx + 16, sy + 16, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(190,235,240,.5)"; ctx.beginPath(); ctx.arc(sx + 16, sy + 16, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(232,210,150,.55)"; ctx.beginPath(); ctx.arc(sx + 16, sy + 16, 3, 0, 7); ctx.fill();
+    for (var m = 0; m < 3; m++){
+      var mt = (G.time / 1400 + m * 0.33 + x * 0.1) % 1;
+      ctx.fillStyle = "rgba(190,235,240," + (0.5 - mt * 0.4).toFixed(2) + ")";
+      ctx.fillRect(sx + 12 + m * 4, sy + 22 - mt * 18, 2, 2);
+    }
+  } else {
+    ctx.fillStyle = "#142840"; ctx.fillRect(sx, sy, TILE, TILE);
+  }
+}
+
+/* ---------- City decor: ambient candy of the future ---------- */
+function drawVenusDecor(d, sx, sy){
+  var t = G.time;
+  if (d.kind === "beacon"){
+    // a tall light beacon, a slow color breath up its length
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx + 10, sy + 20, 12, 4);
+    ctx.fillStyle = "#26424f"; ctx.fillRect(sx + 13, sy - 30, 6, 50);
+    var br = (Math.sin(t / 600) + 1) / 2;
+    ctx.fillStyle = "rgba(120,225,224," + (0.3 + br * 0.4).toFixed(2) + ")"; ctx.fillRect(sx + 14, sy - 28, 4, 46);
+    ctx.fillStyle = "#bfe9ea"; ctx.fillRect(sx + 12, sy - 34, 8, 6);
+    if (br > 0.6){ ctx.fillStyle = "rgba(120,225,224,.18)"; ctx.beginPath(); ctx.arc(sx + 16, sy - 31, 12, 0, 7); ctx.fill(); }
+  } else if (d.kind === "holotree"){
+    // a holographic tree projection that flickers and scans
+    var fl = Math.floor(t / 120) % 8 !== 0;
+    ctx.fillStyle = "rgba(90,200,210,.16)"; ctx.fillRect(sx + 6, sy + 22, 20, 3);
+    if (fl){
+      ctx.fillStyle = "rgba(70,200,170,.5)"; ctx.fillRect(sx + 14, sy + 4, 4, 20);
+      ctx.fillStyle = "rgba(90,225,180,.4)";
+      ctx.beginPath(); ctx.arc(sx + 16, sy + 6, 12, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(150,240,210,.5)";
+      ctx.beginPath(); ctx.arc(sx + 16, sy + 5, 7, 0, 7); ctx.fill();
+      var scan = (t / 30) % 24;
+      ctx.fillStyle = "rgba(190,255,235,.5)"; ctx.fillRect(sx + 4, sy - 6 + scan, 24, 1);
+    }
+  } else if (d.kind === "skytraffic"){
+    // a lane of flying cars drifting across, overhead
+    for (var i = 0; i < 3; i++){
+      var sp = (t / 14 + i * 60) % 160 - 40;
+      var fy = sy - 30 + i * 9;
+      ctx.fillStyle = i % 2 === 0 ? "#7fb2e5" : "#bfe9ea";
+      ctx.fillRect(sx - 30 + sp, fy, 14, 5);
+      ctx.fillStyle = "rgba(232,210,150,.7)"; ctx.fillRect(sx - 30 + sp + 13, fy + 1, 3, 3);
+      ctx.fillStyle = "rgba(120,225,224,.25)"; ctx.fillRect(sx - 30 + sp - 6, fy + 1, 6, 3);
+    }
+  } else if (d.kind === "lightfountain"){
+    // a fountain of light: rising luminous jets instead of water
+    ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(sx + 4, sy + 22, 26, 4);
+    ctx.fillStyle = "#1f4f5a"; ctx.fillRect(sx + 6, sy + 18, 22, 6);
+    for (var j = 0; j < 6; j++){
+      var jt = (t / 900 + j * 0.16) % 1;
+      var jx = sx + 8 + j * 3.4 + Math.sin(jt * 6.28 + j) * 3;
+      var jy = sy + 18 - jt * 20;
+      ctx.fillStyle = "rgba(120,225,224," + (0.7 - jt * 0.6).toFixed(2) + ")";
+      ctx.fillRect(jx, jy, 3, 4);
+    }
+    ctx.fillStyle = "rgba(190,235,240,.5)"; ctx.fillRect(sx + 8, sy + 18, 18, 2);
+  } else if (d.kind === "hologlobe"){
+    // a slowly rotating holographic globe on a pedestal
+    ctx.fillStyle = "#26424f"; ctx.fillRect(sx + 12, sy + 16, 8, 10);
+    var spin = t / 700;
+    ctx.fillStyle = "rgba(90,200,210,.3)"; ctx.beginPath(); ctx.arc(sx + 16, sy + 8, 11, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(150,240,210,.7)"; ctx.lineWidth = 1;
+    for (var r = 0; r < 3; r++){
+      ctx.beginPath();
+      ctx.ellipse ? ctx.ellipse(sx + 16, sy + 8, 10, 3 + r * 2, spin + r, 0, 7) : ctx.arc(sx + 16, sy + 8, 10 - r * 2, 0, 7);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#bfe9ea"; ctx.beginPath(); ctx.arc(sx + 16, sy + 8, 2, 0, 7); ctx.fill();
+  } else if (d.kind === "vinewall"){
+    // a vertical garden panel, leaves swaying, with grow lights
+    ctx.fillStyle = "#1c3a44"; ctx.fillRect(sx + 4, sy + 2, 24, 24);
+    var sway = Math.round(Math.sin(t / 700 + sx) * 2);
+    ctx.fillStyle = "#2f7a52";
+    for (var vx = 0; vx < 4; vx++){
+      for (var vy = 0; vy < 4; vy++){
+        ctx.fillRect(sx + 6 + vx * 6 + (vy % 2 ? sway : 0), sy + 4 + vy * 6, 5, 5);
+      }
+    }
+    ctx.fillStyle = "rgba(150,240,210,.3)"; ctx.fillRect(sx + 4, sy + 2, 24, 2);
+    var gl = Math.floor(t / 500) % 2 === 0;
+    ctx.fillStyle = gl ? "rgba(232,150,210,.4)" : "rgba(232,150,210,.2)"; ctx.fillRect(sx + 4, sy + 24, 24, 2);
+  } else if (d.kind === "solartree"){
+    // a solar collector tree, panels turning to a slow sun
+    ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(sx + 10, sy + 22, 12, 3);
+    ctx.fillStyle = "#26424f"; ctx.fillRect(sx + 14, sy + 4, 4, 20);
+    var tilt = Math.round(Math.sin(t / 1200) * 3);
+    ctx.fillStyle = "#1f3a6a";
+    ctx.fillRect(sx + 4, sy + 2 + tilt, 10, 7); ctx.fillRect(sx + 18, sy + 2 - tilt, 10, 7);
+    ctx.fillStyle = "rgba(120,180,235,.5)";
+    ctx.fillRect(sx + 5, sy + 3 + tilt, 8, 2); ctx.fillRect(sx + 19, sy + 3 - tilt, 8, 2);
+    var gl2 = Math.floor(t / 600) % 2 === 0;
+    if (gl2){ ctx.fillStyle = "rgba(232,210,150,.4)"; ctx.fillRect(sx + 14, sy + 8, 4, 3); }
+  } else if (d.kind === "mistjet"){
+    // a cooling mist jet, a soft cloud that breathes out and fades
+    var mt = (t / 1300) % 1;
+    ctx.fillStyle = "#26424f"; ctx.fillRect(sx + 13, sy + 18, 6, 6);
+    ctx.fillStyle = "rgba(190,235,240," + (0.4 - mt * 0.35).toFixed(2) + ")";
+    var sprd = mt * 14;
+    ctx.beginPath(); ctx.arc(sx + 16, sy + 14 - mt * 8, 4 + sprd, 0, 7); ctx.fill();
+  } else if (d.kind === "benchpod"){
+    // a curved seating pod with a soft underglow
+    ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(sx + 3, sy + 18, 26, 4);
+    ctx.fillStyle = "#2a4a58"; ctx.fillRect(sx + 4, sy + 10, 24, 9);
+    ctx.fillStyle = "#36606e"; ctx.fillRect(sx + 4, sy + 8, 24, 4);
+    var br = (Math.sin(t / 800) + 1) / 2;
+    ctx.fillStyle = "rgba(120,225,224," + (0.2 + br * 0.3).toFixed(2) + ")"; ctx.fillRect(sx + 4, sy + 19, 24, 2);
+  }
+}
+
+/* ---------- City critters: resident bots and microdrones ---------- */
+function drawVenusCritter(c, sx, sy){
+  var f = c.flip < 0 ? -1 : 1;
+  var t = G.time;
+  if (c.kind === "skydrone"){
+    // a sleek courier drone hovering with a sweeping sensor light
+    var hov = Math.round(Math.sin(t / 240 + (c.hx || 0)) * 3);
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx + 2, sy + 16, 12, 3);
+    ctx.fillStyle = "#cfe2ef"; ctx.fillRect(sx + 3, sy - 12 + hov, 10, 5);
+    ctx.fillStyle = "#7fb2e5"; ctx.fillRect(sx + 3, sy - 12 + hov, 10, 2);
+    var spin = Math.floor(t / 70) % 2 === 0;
+    ctx.fillStyle = "rgba(190,235,240,.6)";
+    if (spin){ ctx.fillRect(sx - 2, sy - 13 + hov, 7, 1); ctx.fillRect(sx + 11, sy - 13 + hov, 7, 1); }
+    else { ctx.fillRect(sx - 1, sy - 15 + hov, 1, 5); ctx.fillRect(sx + 14, sy - 15 + hov, 1, 5); }
+    var bl = Math.floor(t / 360) % 2 === 0;
+    ctx.fillStyle = bl ? "#78e9e0" : "#2a6a64"; ctx.fillRect(sx + 7, sy - 8 + hov, 2, 2);
+  } else if (c.kind === "servobot"){
+    // a small rolling service bot with a friendly light eye
+    var roll = Math.round(Math.sin(t / 200) * 1);
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx + 1, sy + 13, 14, 3);
+    ctx.fillStyle = "#cfd8e0"; ctx.fillRect(sx + 1, sy + 2, 14, 11);
+    ctx.fillStyle = "#9aa6b8"; ctx.fillRect(sx + 1, sy + 9, 14, 4);
+    ctx.fillStyle = "#2a3340"; ctx.fillRect(sx + 3, sy + 4, 10, 5);
+    var bl = Math.floor(t / 500) % 2 === 0;
+    ctx.fillStyle = bl ? "#78e9e0" : "#2f6a64"; ctx.fillRect(sx + (f > 0 ? 8 : 4), sy + 5, 4, 3);
+    ctx.fillStyle = "#36606e"; ctx.fillRect(sx + 2 + roll, sy + 13, 4, 3); ctx.fillRect(sx + 10 - roll, sy + 13, 4, 3);
+  } else if (c.kind === "butterdrone"){
+    // a pollinator microdrone, wings of light, drifting like a butterfly
+    var g = (t / 1000 + (c.hx || 0) * 0.06) % 1;
+    var fy = sy + 4 - Math.sin(g * 6.28) * 6;
+    var wing = Math.floor(t / 90) % 2 === 0;
+    ctx.fillStyle = "#2a3340"; ctx.fillRect(sx + 7, fy, 3, 7);
+    ctx.fillStyle = wing ? "rgba(232,150,210,.7)" : "rgba(232,150,210,.4)";
+    ctx.fillRect(sx + (wing ? 2 : 4), fy, 5, 5); ctx.fillRect(sx + 10, fy, 5, 5);
+    ctx.fillStyle = wing ? "rgba(120,225,224,.7)" : "rgba(120,225,224,.4)";
+    ctx.fillRect(sx + (wing ? 2 : 4), fy + 4, 4, 3); ctx.fillRect(sx + 10, fy + 4, 4, 3);
+  } else if (c.kind === "robird"){
+    // a robotic songbird, metal sheen, a clicking beak
+    var flap = Math.floor(t / 160 + (c.hx || 0)) % 2 === 0;
+    ctx.fillStyle = "#8aa0b0";
+    if (flap){ ctx.fillRect(sx, sy + 2, 8, 3); ctx.fillRect(sx + 8, sy + 2, 8, 3); }
+    else { ctx.fillRect(sx + 2, sy, 6, 3); ctx.fillRect(sx + 8, sy, 6, 3); }
+    ctx.fillStyle = "#aebccc"; ctx.fillRect(sx + 6, sy + 1, 5, 5);
+    ctx.fillStyle = "#78e9e0"; ctx.fillRect(sx + (f > 0 ? 9 : 6), sy + 2, 2, 2);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (f > 0 ? 11 : 5), sy + 3, 2, 1);
+  } else if (c.kind === "petbot"){
+    // a small companion bot, trotting on soft legs, a wagging light tail
+    var step = Math.floor(t / 200) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx + 2, sy + 14, 14, 3);
+    ctx.fillStyle = "#d8c0a0"; ctx.fillRect(sx + 2, sy + 5, 13, 8);
+    ctx.fillStyle = "#c0a888"; ctx.fillRect(sx + (f > 0 ? 12 : 0), sy + 3, 6, 6);
+    ctx.fillStyle = "#2a3340"; ctx.fillRect(sx + (f > 0 ? 14 : 1), sy + 5, 2, 2);
+    var wag = Math.round(Math.sin(t / 160) * 2);
+    ctx.fillStyle = "#78e9e0"; ctx.fillRect(sx + (f > 0 ? 0 : 14), sy + 4 + wag, 3, 2);
+    ctx.fillStyle = "#b09878"; ctx.fillRect(sx + 3, sy + 13, 2, 3); ctx.fillRect(sx + 11, sy + 13 - step, 2, 3);
+  } else if (c.kind === "spheredroid"){
+    // a floating sphere droid bobbing with an orbiting spark
+    var hov = Math.round(Math.sin(t / 300 + (c.hx || 0)) * 4);
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx + 3, sy + 16, 12, 3);
+    ctx.fillStyle = "#c0cad6"; ctx.beginPath(); ctx.arc(sx + 9, sy + 6 + hov, 7, 0, 7); ctx.fill();
+    ctx.fillStyle = "#8a98a8"; ctx.beginPath(); ctx.arc(sx + 9, sy + 8 + hov, 7, 0, 3.2); ctx.fill();
+    ctx.fillStyle = "#78e9e0"; ctx.beginPath(); ctx.arc(sx + 9, sy + 5 + hov, 2, 0, 7); ctx.fill();
+    var oa = t / 300;
+    ctx.fillStyle = "rgba(232,210,150,.9)";
+    ctx.fillRect(sx + 9 + Math.cos(oa) * 10 - 1, sy + 6 + hov + Math.sin(oa) * 5 - 1, 2, 2);
+  }
+}
+
+/* ---------- The player: a resident on a hover plate ---------- */
+function drawVenusPlayer(px, py, bobp){
+  var p = G.player, t = G.time;
+  var face = (p.dir === "left") ? -1 : 1;
+  // a teal hover ring stands in for the ground shadow
+  var pulse = (Math.sin(t / 240) + 1) / 2;
+  ctx.fillStyle = "rgba(120,225,224," + (0.18 + pulse * 0.22).toFixed(2) + ")";
+  ctx.beginPath(); ctx.ellipse ? ctx.ellipse(px + p.w / 2, py + p.h - 1, p.w / 2, 4, 0, 0, 7) : ctx.arc(px + p.w / 2, py + p.h - 1, p.w / 2, 0, 7); ctx.fill();
+  ctx.fillStyle = "#78e9e0"; ctx.fillRect(px + 2, py + p.h - 3 + bobp, p.w - 4, 2);
+  // a sleek luminous jumpsuit
+  ctx.fillStyle = "#2f5a6e"; ctx.fillRect(px, py + 8 + bobp, p.w, p.h - 10);
+  ctx.fillStyle = "#3f7a8e"; ctx.fillRect(px + 2, py + 9 + bobp, p.w - 4, 4);
+  ctx.fillStyle = "rgba(120,225,224,.7)"; ctx.fillRect(px + p.w / 2 - 1, py + 10 + bobp, 2, p.h - 14); // light seam
+  // face and a soft visor
+  ctx.fillStyle = "#e8c39e"; ctx.fillRect(px + 4, py + bobp, p.w - 8, 12);
+  ctx.fillStyle = "#243a44"; ctx.fillRect(px + 3, py - 3 + bobp, p.w - 6, 6);     // hair/cap
+  ctx.fillStyle = "rgba(120,225,224,.6)"; ctx.fillRect(px + 4, py + 3 + bobp, p.w - 8, 3); // visor band
+  if (p.dir !== "up"){ ctx.fillStyle = "#15121c"; ctx.fillRect(px + (face > 0 ? 7 : 5), py + 4 + bobp, 2, 2); ctx.fillRect(px + p.w - 9, py + 4 + bobp, 2, 2); }
+}
+
+/* ---------- City pavilion facades, custom per site ---------- */
+function vPlinth(bx, by, bw, bh){
+  // a luminous base platform under each structure with a soft light skirt
+  ctx.fillStyle = "rgba(120,225,224,.18)"; ctx.fillRect(bx - 8, by + bh - 12, bw + 16, 18);
+  ctx.fillStyle = "#1c3a44"; ctx.fillRect(bx - 4, by + bh - 10, bw + 8, 14);
+  ctx.fillStyle = "#2a4a58"; ctx.fillRect(bx, by + bh - 8, bw, 7);
+  var br = Math.floor(G.time / 500) % 2 === 0;
+  ctx.fillStyle = br ? "rgba(120,225,224,.6)" : "rgba(120,225,224,.35)";
+  ctx.fillRect(bx, by + bh - 2, bw, 2);
+}
+BUILDING_ART.instituteV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a domed hall of learning with a glowing oculus
+  ctx.fillStyle = "#234c57"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#2f6e7a"; ctx.fillRect(bx, by + 12, bw, 4);
+  ctx.fillStyle = "#1f4f5a"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 12, bw / 2, 3.14, 0); ctx.fill();
+  var gl = Math.floor(G.time / 500) % 2 === 0;
+  ctx.fillStyle = gl ? "#bfe9ea" : "#6ea8b0"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 8, 6, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(190,235,240,.7)"; for (var wx = bx + 8; wx < bx + bw - 6; wx += 12){ ctx.fillRect(wx, by + 22, 6, bh - 20); }
+};
+BUILDING_ART.allochubV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a hub of flowing light channels, distribution made visible
+  ctx.fillStyle = "#244c63"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#3a6e8a"; ctx.fillRect(bx, by + 12, bw, 4);
+  // radial light channels flowing outward from a core
+  var fl = (G.time / 40) % 16;
+  ctx.fillStyle = "rgba(120,225,224,.5)";
+  for (var i = 0; i < 4; i++){ ctx.fillRect(bx + 6 + i * (bw / 4), by + 18 + ((fl + i * 4) % 16), bw / 6, 3); }
+  ctx.fillStyle = "#bfe9ea"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 26, 5, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(190,235,240,.6)"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 26, 9, 0, 7); ctx.fill();
+};
+BUILDING_ART.designlabV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a lab crowned with a wireframe model under a scanning grid
+  ctx.fillStyle = "#314e72"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#4a6e9e"; ctx.fillRect(bx, by + 12, bw, 4);
+  ctx.strokeStyle = "rgba(150,200,240,.6)"; ctx.lineWidth = 1;
+  for (var gx = bx + 6; gx < bx + bw; gx += 8){ ctx.beginPath(); ctx.moveTo(gx, by + 18); ctx.lineTo(gx, by + bh - 2); ctx.stroke(); }
+  // a floating wireframe model above the roof
+  var rot = G.time / 800;
+  ctx.strokeStyle = "rgba(120,225,224,.8)";
+  var mcx = bx + bw / 2, mcy = by - 2, mr = 7;
+  ctx.beginPath(); ctx.moveTo(mcx - mr, mcy); ctx.lineTo(mcx, mcy - mr + Math.sin(rot) * 2); ctx.lineTo(mcx + mr, mcy); ctx.lineTo(mcx, mcy + mr); ctx.closePath(); ctx.stroke();
+  ctx.lineWidth = 1;
+};
+BUILDING_ART.fabfarmV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a greenhouse and fab block: vine racks beside a working arm
+  ctx.fillStyle = "#28543c"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#3f7a5a"; ctx.fillRect(bx, by + 12, bw, 4);
+  // glass vine tiers
+  ctx.fillStyle = "rgba(120,225,180,.3)"; ctx.fillRect(bx + 4, by + 18, bw / 2 - 6, bh - 18);
+  ctx.fillStyle = "#46a06a";
+  for (var ty = by + 20; ty < by + bh - 4; ty += 8){ ctx.fillRect(bx + 6, ty, bw / 2 - 10, 4); }
+  // a fab arm that pivots, building something small
+  var sw = Math.round(Math.sin(G.time / 360) * 4);
+  ctx.fillStyle = "#9aa6b8"; ctx.fillRect(bx + bw - 16, by + 20, 4, bh - 20);
+  ctx.fillStyle = "#cfd8e0"; ctx.fillRect(bx + bw - 16, by + 22, 10 + sw, 3);
+  ctx.fillStyle = "#78e9e0"; ctx.fillRect(bx + bw - 8 + sw, by + 22, 3, 3);
+};
+BUILDING_ART.archiveV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a quiet archive: a tall glass stack of data spindles, softly lit
+  ctx.fillStyle = "#474472"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#6e6a9e"; ctx.fillRect(bx, by + 12, bw, 4);
+  for (var sx2 = bx + 6; sx2 < bx + bw - 4; sx2 += 10){
+    ctx.fillStyle = "#2a2848"; ctx.fillRect(sx2, by + 18, 6, bh - 16);
+    var lit = Math.floor(G.time / 400 + sx2) % 3 === 0;
+    ctx.fillStyle = lit ? "rgba(190,160,235,.8)" : "rgba(150,130,200,.4)"; ctx.fillRect(sx2 + 1, by + 20, 4, bh - 20);
+  }
+  ctx.fillStyle = "#bfa9ea"; ctx.fillRect(bx + bw / 2 - 6, by + 6, 12, 5);  // a soft sign light, no text
+};
+BUILDING_ART.immersionV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a dim dome glowing with shifting immersion colors, a soft trap
+  ctx.fillStyle = "#3a3060"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#5a4a8a"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 14, bw / 2, 3.14, 0); ctx.fill();
+  var cyc = Math.floor(G.time / 380) % 3;
+  var col = cyc === 0 ? "rgba(232,90,200,.5)" : cyc === 1 ? "rgba(120,140,235,.5)" : "rgba(120,225,224,.5)";
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 14, bw / 3, 3.14, 0); ctx.fill();
+  ctx.fillStyle = "#1a1430"; ctx.fillRect(bx + bw / 2 - 5, by + 24, 10, bh - 22);  // doorway into the dark
+  ctx.fillStyle = col; ctx.fillRect(bx + 4, by + bh - 6, bw - 8, 2);
+};
+BUILDING_ART.statusV = function(b, bx, by, bw, bh){
+  vPlinth(bx, by, bw, bh);
+  // a gilded court with a ranked podium, status that returns without money
+  ctx.fillStyle = "#5d4524"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#8a6a3c"; ctx.fillRect(bx, by + 12, bw, 4);
+  // three podium steps, the top one glinting
+  ctx.fillStyle = "#caa23f"; ctx.fillRect(bx + bw / 2 - 4, by + 16, 8, bh - 14);
+  ctx.fillStyle = "#a8842f"; ctx.fillRect(bx + bw / 2 - 12, by + 22, 8, bh - 20); ctx.fillRect(bx + bw / 2 + 4, by + 26, 8, bh - 24);
+  var gl = Math.floor(G.time / 300) % 2 === 0;
+  ctx.fillStyle = gl ? "#ffe9b0" : "#caa23f"; ctx.fillRect(bx + bw / 2 - 3, by + 12, 6, 4);
+  // little ranking pennants
+  var wv = Math.round(Math.sin(G.time / 400) * 2);
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx + 6 + wv, by + 16, 6, 4); ctx.fillRect(bx + bw - 12 - wv, by + 18, 6, 4);
+};
+
+/* ---------- Stage placeholders, filled in S2 through S5. They are
+   valid empty shells so the chapter registers and the city is walkable
+   and verifiable from Stage 1 on. Each later stage replaces its shell. ---------- */
+var CHV_LESSONS = {};        /* S2 */
+var CHV_LESSON_CARDS = [];   /* S2 */
+var CHV_PRACTICE = { q:"", choices:[] };  /* S2 */
+var CHV_GATE_QS = [];        /* S2 */
+var CHV_BOOKS = [];          /* S2 */
+var CHV_DESK = {             /* S3 */
+  chapter: "CHAPTER 6: THE VENUS PROJECT",
+  labelsOn: false,
+  needleNames: { prosperity:"ABUNDANCE", equality:"ACCESS", freedom:"AUTONOMY", stability:"HARMONY" },
+  intro: "",
+  collapseTitle: "THE DESIGN UNDER STRESS",
+  collapseLines: {
+    prosperity: "", equality: "", freedom: "", stability: ""
+  },
+  beats: []
+};
+var CHV_ARCADE = {           /* S4 */
+  engine: "lander", title: "SOFT LANDING", skin: "lander",
+  startLabel: "BEGIN DESCENT", endTitle: "ALL PODS DELIVERED",
+  hitVerb: "LAND A POD", sumLabel: "Pods landed", sumUnit: "landed", spoilUnit: "pods lost",
+  intro: "", cleanLine: "", hitLine: "",
+  rulesHtml: "", par: 60, speedCap: 30, noHitBonus: 35,
+  waves: []
+};
+var CHV_FREEPLAY = {         /* S5 */
+  chapter: "CHAPTER 6: THE VENUS PROJECT",
+  tickMs: 1600,
+  needleNames: { prosperity:"ABUNDANCE", equality:"ACCESS", freedom:"AUTONOMY", stability:"HARMONY" },
+  intro: "",
+  banksNote: "FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
+  drift: { prosperity: -1, stability: -1 },
+  shockEvery: { min: 7, max: 13 },
+  levers: [],
+  shocks: []
+};
+
+CHAPTERS.chV = {
+  id: "chV",
+  name: "CHAPTER 6: THE VENUS PROJECT",
+  titleSub: "Walk a city five hundred years on, where machines make plenty and need, not money, decides. Gather four insights around the ring.",
+  walkToast: "THE WALK. Four pavilions hold the city's insights.<br>Step to a pavilion and press A or SPACE.",
+  unlock: "chP",
+  map: CHV_MAP,
+  buildings: CHV_BUILDINGS,
+  npcs: CHV_NPCS,
+  hazards: CHV_HAZARDS,
+  lessons: CHV_LESSONS,
+  lessonCards: CHV_LESSON_CARDS,
+  practice: CHV_PRACTICE,
+  gateQs: CHV_GATE_QS,
+  books: CHV_BOOKS,
+  desk: CHV_DESK,
+  arcade: CHV_ARCADE,
+  freeplay: CHV_FREEPLAY,
+  gate: { tx: 17.5, ty: 13.5 },
+  spawn: { x: 17, y: 14 },
+  gatePlace: "the assembly ring",
+  charterName: "THE CITY'S DESIGN",
+  charterShort: "The City's Design",
+  logicName: "the design's own logic",
+  theme: "future",
+  streets: {},
+  palette: { bg: "#0a1322", g1: "#1b3450", g2: "#18304a" }
+};
+CHV_FREEPLAY.collapseTitle = CHV_DESK.collapseTitle;
+CHV_FREEPLAY.collapseLines = CHV_DESK.collapseLines;
+
+
 var CHAPTER_ID = "ch1";
 var CUR = CHAPTERS.ch1;
 var DESK_CFG = CH1_DESK;
@@ -11404,7 +11958,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M19.S5",
+  version: "M20.S1",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
