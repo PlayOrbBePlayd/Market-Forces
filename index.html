@@ -442,7 +442,7 @@ function isSolid(tx,ty){
    so a returning player keeps Free Play and cleared chapter state
    across sessions. Short runs, permanent progress. */
 var PROGRESS_KEY = "mf_progress";
-var CHAPTER_ORDER = ["ch0", "chF", "ch1", "ch2", "ch3"];
+var CHAPTER_ORDER = ["ch0", "chF", "ch1", "ch2", "ch3", "chP"];
 function blankChapterProgress(){ return { cleared: false, clears: 0, bestDesk: 0, bestArcade: 0 }; }
 function freshProgress(){
   var p = {};
@@ -792,7 +792,7 @@ function updateCritters(dt){
     var dx = c.tx - c.x, dy = c.ty - c.y;
     var d = Math.sqrt(dx*dx + dy*dy);
     if (d > 2){
-      var sp = c.kind === "rat" ? 92 : c.kind === "seagull" ? 48 : c.kind === "sparrow" ? 66 : c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : c.kind === "swan" ? 22 : c.kind === "robin" ? 70 : c.kind === "patroldog" ? 58 : c.kind === "paradeflock" ? 30 : c.kind === "kestrel" ? 24 : 52;
+      var sp = c.kind === "rat" ? 92 : c.kind === "seagull" ? 48 : c.kind === "sparrow" ? 66 : c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : c.kind === "swan" ? 22 : c.kind === "robin" ? 70 : c.kind === "patroldog" ? 58 : c.kind === "paradeflock" ? 30 : c.kind === "kestrel" ? 24 : c.kind === "dolphin" ? 64 : c.kind === "gull" ? 52 : c.kind === "flyingfish" ? 88 : c.kind === "seaturtle" ? 16 : c.kind === "frigatebird" ? 30 : c.kind === "pelican" ? 38 : 52;
       c.x += dx/d * sp * dt/1000;
       c.y += dy/d * sp * dt/1000;
       c.flip = dx < 0 ? -1 : 1;
@@ -813,6 +813,7 @@ function updateCritters(dt){
 function drawDecorItem(d, sx, sy){
   if (CUR.theme === "stoneage") return drawStoneAgeDecor(d, sx, sy);
   if (CUR.theme === "feudal") return drawFeudalDecor(d, sx, sy);
+  if (CUR.theme === "pirate") return drawPirateDecor(d, sx, sy);
   if (d.kind === "billboard"){
     // a digital board cycling abstract color bars, no readable text
     ctx.fillStyle = "#26282e"; ctx.fillRect(sx+4, sy-30, 5, 48); ctx.fillRect(sx+52, sy-30, 5, 48);
@@ -1314,6 +1315,7 @@ function drawDecorItem(d, sx, sy){
 
 function drawCritter(c, sx, sy){
   if (CUR.theme === "stoneage") return drawStoneAgeCritter(c, sx, sy);
+  if (CUR.theme === "pirate") return drawPirateCritter(c, sx, sy);
   if (c.kind === "pigeon"){
     var peck = Math.floor(G.time/420) % 3 === 0 ? 2 : 0;
     ctx.fillStyle = "#7a8494"; ctx.fillRect(sx, sy+4, 10, 7);
@@ -1790,6 +1792,7 @@ function drawGroundTile(c, x, y, sx, sy){
   if (CUR.theme === "commons") return drawCommonsGround(c, x, y, sx, sy);
   if (CUR.theme === "planned") return drawPlannedGround(c, x, y, sx, sy);
   if (CUR.theme === "feudal") return drawFeudalGround(c, x, y, sx, sy);
+  if (CUR.theme === "pirate") return drawPirateGround(c, x, y, sx, sy);
   // the old cobble checker, kept as the fallback for future chapters
   ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
   ctx.fillRect(sx, sy, TILE, TILE);
@@ -3198,6 +3201,13 @@ function drawRoomBust(cx2, midY, cfg){
   } else if (cfg.hair === "cap"){
     ctx.fillRect(cx2 - hw/2 - 2, midY - hh/2 - 8, hw + 4, 20);
     ctx.fillRect(cx2 - hw/2 - 14, midY - hh/2 + 6, 18, 8);
+  } else if (cfg.hair === "bandana"){
+    // a wrapped headscarf, knotted at the side, with a hanging tail
+    ctx.fillRect(cx2 - hw/2 - 2, midY - hh/2 - 4, hw + 4, 16);
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(cx2 - hw/2 - 2, midY - hh/2 + 6, hw + 4, 4);
+    ctx.fillStyle = cfg.hairC;
+    ctx.fillRect(cx2 + hw/2 - 4, midY - hh/2 + 2, 12, 10);   // side knot
+    ctx.fillRect(cx2 + hw/2 + 2, midY - hh/2 + 8, 6, 18);    // tail
   } else {
     ctx.fillRect(cx2 - hw/2, midY - hh/2 - 4, hw, 14);
   }
@@ -3212,6 +3222,13 @@ function drawRoomBust(cx2, midY, cfg){
     ctx.fillRect(cx2 - 4, midY - 4, 8, 4);
     ctx.fillStyle = cfg.skin; ctx.fillRect(cx2 - 20, midY - 6, 12, 8); ctx.fillRect(cx2 + 8, midY - 6, 12, 8);
     ctx.fillStyle = "#15121c"; ctx.fillRect(cx2 - 17, midY - 4, 6, 6); ctx.fillRect(cx2 + 11, midY - 4, 6, 6);
+  }
+  if (cfg.acc === "eyepatch"){
+    // a patch over one eye with a strap across the brow
+    ctx.fillStyle = "#15121c";
+    ctx.fillRect(cx2 + 8, midY - 10, 14, 14);
+    ctx.fillStyle = "#0e0b12";
+    ctx.fillRect(cx2 - 22, midY - 6, 46, 3);
   }
   if (cfg.acc === "beard"){
     ctx.fillStyle = cfg.hairC;
@@ -3639,6 +3656,11 @@ function closeInterior(){
     G.slowUntil = G.time + 30000;
     toast("Your legs disagree with your ambition.<br>SLOWED for 30 seconds.");
   }
+  if (room === "grog" && grogDrank){
+    grogDrank = false;
+    G.slowUntil = G.time + 30000;
+    toast("The deck will not hold still.<br>SLOWED for 30 seconds.");
+  }
   sceneFlash();
   document.body.classList.remove("interior-live");
   refreshHUD();
@@ -3690,6 +3712,8 @@ function openBuildingInterior(b){
   else if (b.id === "breadqueue") buildBreadQueueRoom(b);
   else if (b.id === "blackmarket") buildBlackMarketRoom(b);
   else if (b.id === "cinema") buildCinemaRoom(b);
+  else if (b.id === "grog") buildGrogRoom(b);
+  else if (b.id === "gamblinghulk") buildGamblingHulkRoom(b);
   else if (b.id === "cache") buildCacheRoom(b);
   else if (b.kind === "institute") buildInstituteRoom(b);
   openInterior();
@@ -4670,13 +4694,20 @@ function deskHeader(room, sub){
   room.appendChild(el("div", "beatno", sub));
 }
 
+/* needle labels: a chapter may rename the four needles for its own world
+   (Piracy shows PLUNDER, LOYALTY, LIBERTY, ORDER) without touching the engine. */
+function needleLabel(n){
+  var cfg = (G.scene === "FREEPLAY") ? FREEPLAY_CFG : DESK_CFG;
+  return (cfg && cfg.needleNames && cfg.needleNames[n.id]) || n.name;
+}
+
 function buildGauges(deltas, needles){
   var src = needles || (desk ? desk.needles : {});
   var wrap = el("div", "gauges");
   NEEDLE_DEFS.forEach(function(n){
     var v = src[n.id];
     var g = el("div", "gauge" + (v <= 15 ? " low" : ""));
-    g.appendChild(el("div", "g-name", n.name));
+    g.appendChild(el("div", "g-name", needleLabel(n)));
     var bar = el("div", "g-bar");
     var fill = el("div", "g-fill");
     fill.style.width = v + "%";
@@ -5993,7 +6024,7 @@ function renderFreeRoom(showIntro){
   var wrap = el("div", "gauges");
   NEEDLE_DEFS.forEach(function(n){
     var g = el("div", "gauge");
-    g.appendChild(el("div", "g-name", n.name));
+    g.appendChild(el("div", "g-name", needleLabel(n)));
     var bar = el("div", "g-bar");
     var fill = el("div", "g-fill");
     fill.style.width = free.needles[n.id] + "%";
@@ -6234,7 +6265,7 @@ function resetRun(){
   G.booksRead = {};
   G.balanceBonus = false;
   barDrank = false;
-  permitHeld = false;
+  grogDrank = false;
   breadQueued = false;
   cinemaWatched = false;
   if (CHAPTER_ID === "chF") resetFeudal();
@@ -6552,9 +6583,44 @@ function render(){
       ctx.fillStyle = "#f2e8b0"; ctx.fillRect(pface>0?hx+h.w-6:hx+3, hy+6, 3, 3);
       ctx.fillStyle = "#5c4326";
       ctx.fillRect(hx+4, hy+h.h-4, 3, 4); ctx.fillRect(hx+h.w-7, hy+h.h-4, 3, 4);
+    } else if (h.skin==="navysloop"){
+      // a crown patrol sloop: dark hull, white sail, a red ensign
+      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(hx+3, hy+h.h-3, h.w-6, 5);
+      ctx.fillStyle = "#2a3744"; ctx.fillRect(hx+2, hy+10, h.w-4, h.h-12);
+      ctx.fillStyle = "#3c4c5a"; ctx.fillRect(hx+4, hy+10, h.w-8, 3);
+      ctx.fillStyle = "#1c2530"; ctx.fillRect(hx+6, hy+16, h.w-12, 4);
+      ctx.fillStyle = "#3a2412"; ctx.fillRect(hx+h.w/2-1, hy-4, 2, 16);   // mast
+      var bil = Math.round(Math.sin(G.time/200)*2);
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(hx+h.w/2-9+bil, hy-2, 18, 12);
+      ctx.fillStyle = "#d8cdb4"; ctx.fillRect(hx+h.w/2-9+bil, hy-2, 18, 2);
+      var ef = Math.floor(G.time/240)%2===0?0:1;
+      ctx.fillStyle = "#c23a2a"; ctx.fillRect(hx+h.w/2+1, hy-8, 7-ef, 4);
+      ctx.fillStyle = "rgba(214,238,245,.4)"; ctx.fillRect(hx+2, hy+h.h-2, h.w-4, 2);
+    } else if (h.skin==="stormcell"){
+      // a drifting squall: a dark cloud with rain streaks and a flash
+      var pr = h.w/2;
+      ctx.fillStyle = "rgba(20,40,54,.5)";
+      ctx.beginPath(); ctx.arc(hx+pr, hy+pr-4, pr, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(40,64,80,.55)";
+      ctx.beginPath(); ctx.arc(hx+pr-8, hy+pr-2, pr*0.7, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(hx+pr+8, hy+pr-2, pr*0.7, 0, 7); ctx.fill();
+      var ro = (G.time/40)%10;
+      ctx.fillStyle = "rgba(150,205,224,.6)";
+      for (var rdx=0; rdx<h.w; rdx+=7){ ctx.fillRect(hx+rdx, hy+pr+2+((ro+rdx)%10), 1, 6); }
+      if (Math.floor(G.time/700)%5===0){ ctx.fillStyle="rgba(255,250,210,.85)"; ctx.fillRect(hx+pr-1, hy+pr-2, 3, h.h-pr); }
+    } else if (h.skin==="frigate"){
+      // a navy frigate hunter: bigger hull, three gun ports, a chasing prow
+      ctx.fillStyle = "rgba(0,0,0,.32)"; ctx.fillRect(hx+3, hy+h.h-3, h.w-6, 5);
+      ctx.fillStyle = "#23303c"; ctx.fillRect(hx+2, hy+12, h.w-4, h.h-14);
+      ctx.fillStyle = "#34424f"; ctx.fillRect(hx+2, hy+12, h.w-4, 3);
+      ctx.fillStyle = "#e8b04b";
+      for (var gp=hx+6; gp<hx+h.w-6; gp+=9){ ctx.fillRect(gp, hy+19, 4, 4); }
+      ctx.fillStyle = "#3a2412"; ctx.fillRect(hx+h.w/2-1, hy-6, 3, 20);
+      var bil2 = Math.round(Math.sin(G.time/180)*2);
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(hx+h.w/2-11+bil2, hy-4, 22, 14);
+      ctx.fillStyle = "#9a2f2a"; ctx.fillRect(hx+h.w/2+2, hy-12, 8, 5);
+      ctx.fillStyle = "rgba(214,238,245,.45)"; ctx.fillRect(hx+2, hy+h.h-2, h.w-4, 3);
     } else if (h.type==="cart"){
-      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(hx+2, hy+h.h-3, h.w-4, 5);
-      ctx.fillStyle = "#6e4a24"; ctx.fillRect(hx, hy+4, h.w, h.h-8);
       ctx.fillStyle = "#a3713c"; ctx.fillRect(hx+3, hy, h.w-6, 8);
       ctx.fillStyle = "#241a12";
       ctx.beginPath(); ctx.arc(hx+7, hy+h.h-2, 5, 0, 7); ctx.fill();
@@ -6661,6 +6727,8 @@ function render(){
   if (!flashing){
   if (CUR.theme === "feudal"){
     drawFeudalPlayer(px, py, bobp);
+  } else if (CUR.theme === "pirate"){
+    drawShipPlayer(px, py, bobp);
   } else {
   ctx.fillStyle = "#2c4f7c"; ctx.fillRect(px, py+8+bobp, p.w, p.h-8);     // coat
   ctx.fillStyle = "#e8c39e"; ctx.fillRect(px+4, py+bobp, p.w-8, 12);      // face
@@ -9838,6 +9906,1051 @@ CHAPTERS.ch0 = {
 
 /* ===== END LEVEL 0 PROLOGUE ===== */
 
+
+/* =====================================================
+   CHAPTER PIRACY. Chapter 5, internal id chP. Milestone 19.
+   A water level: open high seas dotted with small island
+   ports, each serving one need, with the ship as the player.
+   Stateless order. The exact opposite of the planned city
+   it sits beside. Built to the Level 0 quality bar from day
+   one. Stage 1 lays the living sea: the water, the islands,
+   the sea critters, the decor, the hazards, and the ship.
+   The shared engines carry the lesson, the desk, the arcade,
+   and free play in the stages that follow.
+   ===================================================== */
+
+var CHP_MAP = [
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "T..........................T.......T",
+  "T.........C..TT....................T",
+  "T.....................TT...........T",
+  "T........T..............C..........T",
+  "T..............C...................T",
+  "T..................................T",
+  "T..........TT......................T",
+  "T...................C...T..........T",
+  "T..................................T",
+  "T............C.....................T",
+  "T................TT......T.........T",
+  "T.....................C............T",
+  "T..................................T",
+  "T...............C..................T",
+  "T..................................T",
+  "T..................................T",
+  "T..................................T",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+];
+
+/* The island ports. Each rectangle is solid land; the ship
+   sails the water between them. Four lesson isles, two vice
+   isles, and the institute, all on the open sea. */
+var CHP_BUILDINGS = [
+  { id:"institute",    name:"THE SEA COLLEGE",      kind:"institute",  x:14, y:2,  w:8, h:5, door:{x:17, y:6},  hue:"#3f6e5a", roof:"#2a4a3c", sign:"COLLEGE" },
+  { id:"articles",     name:"THE ARTICLES TABLE",   kind:"lesson",     x:2,  y:3,  w:8, h:5, door:{x:6,  y:7},  hue:"#7a5a3c", roof:"#4f3a23", sign:"ARTICLES" },
+  { id:"freeport",     name:"THE FREE PORT",        kind:"lesson",     x:26, y:3,  w:8, h:5, door:{x:29, y:7},  hue:"#a3713c", roof:"#6e4a24", sign:"FREE PORT" },
+  { id:"prizecourt",   name:"THE PRIZE COURT",      kind:"lesson",     x:2,  y:12, w:8, h:5, door:{x:6,  y:16}, hue:"#5b7f9e", roof:"#3c566e", sign:"PRIZE COURT" },
+  { id:"anchorage",    name:"THE MERCHANT ANCHORAGE",kind:"lesson",    x:26, y:12, w:8, h:5, door:{x:29, y:16}, hue:"#6e7e8a", roof:"#47545c", sign:"ANCHORAGE" },
+  { id:"grog",         name:"GROG ISLAND",          kind:"temptation", x:3,  y:20, w:7, h:4, door:{x:6,  y:23}, hue:"#8a5a2c", roof:"#5d3a18", sign:"GROG" },
+  { id:"gamblinghulk", name:"THE GAMBLING HULK",    kind:"temptation", x:26, y:20, w:7, h:4, door:{x:29, y:23}, hue:"#5d3a4a", roof:"#3d2530", sign:"THE HULK" }
+];
+
+var CHP_NPCS = [
+  { id:"sable", name:"QUARTERMASTER SABLE", tx:11, ty:9, hue:"#7a5a3c",
+    lines:["The captain leads the chase. I hold the purse and the articles, and the crew elected me to mistrust him on their behalf.",
+           "No lord set our shares. We voted them, line by line, before a single sail went up. The college argues whether that can really be called order."] },
+  { id:"reef", name:"PILOT REEF", tx:23, ty:11, hue:"#5b7f9e",
+    lines:["Read the water, not the chart. Pale means sand, white means rock, dark blue means go.",
+           "The navy knows these lanes too. Push the raiding and you will meet them oftener than you would like."] },
+  { id:"mags", name:"FENCE MAGS", tx:16, ty:19, hue:"#a3713c",
+    lines:["A prize is only plunder once the Free Port pays for it. Until then it is just a hold full of someone else's trouble.",
+           "Some say the port is the only law out here. Others say it is no law at all. Both sit on the shelf inside, in their strongest form."] }
+];
+
+/* Sea hazards reuse the shared movement types: cart for a navy
+   patrol on a fixed lane, bubble for a drifting storm cell, and
+   collector for a navy frigate that closes on a hard chase. */
+var CHP_HAZARDS = [
+  { id:"patrol1", type:"cart", skin:"navysloop", x:12*TILE, y:6*TILE, w:40, h:22, dir:1, speed:118,
+    minX:2*TILE, maxX:33*TILE, cost:3,
+    line:"A navy sloop crossed your bow on its patrol lane. It answers to a crown, not to you. Minus 3." },
+  { id:"patrol2", type:"cart", skin:"navysloop", x:24*TILE, y:18*TILE, w:40, h:22, dir:-1, speed:132,
+    minX:2*TILE, maxX:33*TILE, cost:3,
+    line:"A navy sloop crossed your bow on its patrol lane. It answers to a crown, not to you. Minus 3." },
+  { id:"storm", type:"bubble", skin:"stormcell", x:16*TILE, y:11*TILE, w:48, h:44, vx:54, vy:42,
+    minX:5*TILE, maxX:28*TILE, minY:8*TILE, maxY:20*TILE, cost:4,
+    line:"A squall swallowed the deck and threw the helm. Minus 4. The sea keeps its own counsel." },
+  { id:"frigate", type:"collector", skin:"frigate", x:18*TILE, y:14*TILE, w:30, h:30, speed:74,
+    homeX:18*TILE, homeY:14*TILE, radius:TILE*5, cost:5,
+    line:"A navy frigate ran you down and put a shot across the rail. Minus 5. Raid louder and it comes sooner." }
+];
+
+CH_DECOR.chP = [
+  { kind:"buoy",       tx:9,  ty:7 },  { kind:"buoy",      tx:25, ty:9 },
+  { kind:"flotsam",    tx:13, ty:12 }, { kind:"flotsam",   tx:21, ty:16 }, { kind:"flotsam", tx:7, ty:18 },
+  { kind:"longboat",   tx:18, ty:8 },
+  { kind:"whirlpool",  tx:20, ty:13 },
+  { kind:"kelp",       tx:6,  ty:10 }, { kind:"kelp",      tx:30, ty:13 }, { kind:"kelp", tx:14, ty:21 },
+  { kind:"breakers",   tx:13, ty:9 },  { kind:"breakers",  tx:17, ty:18 },
+  { kind:"seafoam",    tx:11, ty:16 }, { kind:"seafoam",   tx:24, ty:6 },  { kind:"seafoam", tx:19, ty:21 },
+  { kind:"palmislet",  tx:15, ty:12 }, { kind:"palmislet", tx:24, ty:11 },
+  { kind:"raycloud",   tx:12, ty:5 },  { kind:"raycloud",  tx:27, ty:17 }
+];
+
+CH_CRITTERS.chP = [
+  { kind:"gull",        x:14, y:5 },  { kind:"gull",       x:23, y:7 }, { kind:"gull", x:10, y:13 },
+  { kind:"dolphin",     x:16, y:10 }, { kind:"dolphin",    x:21, y:15 },
+  { kind:"flyingfish",  x:12, y:16 }, { kind:"flyingfish", x:19, y:7 },
+  { kind:"seaturtle",   x:8,  y:11 },
+  { kind:"frigatebird", x:18, y:4 },
+  { kind:"pelican",     x:27, y:13 }
+];
+
+/* ---------- The living sea: ground ---------- */
+function drawPirateGround(c, x, y, sx, sy){
+  if (c === "."){
+    // open water: layered swell with a slow current and a wandering glint
+    var base = ((x + y) % 2 === 0) ? "#15506a" : "#13495f";
+    ctx.fillStyle = base; ctx.fillRect(sx, sy, TILE, TILE);
+    var sw = Math.sin((x * 0.7 + y * 0.5) + G.time / 900);
+    ctx.fillStyle = sw > 0.2 ? "rgba(90,170,196,.16)" : "rgba(10,40,56,.18)";
+    ctx.fillRect(sx, sy + 8 + Math.round(sw * 3), TILE, 8);
+    // drifting crest streaks, scrolling with the current
+    var roll = (G.time / 36 + x * 11 + y * 7) % 64;
+    ctx.fillStyle = "rgba(150,205,224,.18)";
+    ctx.fillRect(sx + ((roll) % TILE), sy + 5, 9, 2);
+    ctx.fillRect(sx + ((roll + 18) % TILE), sy + 22, 7, 2);
+    // an occasional sun glint that twinkles per tile
+    if ((x * 5 + y * 3) % 7 === 0){
+      var tw = Math.floor(G.time / 240 + x + y) % 4;
+      if (tw === 0){ ctx.fillStyle = "rgba(232,210,150,.30)"; ctx.fillRect(sx + 12, sy + 12, 4, 3); }
+    }
+  } else if (c === "T"){
+    // a reef rock with white surf breaking around its base
+    ctx.fillStyle = "#11465c"; ctx.fillRect(sx, sy, TILE, TILE);
+    var surf = Math.floor(G.time / 300 + x + y) % 3;
+    ctx.fillStyle = "rgba(214,238,245,.55)";
+    ctx.fillRect(sx + 2 - surf, sy + TILE - 9, TILE - 4 + surf, 4);
+    ctx.fillRect(sx + 4, sy + 4, 4 + surf, 3);
+    ctx.fillStyle = "#3a4750"; ctx.fillRect(sx + 5, sy + 7, TILE - 12, TILE - 14);
+    ctx.fillStyle = "#54626b"; ctx.fillRect(sx + 8, sy + 5, TILE - 18, TILE - 16);
+    ctx.fillStyle = "#2b353c"; ctx.fillRect(sx + 11, sy + 12, 5, 6);
+    ctx.fillStyle = "rgba(120,160,90,.5)"; ctx.fillRect(sx + 9, sy + 7, 5, 3);
+  } else if (c === "C"){
+    // a sandbar shoal: pale turquoise shallows over sand
+    ctx.fillStyle = "#15506a"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#2f8a96"; ctx.fillRect(sx + 2, sy + 4, TILE - 4, TILE - 8);
+    ctx.fillStyle = "#caa66a"; ctx.fillRect(sx + 6, sy + 9, TILE - 12, TILE - 16);
+    ctx.fillStyle = "#dcc089"; ctx.fillRect(sx + 9, sy + 11, TILE - 18, 5);
+    var rp = Math.floor(G.time / 360 + x) % 2;
+    ctx.fillStyle = "rgba(214,238,245,.4)"; ctx.fillRect(sx + 3 + rp * 3, sy + 5, 8, 2);
+  } else {
+    // any other glyph: plain deep water
+    ctx.fillStyle = "#123f54"; ctx.fillRect(sx, sy, TILE, TILE);
+  }
+}
+
+/* ---------- Sea decor: ambient candy on the water ---------- */
+function drawPirateDecor(d, sx, sy){
+  if (d.kind === "buoy"){
+    var bob = Math.round(Math.sin(G.time / 520 + sx) * 3);
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx + 8, sy + 22, 14, 4);
+    ctx.fillStyle = "#c23a2a"; ctx.fillRect(sx + 10, sy + 6 + bob, 10, 14);
+    ctx.fillStyle = "#e8e0d0"; ctx.fillRect(sx + 10, sy + 11 + bob, 10, 4);
+    ctx.fillStyle = "#2a2a30"; ctx.fillRect(sx + 13, sy + 1 + bob, 4, 6);
+    var lit = Math.floor(G.time / 600) % 2 === 0;
+    ctx.fillStyle = lit ? "#ffe9b0" : "#7a6a40"; ctx.fillRect(sx + 13, sy - 1 + bob, 4, 3);
+    ctx.fillStyle = "rgba(214,238,245,.4)"; ctx.fillRect(sx + 6, sy + 20, 20, 2);
+  } else if (d.kind === "flotsam"){
+    var fb = Math.round(Math.sin(G.time / 600 + sy) * 2);
+    ctx.fillStyle = "rgba(214,238,245,.28)"; ctx.fillRect(sx + 4, sy + 18 + fb, 26, 2);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx + 6, sy + 12 + fb, 18, 6);
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx + 6, sy + 12 + fb, 18, 2);
+    ctx.fillStyle = "#8a6a44"; ctx.fillRect(sx + 20, sy + 9 + fb, 8, 4);
+  } else if (d.kind === "longboat"){
+    var lb = Math.round(Math.sin(G.time / 700) * 2);
+    ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(sx, sy + 20 + lb, 40, 4);
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx + 2, sy + 10 + lb, 36, 9);
+    ctx.fillStyle = "#7a5a36"; ctx.fillRect(sx + 4, sy + 10 + lb, 32, 3);
+    ctx.fillStyle = "#3a2c18"; ctx.fillRect(sx + 8, sy + 13 + lb, 4, 4); ctx.fillRect(sx + 28, sy + 13 + lb, 4, 4);
+    // a slow oar dip
+    var oar = Math.round(Math.sin(G.time / 400) * 3);
+    ctx.fillStyle = "#8a6a44"; ctx.fillRect(sx + 14, sy + 6 + lb, 3, 8 + oar);
+  } else if (d.kind === "whirlpool"){
+    var spin = G.time / 320;
+    ctx.fillStyle = "rgba(10,40,56,.4)"; ctx.beginPath(); ctx.arc(sx + 16, sy + 14, 14, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(150,205,224,.5)"; ctx.lineWidth = 2;
+    for (var a = 0; a < 3; a++){
+      ctx.beginPath();
+      var r0 = 4 + a * 4;
+      ctx.arc(sx + 16, sy + 14, r0, spin + a * 2, spin + a * 2 + 4.4);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "rgba(10,40,56,.6)"; ctx.beginPath(); ctx.arc(sx + 16, sy + 14, 3, 0, 7); ctx.fill();
+  } else if (d.kind === "kelp"){
+    var ks = Math.round(Math.sin(G.time / 600 + sx) * 3);
+    ctx.fillStyle = "#1f5a3a";
+    ctx.fillRect(sx + 8 + ks, sy + 4, 3, 22); ctx.fillRect(sx + 16 - ks, sy + 2, 3, 24); ctx.fillRect(sx + 22 + ks, sy + 6, 3, 20);
+    ctx.fillStyle = "#2f7a4a";
+    ctx.fillRect(sx + 6 + ks, sy + 8, 6, 3); ctx.fillRect(sx + 18 - ks, sy + 6, 6, 3); ctx.fillRect(sx + 21 + ks, sy + 12, 6, 3);
+  } else if (d.kind === "breakers"){
+    // a rolling line of whitewater
+    var roll = (G.time / 90) % 40;
+    ctx.fillStyle = "rgba(214,238,245,.5)";
+    ctx.fillRect(sx + (roll % 36), sy + 10, 12, 3);
+    ctx.fillRect(sx + ((roll + 14) % 36), sy + 18, 9, 3);
+    ctx.fillStyle = "rgba(214,238,245,.25)";
+    ctx.fillRect(sx + ((roll + 6) % 36), sy + 14, 7, 2);
+  } else if (d.kind === "seafoam"){
+    for (var fi = 0; fi < 5; fi++){
+      var ft = (G.time / 1800 + fi * 0.2) % 1;
+      var fx = sx + 4 + fi * 6 + Math.sin(ft * 6.28 + fi) * 4;
+      var fy = sy + 6 + ft * 18;
+      ctx.fillStyle = "rgba(214,238,245," + (0.5 - ft * 0.4).toFixed(2) + ")";
+      ctx.fillRect(fx, fy, 3, 3);
+    }
+  } else if (d.kind === "palmislet"){
+    // a tiny uninhabited sand dot with a single palm, pure scenery
+    ctx.fillStyle = "rgba(0,0,0,.14)"; ctx.fillRect(sx + 4, sy + 20, 26, 4);
+    ctx.fillStyle = "#caa66a"; ctx.fillRect(sx + 5, sy + 16, 24, 7);
+    ctx.fillStyle = "#dcc089"; ctx.fillRect(sx + 9, sy + 17, 16, 3);
+    var lean = Math.round(Math.sin(G.time / 700) * 2);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx + 15 + lean, sy + 4, 3, 14);
+    ctx.fillStyle = "#2f7a4a";
+    ctx.fillRect(sx + 9 + lean, sy + 2, 9, 3); ctx.fillRect(sx + 16 + lean, sy + 1, 9, 3); ctx.fillRect(sx + 13 + lean, sy + 5, 8, 3);
+  } else if (d.kind === "raycloud"){
+    // a drifting cloud shadow sliding across the water
+    var drift = (G.time / 60) % 120 - 30;
+    ctx.fillStyle = "rgba(8,30,44,.18)";
+    ctx.fillRect(sx - 20 + drift, sy + 6, 40, 14); ctx.fillRect(sx - 8 + drift, sy + 2, 22, 8);
+  }
+}
+
+/* ---------- Sea critters ---------- */
+function drawPirateCritter(c, sx, sy){
+  var f = c.flip < 0 ? -1 : 1;
+  var t = G.time;
+  if (c.kind === "gull"){
+    var flap = Math.floor(t / 150 + (c.hx || 0)) % 2 === 0;
+    ctx.fillStyle = "#eef2f5";
+    if (flap){ ctx.fillRect(sx, sy + 2, 8, 3); ctx.fillRect(sx + 8, sy + 2, 8, 3); }
+    else { ctx.fillRect(sx + 2, sy, 6, 3); ctx.fillRect(sx + 8, sy, 6, 3); }
+    ctx.fillStyle = "#cfd8dd"; ctx.fillRect(sx + 6, sy + 1, 4, 4);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (f > 0 ? 10 : 5), sy + 2, 2, 1);
+  } else if (c.kind === "frigatebird"){
+    // a big seabird wheeling on a wide circle
+    var flap2 = Math.floor(t / 260) % 2 === 0;
+    ctx.fillStyle = "#23262c";
+    if (flap2){ ctx.fillRect(sx - 2, sy + 2, 11, 3); ctx.fillRect(sx + 9, sy + 2, 11, 3); }
+    else { ctx.fillRect(sx + 1, sy - 1, 8, 3); ctx.fillRect(sx + 9, sy - 1, 8, 3); }
+    ctx.fillStyle = "#15171c"; ctx.fillRect(sx + 7, sy + 1, 5, 5);
+    ctx.fillStyle = "#c23a2a"; ctx.fillRect(sx + 8, sy + 5, 3, 2);
+  } else if (c.kind === "pelican"){
+    var glide = Math.round(Math.sin(t / 500) * 2);
+    ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(sx + 2, sy + 16, 16, 3);
+    ctx.fillStyle = "#cdd4d8"; ctx.fillRect(sx + 2, sy + 4 + glide, 16, 8);
+    ctx.fillStyle = "#a9b2b8"; ctx.fillRect(sx + 2, sy + 9 + glide, 16, 3);
+    ctx.fillStyle = "#e8c39e"; ctx.fillRect(sx + (f > 0 ? 14 : 0), sy + 2 + glide, 6, 6);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (f > 0 ? 18 : -2), sy + 6 + glide, 5, 3);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 16 : 3), sy + 4 + glide, 1, 1);
+  } else if (c.kind === "dolphin"){
+    // arcs out of the water and back on a loop
+    var d = (t / 1500 + (c.hx || 0) * 0.05) % 1;
+    if (d < 0.5){
+      var arc = Math.sin(d / 0.5 * Math.PI);
+      var dy = sy + 14 - arc * 22;
+      ctx.fillStyle = "#3a6e84"; ctx.fillRect(sx + 2, dy, 18, 7);
+      ctx.fillStyle = "#5b93ab"; ctx.fillRect(sx + 4, dy + 1, 12, 3);
+      ctx.fillStyle = "#3a6e84"; ctx.fillRect(sx + (f > 0 ? 18 : 0), dy - 3, 4, 6);   // fin/tail
+      ctx.fillStyle = "#2a5468"; ctx.fillRect(sx + 9, dy - 4, 4, 4);                   // dorsal
+      ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 5 : 16), dy + 1, 1, 1);
+    } else {
+      ctx.fillStyle = "rgba(214,238,245,.35)";
+      ctx.fillRect(sx + 4, sy + 12, 6, 2); ctx.fillRect(sx + 12, sy + 13, 5, 2);
+    }
+  } else if (c.kind === "flyingfish"){
+    var g = (t / 1100 + (c.hx || 0) * 0.07) % 1;
+    if (g < 0.4){
+      var a2 = Math.sin(g / 0.4 * Math.PI);
+      var fx = sx + g * 30 * f, fy = sy + 8 - a2 * 16;
+      ctx.fillStyle = "#7fb2c8"; ctx.fillRect(fx, fy, 8, 4);
+      ctx.fillStyle = "#bfe4ef"; ctx.fillRect(fx + (f > 0 ? -2 : 6), fy - 2, 5, 3);   // wing fin
+      ctx.fillStyle = "#5b8fa6"; ctx.fillRect(fx + (f > 0 ? 7 : -2), fy, 3, 4);
+    } else {
+      ctx.fillStyle = "rgba(214,238,245,.3)"; ctx.fillRect(sx + 4, sy + 8, 5, 2);
+    }
+  } else if (c.kind === "seaturtle"){
+    var paddle = Math.round(Math.sin(t / 600 + (c.hx || 0)) * 2);
+    ctx.fillStyle = "rgba(0,0,0,.14)"; ctx.fillRect(sx + 2, sy + 16, 20, 3);
+    ctx.fillStyle = "#3f5a2e"; ctx.fillRect(sx + 3, sy + 5, 17, 11);
+    ctx.fillStyle = "#5a7a3c"; ctx.fillRect(sx + 6, sy + 7, 11, 7);
+    ctx.fillStyle = "#2f4522"; ctx.fillRect(sx + 8, sy + 8, 3, 3); ctx.fillRect(sx + 13, sy + 10, 3, 3);
+    ctx.fillStyle = "#6a8a4c"; ctx.fillRect(sx + (f > 0 ? 18 : -1), sy + 7, 5, 4);     // head
+    ctx.fillStyle = "#4a6630"; ctx.fillRect(sx + 1, sy + 6 + paddle, 4, 4); ctx.fillRect(sx + 17, sy + 12 - paddle, 4, 4); // flippers
+  }
+}
+
+/* ---------- The player as a ship, top down sloop ---------- */
+function drawShipPlayer(px, py, bob){
+  var p = G.player, t = G.time;
+  var cx = px + p.w / 2, cy = py + p.h / 2 + bob;
+  var moving = p.anim > 0;
+  // wake trailing opposite the heading
+  var wob = Math.sin(t / 160) * 2;
+  ctx.fillStyle = "rgba(214,238,245,.4)";
+  if (p.dir === "up"){ ctx.fillRect(cx - 5, cy + 8, 4, 7 + (moving ? 3 : 0)); ctx.fillRect(cx + 1, cy + 8, 4, 7 + (moving ? 3 : 0)); }
+  else if (p.dir === "down"){ ctx.fillRect(cx - 5, cy - 14, 4, 6); ctx.fillRect(cx + 1, cy - 14, 4, 6); }
+  else if (p.dir === "left"){ ctx.fillRect(cx + 6, cy - 3, 7 + (moving ? 3 : 0), 4); }
+  else { ctx.fillRect(cx - 13, cy - 3, 7 + (moving ? 3 : 0), 4); }
+  // hull
+  ctx.fillStyle = "#5c3a1e"; ctx.fillRect(cx - 7, cy - 10, 14, 20);
+  ctx.fillStyle = "#7a4f28"; ctx.fillRect(cx - 6, cy - 11, 12, 6);   // bow
+  ctx.fillStyle = "#3a2412"; ctx.fillRect(cx - 7, cy + 7, 14, 3);    // stern
+  // deck
+  ctx.fillStyle = "#8a6a44"; ctx.fillRect(cx - 4, cy - 6, 8, 12);
+  // mast and a billowing sail
+  ctx.fillStyle = "#3a2412"; ctx.fillRect(cx - 1, cy - 8, 2, 14);
+  var bil = Math.round(wob);
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(cx - 6 + bil, cy - 7, 12, 9);
+  ctx.fillStyle = "#d8cdb4"; ctx.fillRect(cx - 6 + bil, cy - 7, 12, 2);
+  // the black flag
+  var fl = Math.floor(t / 220) % 2 === 0 ? 0 : 1;
+  ctx.fillStyle = "#15121c"; ctx.fillRect(cx + 1, cy - 16, 7 - fl, 5);
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(cx + 3, cy - 15, 2, 1); ctx.fillRect(cx + 2, cy - 13, 4, 1);
+}
+
+/* ---------- Island port facades, custom per site ---------- */
+function piIsland(bx, by, bw, bh){
+  // a sandy island base under the structure with a shallows ring
+  ctx.fillStyle = "rgba(47,138,150,.5)"; ctx.fillRect(bx - 8, by + bh - 14, bw + 16, 22);
+  ctx.fillStyle = "#caa66a"; ctx.fillRect(bx - 4, by + bh - 10, bw + 8, 16);
+  ctx.fillStyle = "#dcc089"; ctx.fillRect(bx, by + bh - 8, bw, 7);
+}
+BUILDING_ART.instituteP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a lighthouse college: white tower with a turning lamp
+  ctx.fillStyle = "#cdd4d8"; ctx.fillRect(bx, by + 10, bw, bh - 8);
+  ctx.fillStyle = "#a9b2b8"; ctx.fillRect(bx, by + 10, bw, 4);
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(bx, by + 18, bw, 5); ctx.fillRect(bx, by + 30, bw, 5);
+  ctx.fillStyle = "#3a5a4a"; ctx.fillRect(bx + bw / 2 - 7, by - 16, 14, 22);
+  ctx.fillStyle = "#2a4a3c"; ctx.beginPath(); ctx.moveTo(bx + bw / 2, by - 24); ctx.lineTo(bx + bw / 2 - 9, by - 14); ctx.lineTo(bx + bw / 2 + 9, by - 14); ctx.closePath(); ctx.fill();
+  var lamp = Math.floor(G.time / 500) % 2 === 0;
+  ctx.fillStyle = lamp ? "#ffe9b0" : "#7a6a40"; ctx.fillRect(bx + bw / 2 - 4, by - 12, 8, 6);
+  if (lamp){ ctx.fillStyle = "rgba(255,233,176,.22)"; ctx.fillRect(bx + bw / 2 + 4, by - 12, 18, 6); }
+};
+BUILDING_ART.articlesP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a low timber meeting house with a hung black flag and an open ledger out front
+  ctx.fillStyle = "#6e5436"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#4f3a23"; ctx.beginPath(); ctx.moveTo(bx - 4, by + 14); ctx.lineTo(bx + bw / 2, by - 2); ctx.lineTo(bx + bw + 4, by + 14); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#2a2a30"; ctx.fillRect(bx + bw / 2 - 7, by + 22, 14, bh - 22);   // door
+  ctx.fillStyle = "#15121c"; ctx.fillRect(bx + 6, by + 16, 5, 12);                    // flag staff
+  var fl = Math.floor(G.time / 300) % 2 === 0 ? 0 : 1;
+  ctx.fillStyle = "#15121c"; ctx.fillRect(bx + 6, by + 16, 12 - fl, 7);
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(bx + 9, by + 18, 3, 2);
+  ctx.fillStyle = "#cabf9f"; ctx.fillRect(bx + bw - 16, by + 26, 12, 8);              // the open articles
+};
+BUILDING_ART.freeportP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a busy quay of stacked stalls and crates, a market that asks no questions
+  ctx.fillStyle = "#a3713c"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#6e4a24"; ctx.fillRect(bx - 2, by + 8, bw + 4, 8);
+  // striped awnings
+  for (var ax = bx + 4; ax < bx + bw - 6; ax += 16){
+    ctx.fillStyle = "#c23a2a"; ctx.fillRect(ax, by + 18, 7, 5);
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(ax + 7, by + 18, 7, 5);
+  }
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(bx + 5, by + 30, 9, 8); ctx.fillRect(bx + bw - 16, by + 28, 10, 10);
+  ctx.fillStyle = "#7a5a36"; ctx.fillRect(bx + 7, by + 30, 5, 4);
+};
+BUILDING_ART.prizecourtP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a sober stone hall with scales of division over the door
+  ctx.fillStyle = "#7c8790"; ctx.fillRect(bx, by + 12, bw, bh - 10);
+  ctx.fillStyle = "#5b666e"; ctx.fillRect(bx - 2, by + 6, bw + 4, 10);
+  for (var cxp = bx + 6; cxp < bx + bw - 4; cxp += 12){ ctx.fillStyle = "#9aa4ac"; ctx.fillRect(cxp, by + 18, 5, bh - 16); }
+  // scales of fair shares
+  var tip = Math.round(Math.sin(G.time / 700) * 2);
+  ctx.fillStyle = "#e8b04b";
+  ctx.fillRect(bx + bw / 2 - 1, by + 2, 2, 10);
+  ctx.fillRect(bx + bw / 2 - 12, by + 4 + tip, 24, 2);
+  ctx.fillStyle = "#caa23f"; ctx.fillRect(bx + bw / 2 - 12, by + 6 + tip, 4, 3); ctx.fillRect(bx + bw / 2 + 8, by + 6 - tip, 4, 3);
+};
+BUILDING_ART.anchorageP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a roadstead: a fat merchant hull lying at anchor, the prize that waits
+  ctx.fillStyle = "#47545c"; ctx.fillRect(bx, by + 14, bw, bh - 12);
+  ctx.fillStyle = "#6e7e8a"; ctx.fillRect(bx + 4, by + 8, bw - 8, 10);
+  // merchant cog hull behind the dock
+  ctx.fillStyle = "#5c3a1e"; ctx.fillRect(bx + 6, by + 18, bw - 12, 12);
+  ctx.fillStyle = "#7a4f28"; ctx.fillRect(bx + 6, by + 18, bw - 12, 3);
+  ctx.fillStyle = "#3a2412"; ctx.fillRect(bx + bw / 2 - 1, by + 2, 2, 18);    // mast
+  ctx.fillStyle = "#d8cdb4"; ctx.fillRect(bx + bw / 2 - 8, by + 4, 16, 8);    // furled sail
+  ctx.fillStyle = "#2a2a30"; ctx.fillRect(bx + 4, by + bh - 6, 5, 5); ctx.fillRect(bx + bw - 9, by + bh - 6, 5, 5); // anchor blocks
+};
+BUILDING_ART.grogP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a leaning tavern shack with a swinging tankard sign and lantern glow
+  ctx.fillStyle = "#8a5a2c"; ctx.fillRect(bx + 2, by + 12, bw - 2, bh - 10);
+  ctx.fillStyle = "#5d3a18"; ctx.beginPath(); ctx.moveTo(bx, by + 16); ctx.lineTo(bx + bw / 2 + 2, by); ctx.lineTo(bx + bw, by + 12); ctx.closePath(); ctx.fill();
+  var glow = Math.floor(G.time / 360) % 2 === 0;
+  ctx.fillStyle = glow ? "#e8b04b" : "#9a7a30"; ctx.fillRect(bx + 6, by + 22, 7, 7);
+  ctx.fillStyle = "#2a1c10"; ctx.fillRect(bx + bw - 16, by + 22, 9, bh - 22);    // door
+  // swinging tankard sign
+  var sw = Math.round(Math.sin(G.time / 320) * 2);
+  ctx.fillStyle = "#3a2c18"; ctx.fillRect(bx + bw - 6, by + 12, 2, 8);
+  ctx.fillStyle = "#caa06a"; ctx.fillRect(bx + bw - 10 + sw, by + 19, 8, 6);
+};
+BUILDING_ART.gamblinghulkP = function(b, bx, by, bw, bh){
+  piIsland(bx, by, bw, bh);
+  // a dismasted hulk grounded and turned into a gambling den, lit ports
+  ctx.fillStyle = "#3d2530"; ctx.fillRect(bx, by + 14, bw, bh - 12);
+  ctx.fillStyle = "#5d3a4a"; ctx.fillRect(bx - 2, by + 12, bw + 4, 6);
+  ctx.fillStyle = "#2a1820"; ctx.beginPath(); ctx.moveTo(bx, by + 14); ctx.lineTo(bx + 6, by + 26); ctx.lineTo(bx, by + 30); ctx.closePath(); ctx.fill();
+  // a broken mast stump leaning
+  ctx.fillStyle = "#3a2412"; ctx.fillRect(bx + bw / 2 - 1, by - 2, 3, 16);
+  // lit gun ports flicker like a casino floor
+  var cyc = Math.floor(G.time / 280) % 3;
+  for (var i = 0; i < 4; i++){
+    ctx.fillStyle = (i === cyc) ? "#ffe9b0" : "#7a4a30";
+    ctx.fillRect(bx + 6 + i * 12, by + 20, 7, 6);
+  }
+};
+
+/* ---------- Chapter Piracy: the lesson sites. M19 S2. ---------- */
+var CHP_LESSONS = {
+  articles: {
+    host: "QUARTERMASTER SABLE",
+    speech: "Before a sail goes up, the articles go round, and every hand makes his mark. They name the shares, the rules, and what the captain may and may not do. Sign, and you are crew. Break them, and the crew, not a king, will judge you.",
+    question: "A new hand asks who is in charge when the captain and I disagree over the heading. By this ship's own articles, who decides?",
+    choices: [
+      { t: "The articles decide, and where they are silent the crew votes; the captain commands only in the chase and the fight", ok: true,
+        why: "Leeson's invisible hook. A pirate crew split power on purpose, electing the captain and binding him with written articles, so authority answered to the very crew it led." },
+      { t: "The captain decides everything, the way a navy ship runs", ok: false,
+        why: "That is the merchant and navy model the crew fled. The articles fence the captain in deliberately, so the answer cannot be him alone. Try again." },
+      { t: "Nobody decides; it is every hand for himself", ok: false,
+        why: "Stateless is not the same as lawless. The whole reason for the articles is order without a sovereign above it. Try again." }
+    ],
+    insight: { title: "INSIGHT: ORDER WRITTEN, NOT IMPOSED",
+      body: "Pirate crews governed themselves with written articles, an elected captain who could be removed, and a quartermaster to check him. Order without a state, agreed in advance and consented to by every hand." }
+  },
+  prizecourt: {
+    host: "PRIZE MASTER VANE",
+    speech: "A taken ship is not yours. It is the company's, and this court divides it by the shares you all signed. One part to a common hand, a little more to the officers for the risk, a set sum to the wounded. The arithmetic is the loyalty.",
+    question: "A rich prize is in the hold and the captain wants a triple share. By the articles, how is the plunder divided?",
+    choices: [
+      { t: "By the shares the crew already agreed: one part each, a modest extra for the officers, a written sum for the wounded", ok: true,
+        why: "Rediker's history. Pirate articles fixed the shares in advance, far flatter than any merchant ship, with compensation written in for a lost arm or eye. Fair division was the glue that held the crew." },
+      { t: "The captain takes whatever he can hold by force", ok: false,
+        why: "A captain who grabs is a captain the crew deposes by the next vote. The shares were fixed in advance to stop exactly this. Try again." },
+      { t: "Split it perfectly evenly, captain and all", ok: false,
+        why: "Close, and not quite. The articles gave officers a modest extra share for the added risk, while staying far flatter than a merchantman. The lesson is fair, not identical. Try again." }
+    ],
+    insight: { title: "INSIGHT: SHARES HOLD THE CREW",
+      body: "Plunder was divided by fixed shares set in the articles, flatter than lawful merchant pay, with written compensation for the wounded. Fair division was the loyalty that kept the company together." }
+  },
+  freeport: {
+    host: "PORTKEEP DELANEY",
+    speech: "A hold full of someone else's silk is just trouble until my port turns it into coin. We keep no magistrate here. We keep memories. Deal straight and the market stays open to you. Cheat once and every stall shuts in your face.",
+    question: "A captain means to cheat the port's traders on one big sale and sail off rich. By this place's own logic, why does he not?",
+    choices: [
+      { t: "Because he will be back, and a port that remembers a cheat stops dealing with him; reputation is the only enforcer out here", ok: true,
+        why: "Leeson again. With no court to sue in, repeat dealing and reputation police the free port. Cheat once and the market closes, so it pays to be known as straight." },
+      { t: "Because the port's magistrate will arrest him", ok: false,
+        why: "There is no magistrate, and that is the point. The port governs itself through reputation, not a bench. Try again." },
+      { t: "Because pirates are honest by nature", ok: false,
+        why: "No romance here. The honesty is structural, not moral: it pays to be trusted when you must return to the same port. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE PORT MAKES PLUNDER PAY",
+      body: "A free port turns seized goods into wealth, and with no court above it, reputation and repeat dealing keep the trade honest. Predation still needs a peaceful market to cash out in." }
+  },
+  anchorage: {
+    host: "LOOKOUT BESS",
+    speech: "Up here you learn the difference between a prize and a grave. A lone trader is supper. A convoy under escort is a fight you may not walk away from. And every ship you take teaches the navy this lane is worth guarding.",
+    question: "I spot a lone merchant near, and far off a fat convoy under navy escort. The crew is hungry. Which do we take?",
+    choices: [
+      { t: "The lone merchant; the convoy's escort would cost more than its hold is worth, and a stripped lane only brings the navy down on everyone", ok: true,
+        why: "Olson's roving bandit. Predation that takes too much kills the trade it feeds on. The wise crew, like the stationary bandit, learns restraint out of plain self interest." },
+      { t: "The convoy; more ships always means more plunder", ok: false,
+        why: "More guns, too. Greed that ignores the escort and the navy's reply is how a crew ends on a gibbet. Try again." },
+      { t: "Neither; real pirates never actually raided", ok: false,
+        why: "They certainly did. Raiding is the whole economy of this chapter. The lesson is which raid, not whether to raid. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE PREY IS THE ECONOMY",
+      body: "Piracy lives off the production of others, so it needs a sea worth raiding. Take too much and the trade dries up and the navy thickens. Restraint here is not virtue, it is self interest." }
+  }
+};
+
+/* ---------- The Sea College: how a stateless order holds ---------- */
+var CHP_LESSON_CARDS = [
+  { t: "HOW ORDER HOLDS WITHOUT A STATE",
+    b: "A pirate crew wrote its articles, elected its captain, kept the right to depose him, and split off a quartermaster to guard the common purse. Authority was granted from below and checked from below. You watched it signed at the Articles Table, where no king set the shares and the crew voted them line by line." },
+  { t: "WHY THE FREE SEA STILL HAD RULES",
+    b: "With no court to appeal to, order ran on agreement, reputation, and self interest. Fixed shares kept the crew loyal, a free port punished cheats by simply refusing to deal, and restraint came from knowing the merchant and the navy both answer back. The prize court taught you the shares, the free port taught you the reputation, and the anchorage taught you the limit." },
+  { t: "BOTH EDGES",
+    b: "Strengths first: a flat, consented order that paid the common hand better and treated the wounded more fairly than the lawful ships of its day, with power genuinely dispersed. Now the failure modes: it was a predation economy that produced nothing, lived by plunder and violence, was entangled with the slave trade, and survived only while richer, more orderly societies existed to raid. The shelf argues both edges at full strength, and the roving bandit sits at the heart of it." }
+];
+
+var CHP_PRACTICE = {
+  q: "PRACTICE REP. The voyage is over and the crew must set next season's heading. By this system's own logic, who settles it?",
+  choices: [
+    { t: "The crew, by vote, within the articles they all signed", ok: true,
+      why: "Right. Outside the chase and the fight, the pirate ship was a voting society, and the articles bound everyone aboard, the captain included." },
+    { t: "The captain alone, as on any other ship", ok: false,
+      why: "That is the navy and merchant model the crew rejected. The captain led in battle, not in council. Run it again." },
+    { t: "Whoever is strongest takes the helm", ok: false,
+      why: "Strength without the articles is mutiny, and mutiny sinks the venture for everyone. The vote is the order here. Run it again." }
+  ]
+};
+
+var CHP_GATE_QS = [
+  { q: "GATE 1 OF 2. With no state and no court, what actually kept a pirate crew from collapsing into every hand for himself?",
+    choices: [
+      { t: "Written articles, an elected and removable captain, and shares fixed in advance, all consented to", ok: true,
+        why: "Leeson's case: self interest, not virtue, built a working constitution at sea. Order really can emerge from below, by agreement and incentive." },
+      { t: "The natural goodness of the men aboard", ok: false,
+        why: "The argument never rests on virtue. It rests on incentives and rules the crew chose for themselves. No romance. The gate resets." },
+      { t: "Fear of a captain holding absolute power", ok: false,
+        why: "The captain was deliberately weak outside battle, elected and removable. Absolute power is the very thing the articles prevent. The gate resets." }
+    ]},
+  { q: "GATE 2 OF 2. In the critics' strongest form, what is the hard truth about this stateless order?",
+    choices: [
+      { t: "It produced nothing and lived by plundering the trade and the people of richer societies, the slave trade among them", ok: true,
+        why: "Cordingly and Olson's point. A roving bandit creates no wealth, it only seizes, and the romance hides real violence. That is the honest critique, at full strength." },
+      { t: "That self government simply cannot work at any scale", ok: false,
+        why: "Too strong, and false. The crews did govern themselves, often well. The serious critique is about predation and violence, not the impossibility of order. The gate resets." },
+      { t: "That the pirates were each uniquely evil men", ok: false,
+        why: "Making it about character is the straw man this game refuses. The critique is structural: predation only ever pays by taking from someone who made the thing. The gate resets." }
+    ]}
+];
+
+var CHP_BOOKS = [
+  { id:"leeson", side:"for", title:"The Invisible Hook", author:"Peter Leeson, 2009",
+    link:"https://en.wikipedia.org/wiki/The_Invisible_Hook",
+    summary:"An economist applies plain rational choice to pirate crews and finds, behind the skull and crossbones, a surprisingly orderly constitution. Written articles, elected captains, a quartermaster to check the captain, even an early form of injury compensation all emerge, he argues, not from virtue but from self interest, as practical answers to the problem of cooperating in a trade with no state above it. Even the flag was branding, meant to win surrender without a costly fight. It is the sharpest case that workable order can be built from the bottom up by incentives alone." },
+  { id:"rediker", side:"for", title:"Villains of All Nations", author:"Marcus Rediker, 2004",
+    link:"https://en.wikipedia.org/wiki/Marcus_Rediker",
+    summary:"A social historian reads the golden age of piracy from below, as a revolt of common sailors against the brutal discipline and bad pay of merchant and naval ships. He documents the flatter shares, the elected officers, the rough democracy of the articles, and a crew culture that mixed men of many origins in a way unusual for its time. He neither hides the violence nor flattens it into adventure, but argues these were working people improvising a more equal order at sea. It is the strongest case for taking pirate self government seriously." },
+  { id:"cordingly", side:"against", title:"Under the Black Flag", author:"David Cordingly, 1995",
+    link:"https://en.wikipedia.org/wiki/David_Cordingly",
+    summary:"A maritime historian sets out to separate the legend from the record and finds the romance mostly invented later. The real pirates, in his telling, were violent, often cruel, frequently drunk, and short lived, and the orderly democracy was real but partial, riding atop robbery, terror, and a deep entanglement with the slave trade. He does not deny the articles or the votes, but insists the glamour hides a grim and predatory life. It is the needed corrective to any romance about the free sea." },
+  { id:"olson", side:"against", title:"Roving and Stationary Bandits", author:"Mancur Olson, 1993 and 2000",
+    link:"https://en.wikipedia.org/wiki/Mancur_Olson",
+    summary:"An economist asks why some plunderers settle into governments while others never do, and draws a line between the roving bandit who takes everything and moves on and the stationary bandit who, by staying put, finds it pays to leave his subjects enough to produce again. Piracy in this light is the roving kind: it makes no wealth and has little reason for restraint beyond fear of the navy, so the order it builds is genuine but parasitic on the productive societies it preys upon. It is the deepest structural critique of predation as a way to run an economy." }
+];
+
+/* ---------- Chapter Piracy interiors. M19 S2. Bespoke island rooms
+   that lead with their own props, plus the two vice isles. The
+   institute keeps the shared learning set, as every chapter does. ---------- */
+
+function propArticlesTable(th){
+  // a long table with the open articles, inkwell, two quills, and inked marks
+  ctx.fillStyle = "#3a2c18"; ctx.fillRect(80, 196, 360, 16);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(80, 196, 360, 5);
+  ctx.fillStyle = "#2a2012"; ctx.fillRect(96, 212, 12, 72); ctx.fillRect(412, 212, 12, 72);
+  // the parchment of articles
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(150, 150, 220, 54);
+  ctx.fillStyle = "#d8cdb4"; ctx.fillRect(150, 150, 220, 6);
+  ctx.fillStyle = "#7a6e52";
+  for (var ln = 0; ln < 5; ln++){ ctx.fillRect(162, 162 + ln * 8, 150 - (ln % 2) * 30, 2); }
+  // inked X signatures along the foot
+  ctx.fillStyle = "#1d1812";
+  for (var s = 0; s < 6; s++){ ctx.fillRect(162 + s * 26, 196, 5, 2); ctx.fillRect(164 + s * 26, 194, 2, 6); }
+  // inkwell and quill
+  ctx.fillStyle = "#22303a"; ctx.fillRect(384, 184, 14, 14);
+  var qb = Math.round(Math.sin(G.time / 600) * 2);
+  ctx.fillStyle = "#e8e0d0"; ctx.fillRect(390 + qb, 156, 3, 30);
+}
+function propBlackFlag(th){
+  // the jolly roger on the back wall, gently waving
+  var wv = Math.round(Math.sin(G.time / 500) * 3);
+  ctx.fillStyle = "#15121c"; ctx.fillRect(452, 56, 150, 96);
+  ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(452, 56, 6, 96);
+  ctx.fillStyle = "#efe6d2";
+  // skull
+  ctx.fillRect(508 + wv, 78, 30, 26); ctx.fillRect(514 + wv, 104, 18, 8);
+  ctx.fillStyle = "#15121c"; ctx.fillRect(514 + wv, 86, 6, 7); ctx.fillRect(526 + wv, 86, 6, 7);
+  ctx.fillRect(520 + wv, 96, 4, 6);
+  // crossbones
+  ctx.fillStyle = "#efe6d2";
+  ctx.fillRect(486 + wv, 120, 76, 5);
+  ctx.fillRect(488 + wv, 114, 8, 18); ctx.fillRect(552 + wv, 114, 8, 18);
+  ctx.save && ctx.save();
+}
+function propMarketStalls(th){
+  // a row of striped awning stalls heavy with goods, no readable text
+  for (var i = 0; i < 3; i++){
+    var x = 80 + i * 130;
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(x, 120, 110, 130);
+    ctx.fillStyle = (i % 2 === 0) ? "#c23a2a" : "#2f7a8a"; ctx.fillRect(x - 6, 104, 122, 8);
+    for (var st = 0; st < 6; st++){ ctx.fillStyle = (st % 2 === 0) ? "#efe6d2" : ((i % 2 === 0) ? "#c23a2a" : "#2f7a8a"); ctx.fillRect(x - 6 + st * 20, 104, 10, 14); }
+    // goods: bolts of cloth, spice sacks
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(x + 10, 160, 24, 18);
+    ctx.fillStyle = "#7a5a8a"; ctx.fillRect(x + 40, 158, 22, 20);
+    ctx.fillStyle = "#3f7a4a"; ctx.fillRect(x + 70, 162, 20, 16);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(x + 8, 200, 94, 50);
+  }
+}
+function propScalesCrate(th){
+  // a merchant balance scale beside stacked crates
+  var tip = Math.round(Math.sin(G.time / 700) * 3);
+  ctx.fillStyle = "#caa23f";
+  ctx.fillRect(540, 120, 3, 90);
+  ctx.fillRect(508, 134 + tip, 70, 3);
+  ctx.fillStyle = "#9a7a30"; ctx.fillRect(508, 136 + tip, 8, 10); ctx.fillRect(570, 136 - tip, 8, 10);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(484, 210, 56, 44); ctx.fillRect(544, 224, 50, 30);
+  ctx.fillStyle = "#7a5a36"; ctx.fillRect(484, 210, 56, 4); ctx.fillRect(544, 224, 50, 4);
+}
+function propSharesLedger(th){
+  // a board of shares: rows of coin tallies and a column for the wounded
+  ctx.fillStyle = "#2a3038"; ctx.fillRect(90, 56, 320, 200);
+  ctx.fillStyle = "#1c2228"; ctx.fillRect(98, 64, 304, 184);
+  ctx.strokeStyle = "rgba(200,210,220,.2)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(300, 70); ctx.lineTo(300, 242); ctx.stroke();
+  for (var r = 0; r < 6; r++){
+    var y = 80 + r * 26;
+    ctx.fillStyle = "#7a8490"; ctx.fillRect(110, y, 60, 4);
+    for (var c = 0; c < (5 - (r % 3)); c++){
+      ctx.fillStyle = "#e8b04b"; ctx.beginPath(); ctx.arc(184 + c * 16, y + 2, 5, 0, 7); ctx.fill();
+    }
+  }
+  // the wounded column gets a steady set sum
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(316, 80, 70, 4);
+  for (var w = 0; w < 4; w++){ ctx.fillStyle = "#e8b04b"; ctx.beginPath(); ctx.arc(322 + w * 16, 100, 5, 0, 7); ctx.fill(); }
+}
+function propPrizeScale(th){
+  // a tall standing scale dividing two heaps of gold, tipping slowly
+  var tip = Math.round(Math.sin(G.time / 900) * 6);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(312, 120, 6, 130);
+  ctx.fillStyle = "#caa23f"; ctx.fillRect(315, 118, 3, 6);
+  ctx.fillRect(250, 140 + tip, 130, 4);
+  ctx.fillStyle = "#9a7a30"; ctx.fillRect(248, 142 + tip, 6, 16); ctx.fillRect(376, 142 - tip, 6, 16);
+  // gold heaps in the pans
+  ctx.fillStyle = "#e8b04b";
+  for (var g = 0; g < 5; g++){ ctx.beginPath(); ctx.arc(252 + g * 5, 156 + tip, 4, 0, 7); ctx.fill(); }
+  for (var g2 = 0; g2 < 5; g2++){ ctx.beginPath(); ctx.arc(360 + g2 * 5, 156 - tip, 4, 0, 7); ctx.fill(); }
+}
+function propRiggingWall(th){
+  // a wall of rope rigging, a few knots, and a ship's wheel
+  ctx.strokeStyle = "#6e5436"; ctx.lineWidth = 2;
+  for (var i = 0; i < 6; i++){
+    var x = 90 + i * 26;
+    ctx.beginPath(); ctx.moveTo(x, 56); ctx.lineTo(x + 30, 250); ctx.stroke();
+  }
+  for (var j = 0; j < 4; j++){
+    ctx.beginPath(); ctx.moveTo(96, 90 + j * 44); ctx.lineTo(250, 80 + j * 44); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  // a ship's wheel, slowly turning
+  var spin = G.time / 900;
+  var cx = 470, cy = 150, r = 46;
+  ctx.fillStyle = "#5c4326"; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  ctx.fillStyle = "#2a2012"; ctx.beginPath(); ctx.arc(cx, cy, r - 8, 0, 7); ctx.fill();
+  ctx.fillStyle = "#7a5a36"; ctx.beginPath(); ctx.arc(cx, cy, 10, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#5c4326"; ctx.lineWidth = 3;
+  for (var k = 0; k < 6; k++){
+    var a = spin + k * 1.047;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * (r + 8), cy + Math.sin(a) * (r + 8)); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+}
+function propCargoHold(th){
+  // stacked barrels and merchant crates with a hanging lantern
+  ctx.fillStyle = "#5c4326";
+  ctx.fillRect(100, 190, 60, 64); ctx.fillRect(166, 206, 54, 48);
+  ctx.fillStyle = "#6e5436";
+  ctx.beginPath(); ctx.arc(360, 210, 28, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(412, 218, 24, 0, 7); ctx.fill();
+  ctx.fillStyle = "#3a2c18";
+  ctx.fillRect(334, 200, 52, 4); ctx.fillRect(334, 218, 52, 4);
+  // a swaying lantern
+  var sw = Math.round(Math.sin(G.time / 500) * 6);
+  ctx.fillStyle = "#2a2012"; ctx.fillRect(250 + sw, 56, 2, 40);
+  var glow = Math.floor(G.time / 360) % 2 === 0;
+  ctx.fillStyle = glow ? "#ffe9b0" : "#9a7a30"; ctx.fillRect(244 + sw, 96, 16, 18);
+  ctx.fillStyle = "#2a2012"; ctx.fillRect(242 + sw, 92, 20, 4); ctx.fillRect(242 + sw, 114, 20, 4);
+}
+function propGrogBarrels(th){
+  // a stack of grog casks, a dripping tap, and tankards
+  ctx.fillStyle = "#6e4a24"; ctx.fillRect(110, 150, 90, 100);
+  ctx.fillStyle = "#8a5a2c"; ctx.fillRect(110, 150, 90, 100);
+  ctx.fillStyle = "#5d3a18"; ctx.fillRect(110, 168, 90, 6); ctx.fillRect(110, 226, 90, 6);
+  ctx.fillStyle = "#caa06a"; ctx.beginPath(); ctx.arc(155, 200, 26, 0, 7); ctx.fill();
+  ctx.fillStyle = "#2a1c10"; ctx.fillRect(150, 240, 10, 8);  // tap
+  // a drip on a loop
+  var dp = (G.time / 900) % 1;
+  ctx.fillStyle = "#caa23f"; ctx.fillRect(154, 248 + dp * 18, 2, 5);
+  // tankards
+  ctx.fillStyle = "#7a8490"; ctx.fillRect(230, 230, 18, 22); ctx.fillRect(256, 234, 16, 18);
+  ctx.fillStyle = "#caa23f"; ctx.fillRect(230, 230, 18, 5);
+}
+function propLantern(th){
+  // a big swinging ship's lantern, the warm vice glow of the tavern
+  var sw = Math.round(Math.sin(G.time / 420) * 10);
+  ctx.fillStyle = "#2a2012"; ctx.fillRect(420 + sw, 50, 3, 46);
+  var glow = Math.floor(G.time / 300) % 2 === 0;
+  if (glow){ ctx.fillStyle = "rgba(255,233,176,.16)"; ctx.beginPath(); ctx.arc(421 + sw, 116, 40, 0, 7); ctx.fill(); }
+  ctx.fillStyle = "#3a2c18"; ctx.fillRect(406 + sw, 94, 32, 8);
+  ctx.fillStyle = glow ? "#ffe9b0" : "#b08a30"; ctx.fillRect(410 + sw, 100, 24, 30);
+  ctx.fillStyle = "#3a2c18"; ctx.fillRect(406 + sw, 128, 32, 8);
+  ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(418 + sw, 100, 3, 30);
+}
+function propDiceTable(th){
+  // a gaming table with dice, a fan of cards, and coin stacks
+  ctx.fillStyle = "#2a3a30"; ctx.fillRect(150, 200, 220, 60);
+  ctx.fillStyle = "#1f2c24"; ctx.fillRect(150, 200, 220, 6);
+  // dice
+  var roll = Math.floor(G.time / 700) % 6;
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(186, 214, 18, 18); ctx.fillRect(210, 218, 16, 16);
+  ctx.fillStyle = "#15121c";
+  ctx.fillRect(190, 218, 4, 4); ctx.fillRect(196, 226, 4, 4);
+  if (roll % 2 === 0) ctx.fillRect(214, 222, 4, 4);
+  // a fan of cards
+  ctx.fillStyle = "#efe6d2";
+  for (var c = 0; c < 4; c++){ ctx.save && ctx.save(); ctx.fillRect(300 + c * 10, 210, 14, 22); }
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(304, 214, 6, 6);
+  // coin stacks
+  ctx.fillStyle = "#e8b04b";
+  for (var s = 0; s < 5; s++){ ctx.fillRect(252, 250 - s * 4, 18, 3); }
+}
+function propHulkRibs(th){
+  // the broken ribs of the grounded hull arching overhead, water stained
+  ctx.strokeStyle = "#3a2c18"; ctx.lineWidth = 6;
+  for (var i = 0; i < 5; i++){
+    var x = 80 + i * 120;
+    ctx.beginPath();
+    ctx.moveTo(x, 290); ctx.quadraticCurveTo(x + 30, 40, x + 70, 60);
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "rgba(40,64,80,.25)";
+  ctx.fillRect(0, 60, VIEW_W, 30);
+  // a shaft of daylight through a hole in the hull
+  var fl = Math.floor(G.time / 600) % 2 === 0;
+  if (fl){ ctx.fillStyle = "rgba(255,233,176,.1)"; ctx.fillRect(360, 50, 40, 240); }
+}
+
+ROOM_PROPS.articlestable = propArticlesTable;
+ROOM_PROPS.blackflag     = propBlackFlag;
+ROOM_PROPS.marketstalls  = propMarketStalls;
+ROOM_PROPS.scalescrate   = propScalesCrate;
+ROOM_PROPS.sharesledger  = propSharesLedger;
+ROOM_PROPS.prizescale    = propPrizeScale;
+ROOM_PROPS.riggingwall   = propRiggingWall;
+ROOM_PROPS.cargohold     = propCargoHold;
+ROOM_PROPS.grogbarrels   = propGrogBarrels;
+ROOM_PROPS.lantern       = propLantern;
+ROOM_PROPS.dicetable     = propDiceTable;
+ROOM_PROPS.hulkribs      = propHulkRibs;
+
+ROOM_THEMES.articlesP   = { back:"#241c12", floor:"#352a1a", counter:"#4f3a23", accent:"#e8b04b",
+  props:["articlestable","blackflag"],
+  bust:{ skin:"#8a5a3c", top:"#5c4326", collar:"#caa06a", hair:"bandana", hairC:"#9a2f2a", acc:"none" } };
+ROOM_THEMES.freeportP   = { back:"#2a2014", floor:"#3a2c1a", counter:"#6e4a24", accent:"#e8b04b",
+  props:["marketstalls","scalescrate"],
+  bust:{ skin:"#caa06a", top:"#a3713c", collar:"#efe6d2", hair:"curls", hairC:"#3a2a1a", acc:"apron" } };
+ROOM_THEMES.prizecourtP = { back:"#1f2730", floor:"#2a333c", counter:"#3c566e", accent:"#e8b04b",
+  props:["sharesledger","prizescale"],
+  bust:{ skin:"#e0a06a", top:"#47545c", collar:"#cfe2ef", hair:"cap", hairC:"#cfc8b8", acc:"beard" } };
+ROOM_THEMES.anchorageP  = { back:"#202a30", floor:"#2c383f", counter:"#47545c", accent:"#3fb8af",
+  props:["riggingwall","cargohold"],
+  bust:{ skin:"#d79a6e", top:"#3c566e", collar:"#cfe2ef", hair:"long", hairC:"#2a1c12", acc:"none" } };
+ROOM_THEMES.grogP       = { back:"#2a1c10", floor:"#3a2814", counter:"#5d3a18", accent:"#e8b04b",
+  props:["grogbarrels","lantern"],
+  bust:{ skin:"#e8b48a", top:"#8a5a2c", collar:"#caa06a", hair:"bun", hairC:"#4a3018", acc:"apron" } };
+ROOM_THEMES.gamblinghulkP = { back:"#241620", floor:"#31202a", counter:"#3d2530", accent:"#e8b04b",
+  props:["dicetable","hulkribs"],
+  bust:{ skin:"#a86a48", top:"#3d2530", collar:"#5d3a4a", hair:"short", hairC:"#15121c", acc:"eyepatch" } };
+ROOM_THEMES.instituteP  = { back:"#16313a", floor:"#1f3f48", counter:"#2f5a64", accent:"#3fb8af",
+  props:["bookshelves","beam"],
+  bust:{ skin:"#caa06a", top:"#2a4a3c", collar:"#3fb8af", hair:"short", hairC:"#cfc8b8", acc:"glasses" } };
+
+/* ---------- The arrival cards for every landing ---------- */
+ARRIVALS.chP = {
+  institute: { who: "THE SEA MASTER",
+    hello: "You hold the parts now: the articles, the shares, the port, and the prey. Inside we bolt them into one machine and ask whether to call it order. Ready?",
+    action: "STEP INSIDE",
+    bye: "Go run it from the chair. The free sea is the real exam." },
+  articles: { who: "QUARTERMASTER SABLE",
+    hello: "Make your mark or stay ashore. The articles bind us all, captain included. Want them read aloud?",
+    action: "READ THE ARTICLES",
+    bye: "Signed and squared. Mind the captain stays inside his lines out there." },
+  freeport: { who: "PORTKEEP DELANEY",
+    hello: "Every flag is welcome at my quay so long as the coin is good and the dealing is straight. Care to see how the market keeps itself honest?",
+    action: "WORK THE QUAY",
+    bye: "Come back with a fair hold and the stalls stay open to you. That is the whole law here." },
+  prizecourt: { who: "PRIZE MASTER VANE",
+    hello: "A prize is in the hold and the company wants its shares. Step up and I will show you how the loot is divided without a soul drawing a cutlass.",
+    action: "HEAR THE DIVISION",
+    bye: "Shares squared and the wounded paid. A fed crew is a loyal crew." },
+  anchorage: { who: "LOOKOUT BESS",
+    hello: "Take the glass. Out there is supper and out there is the gallows, and the trick is telling them apart. Want the lesson?",
+    action: "TAKE THE GLASS",
+    bye: "Eyes to the horizon. Greed and the navy both keep their own watch." },
+  grog: { who: "GROG ISLAND",
+    hello: "Tully wipes a tankard and slides it your way. Nobody on the free sea tells you how to spend a night ashore. The morning sail does.",
+    action: "CALL FOR GROG",
+    bye: "She raises the tankard, half a salute. Your evening, freely spent." },
+  gamblinghulk: { who: "THE GAMBLING HULK",
+    hello: "Solomon Kidd shakes the cup and grins. Posted odds, friend, and the hold takes its cut. Care to bet your share on a fancied prize?",
+    action: "TRY THE TABLE",
+    bye: "The cup rattles behind you. The odds were never a secret." },
+  sable: { who: "QUARTERMASTER SABLE",
+    hello: "The purse is the crew's, not the captain's, and I am elected to mistrust him on their behalf. Got a moment?",
+    action: "TALK SHARES",
+    bye: "Keep the articles in mind. They are the only crown out here." },
+  reef: { who: "PILOT REEF",
+    hello: "Read the water, not the chart. Pale is sand, white is rock, dark is go. A word before you sail?",
+    action: "ASK THE PILOT",
+    bye: "Mind the lanes. The navy reads them too." },
+  mags: { who: "FENCE MAGS",
+    hello: "A prize is just trouble until I turn it into coin. Want to hear how the port pays out?",
+    action: "TALK TRADE",
+    bye: "Bring me clean goods and a fair price. We both keep our names that way." },
+  desk: { who: "THE SHIP'S COUNCIL",
+    hello: "The articles are signed and the crew has chosen you to call it. Four needles, no labels, the system's own logic. Take the chair?",
+    action: "TAKE THE DESK",
+    bye: "The council waits whenever you are ready to call the next heading." }
+};
+
+/* ---------- Grog Island: freedom includes a long sail home ---------- */
+var grogDrank = false;
+function buildGrogRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "GROG MOTHER TULLY"));
+  room.appendChild(el("div", "speech",
+    "No king and no captain tells you how to spend a night ashore, friend. That is the whole point of the free sea. The first tankard is cheap. The morning watch is the price."));
+  var verdict = el("div", "verdict");
+
+  var drink = el("button", "choice", "Call for grog  (+10 pts, but SLOWED for 30s once you sail)");
+  drink.addEventListener("click", function(){
+    if (grogDrank) return;
+    grogDrank = true;
+    G.runPoints += 10;
+    verdict.style.display = "block";
+    verdict.classList.add("bad");
+    verdict.innerHTML = "A fine night, freely chosen. A sea with no master leaves you free to dull your own watch. +10 pts, and the deck will pitch a while.";
+    drink.disabled = true; drink.style.opacity = .4;
+    refreshHUD();
+  });
+
+  var resist = el("button", "choice", "Just water from the cask  (+5 pts)");
+  resist.addEventListener("click", function(){
+    if (room._resisted || grogDrank) return;
+    room._resisted = true;
+    G.runPoints += 5;
+    verdict.style.display = "block";
+    verdict.classList.remove("bad");
+    verdict.innerHTML = "Temptation passed. The free sea never made you come ashore, and it never makes you stay at the cask.";
+    refreshHUD();
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE WATER");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(drink); room.appendChild(resist); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- The Gambling Hulk: a bet on a fancied prize, posted odds ---------- */
+function buildGamblingHulkRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "GAMBLER SOLOMON KIDD"));
+  room.appendChild(el("div", "speech",
+    "Bet your share on a fancied prize, friend. You take it 9 casts in 20. The hold keeps the difference, and the difference keeps the lanterns lit."));
+  var verdict = el("div", "verdict");
+
+  [10, 25, 50].forEach(function(stake){
+    var btn = el("button", "choice", "Stake " + stake + " run points on the prize");
+    btn.addEventListener("click", function(){
+      if (G.runPoints < stake){
+        verdict.style.display = "block"; verdict.classList.add("bad");
+        verdict.innerHTML = "The table takes coin, not promises. You need " + stake + " to play.";
+        return;
+      }
+      var win = rng() < 0.45;
+      verdict.style.display = "block";
+      if (win){
+        G.runPoints += stake;
+        verdict.classList.remove("bad");
+        verdict.innerHTML = "PRIZE TAKEN. +" + stake + " pts. The cast ran your way. The odds have not moved.";
+      } else {
+        G.runPoints -= stake;
+        verdict.classList.add("bad");
+        verdict.innerHTML = "PRIZE LOST. " + stake + " pts gone over the side. The hold's cut is no trick. It is the posted price of the thrill.";
+      }
+      refreshHUD();
+    });
+    room.appendChild(btn);
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE WATER");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+
+/* ---------- The Decision Desk. M19 S3. Labels off. The four needles
+   wear their pirate names: PLUNDER, LOYALTY, LIBERTY, ORDER, mapped onto
+   the shared engine's prosperity, equality, freedom, and stability. ---------- */
+var CHP_DESK = {
+  chapter: "CHAPTER 5: PIRACY",
+  labelsOn: false,
+  needleNames: { prosperity:"PLUNDER", equality:"LOYALTY", freedom:"LIBERTY", stability:"ORDER" },
+  intro: "The crew has elected you to call it. Five decisions wait, and this desk names no principles. Read each option on its merits, run the company by the free sea's own code, and keep all four needles off the floor. Plunder feeds the crew, loyalty holds them, liberty is why they came, and order keeps the navy and the knives at bay. Let any one hit zero and it is mutiny and the noose, or a trade that dries up.",
+  collapseTitle: "MUTINY AND THE NOOSE",
+  collapseLines: {
+    prosperity: "The prizes thinned to nothing and an empty hold feeds no one. One by one the hands slipped off to richer captains, until there was no company left to command.",
+    equality:   "The shares stopped being fair and the crew stopped being a crew. A company that feels cheated does not mutter; it elects someone else and puts you over the side.",
+    freedom:    "You ruled the free sea until it was not free, and the hands who signed articles to escape a master found they had simply chosen a new one. They unchose you.",
+    stability:  "The articles failed, the disputes turned to blades, and the navy followed the noise straight to your anchorage. The rope at the end of it does not take a vote."
+  },
+  beats: [
+    { id:"draft",
+      prompt: "BEAT 1. A fresh crew gathers on the beach to draw up the articles before the first sail. What kind of code do you set down?",
+      options: [
+        { t:"Written shares, an elected captain the crew can depose, and a quartermaster to hold the common purse", fit:2,
+          fx:{ stability:6, equality:4, freedom:2, prosperity:-2 },
+          why:"Leeson's invisible hook. A consented constitution, with power split on purpose, is what turned a mob into a company. It costs a day of arguing on the sand, and it buys a crew that holds." },
+        { t:"A loose understanding, settled hand to hand as quarrels come up", fit:1,
+          fx:{ freedom:4, stability:-4, equality:-2 },
+          why:"The freest deck afloat, and the most fragile. With nothing written, every dispute is a fresh fight, and the strong quietly start writing the rules in everyone else's place." },
+        { t:"A strict code with harsh punishments fixed in advance", fit:1,
+          fx:{ stability:6, freedom:-6, equality:2 },
+          why:"Order bought with liberty. It works, and it slowly rebuilds the navy discipline the crew deserted to escape. Push it far enough and they desert you next." },
+        { t:"Skip the writing and let the strongest hand simply command", fit:0,
+          fx:{ stability:-14, equality:-8, freedom:-4 },
+          why:"That is the merchantman they fled. A captain who answers to no one is a captain the crew either deposes or knifes. The articles exist precisely to prevent this." }
+      ]},
+    { id:"captain",
+      prompt: "BEAT 2. The crew must fix how much the captain rules from day to day, not just in a fight.",
+      options: [
+        { t:"Absolute command in the chase and the battle, the crew's vote in everything else", fit:2,
+          fx:{ stability:4, freedom:2, equality:2 },
+          why:"Rediker's rough democracy. The real pirate bargain: one hand on the helm when the shot flies, every hand on the vote when it does not. Decisive in danger, free in port." },
+        { t:"Full command at all hours, like a navy ship, for the sake of discipline", fit:1,
+          fx:{ stability:6, freedom:-8, equality:-2 },
+          why:"Tidy, and it kills the very thing that drew the crew. A captain who rules the port as well as the fight is just the tyranny they swam away from." },
+        { t:"No captain at all; put every decision to the vote", fit:1,
+          fx:{ freedom:6, stability:-6, prosperity:-2 },
+          why:"Purely free and slow as a council in a storm. A ship in irons while it debates the heading is a ship the navy catches mid argument." },
+        { t:"A captain for life who cannot be removed", fit:0,
+          fx:{ freedom:-14, equality:-6, stability:-2 },
+          why:"The removable captain is the whole check. Make him permanent and you have built a throne on a deck, which is the one thing the articles were written to forbid." }
+      ]},
+    { id:"shares",
+      prompt: "BEAT 3. The first prize is in the hold. How is it divided?",
+      options: [
+        { t:"By the fixed shares in the articles: a part to each hand, a little more to the officers, a set sum to the wounded", fit:2,
+          fx:{ equality:6, stability:2, prosperity:2 },
+          why:"The articles tradition. Shares agreed before a sail went up, flatter than any merchant pay, with the maimed paid first. Fair division is the loyalty that survives a lean season." },
+        { t:"Split it perfectly even, captain and powder boy alike", fit:1,
+          fx:{ equality:2, freedom:2, prosperity:-2, stability:-2 },
+          why:"Generous, and it ignores the extra risk the officers carried. The articles reward that risk on purpose, so the next dangerous job still finds a volunteer." },
+        { t:"Hand the captain's faction the lion's share to keep them sweet", fit:1,
+          fx:{ prosperity:2, stability:2, equality:-8 },
+          why:"You buy a clique and lose the crew. Olson would call it a small stationary bandit forming inside your own ship, taxing the rest until they walk." },
+        { t:"Whoever laid hands on it first simply keeps it", fit:0,
+          fx:{ equality:-12, stability:-8, freedom:2 },
+          why:"A free for all that ends in drawn knives below decks. The shares were fixed in advance for exactly this reason: to take the fight out of the dividing." }
+      ]},
+    { id:"raid",
+      prompt: "BEAT 4. The hunting grounds are rich, the crew is greedy, and the navy is watching. How hard do you raid this season?",
+      options: [
+        { t:"Take enough to live well, leave the lanes worth sailing, and never bait the escorted convoys", fit:2,
+          fx:{ prosperity:4, stability:4, equality:2, freedom:-2 },
+          why:"Olson's wise predator. The roving bandit who strips a lane kills the trade he eats; the one who shows restraint keeps a sea worth returning to. Greed has a horizon." },
+        { t:"Raid everything in reach while the taking is good", fit:1,
+          fx:{ prosperity:8, stability:-8, freedom:2 },
+          why:"A fat season and a heavy bill. Strip the lane and the merchants vanish and the navy arrives, and the next season has nothing to take and a frigate on the water." },
+        { t:"Strike only the escorted convoys for the biggest hauls", fit:1,
+          fx:{ prosperity:4, stability:-6, equality:-2 },
+          why:"Biggest prizes, biggest guns. A hold of glory if it lands, and a running fight with the crown's best if it does not. The gallows is paved with bold convoy raids." },
+        { t:"Stop raiding and trade honestly instead", fit:0,
+          fx:{ prosperity:-14, equality:-4, freedom:-2 },
+          why:"A fine idea and a different chapter entirely. A pirate company with no prizes is a crew with no reason to stay signed. Predation is the engine here, for better and worse." }
+      ]},
+    { id:"pardon",
+      prompt: "BEAT 5. The crown offers a pardon to any crew that comes in and surrenders the account. The Free Port still pays better, for now. What do you put to the crew?",
+      options: [
+        { t:"Keep to the Free Port and the articles, raid with restraint, and stay masters of your own deck", fit:2,
+          fx:{ freedom:6, equality:2, stability:2, prosperity:-2 },
+          why:"The free sea persists exactly as long as it governs itself well. Hold the articles, share fair, and raid light, and the stateless order outlives the offer on the table." },
+        { t:"Take the pardon, pocket the plunder, and go straight", fit:1,
+          fx:{ stability:6, prosperity:2, freedom:-8, equality:-4 },
+          why:"Olson's bandit settling into a subject. Safe, lawful, and the end of the company; the free deck dissolves into a quiet harbor and a forgotten name. A real ending, not a wrong one." },
+        { t:"Negotiate a split: some take the pardon, the rest sail on", fit:1,
+          fx:{ equality:-6, freedom:2, prosperity:-2 },
+          why:"Half a crew cannot crew a ship. A company torn between the rope and the pardon is weak at both, easy prey for the next captain and the next patrol alike." },
+        { t:"Declare war on the crown and burn every port that signs the pardon", fit:0,
+          fx:{ stability:-16, prosperity:-4, freedom:-2 },
+          why:"The gibbet's shortcut. Bravado that turns every neutral hand against you and brings the whole navy at once. Cordingly's grim ending, arrived at on purpose." }
+      ]}
+  ]
+};
+var CHP_FREEPLAY = {
+  chapter:"CHAPTER 5: PIRACY", tickMs:1600,
+  needleNames:{ prosperity:"PLUNDER", equality:"LOYALTY", freedom:"LIBERTY", stability:"ORDER" },
+  intro:"Free Play arrives in M19 S5.",
+  banksNote:"FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
+  drift:{ prosperity:-1, stability:-1 },
+  shockEvery:{ min:7, max:13 },
+  levers:[ { id:"stub", name:"PLACEHOLDER", start:0, positions:[
+    { t:"HOLD", fx:{ prosperity:1 } }, { t:"PUSH", fx:{ prosperity:2, stability:-1 } } ] } ],
+  shocks:[ { id:"calm", fx:{ prosperity:-4 }, line:"The wind died and the prizes with it." } ]
+};
+var CHP_ARCADE = {
+  engine:"catch", title:"BLACK FLAG RUN", skin:"gather",
+  startLabel:"MAKE SAIL", endTitle:"END OF THE RUN", hitVerb:"TAKE A PRIZE",
+  sumLabel:"Prizes taken", sumUnit:"taken", spoilUnit:"taken",
+  intro:"The sea scroller arrives in M19 S4.",
+  cleanLine:"Stage 4.", hitLine:"Stage 4.",
+  par:90, speedCap:30, noHitBonus:30, hitPts:8, comboEvery:4, comboBonus:12,
+  waves:[ { count:8, fall:70, spawnGap:520 } ],
+  catch:{ catcherW:64, items:[{ kind:"good", w:18, h:18, pts:6 }] }
+};
+CHP_FREEPLAY.collapseTitle = CHP_DESK.collapseTitle;
+CHP_FREEPLAY.collapseLines = CHP_DESK.collapseLines;
+
+CHAPTERS.chP = {
+  id: "chP",
+  name: "CHAPTER 5: PIRACY",
+  titleSub: "Sail the free sea. Gather four insights between the island ports. Mind the navy and the storms.",
+  walkToast: "THE WALK. Four island ports hold the sea's insights.<br>Sail to a port and press A or SPACE.",
+  unlock: "ch3",
+  map: CHP_MAP,
+  buildings: CHP_BUILDINGS,
+  npcs: CHP_NPCS,
+  hazards: CHP_HAZARDS,
+  lessons: CHP_LESSONS,
+  lessonCards: CHP_LESSON_CARDS,
+  practice: CHP_PRACTICE,
+  gateQs: CHP_GATE_QS,
+  books: CHP_BOOKS,
+  desk: CHP_DESK,
+  arcade: CHP_ARCADE,
+  freeplay: CHP_FREEPLAY,
+  gate: { tx: 17.5, ty: 13.5 },
+  spawn: { x: 17, y: 14 },
+  gatePlace: "the meeting buoy",
+  charterName: "THE SHIP'S ARTICLES",
+  charterShort: "The Ship's Articles",
+  logicName: "the free sea's own code",
+  theme: "pirate",
+  streets: {},
+  palette: { bg: "#0a2230", g1: "#15506a", g2: "#13495f" }
+};
+
+
 var CHAPTER_ID = "ch1";
 var CUR = CHAPTERS.ch1;
 var DESK_CFG = CH1_DESK;
@@ -9894,7 +11007,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M18.S3",
+  version: "M19.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
