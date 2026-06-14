@@ -3676,6 +3676,11 @@ function closeInterior(){
     G.slowUntil = G.time + 30000;
     toast("The deck will not hold still.<br>SLOWED for 30 seconds.");
   }
+  if (room === "immersion" && immersionDove){
+    immersionDove = false;
+    G.slowUntil = G.time + 30000;
+    toast("Your mind is still half in the dream.<br>SLOWED for 30 seconds.");
+  }
   sceneFlash();
   document.body.classList.remove("interior-live");
   refreshHUD();
@@ -3730,6 +3735,8 @@ function openBuildingInterior(b){
   else if (b.id === "grog") buildGrogRoom(b);
   else if (b.id === "gamblinghulk") buildGamblingHulkRoom(b);
   else if (b.id === "cache") buildCacheRoom(b);
+  else if (b.id === "immersion") buildImmersionRoom(b);
+  else if (b.id === "status") buildStatusRoom(b);
   else if (b.kind === "institute") buildInstituteRoom(b);
   openInterior();
 }
@@ -11834,21 +11841,580 @@ BUILDING_ART.statusV = function(b, bx, by, bw, bh){
 /* ---------- Stage placeholders, filled in S2 through S5. They are
    valid empty shells so the chapter registers and the city is walkable
    and verifiable from Stage 1 on. Each later stage replaces its shell. ---------- */
-var CHV_LESSONS = {};        /* S2 */
-var CHV_LESSON_CARDS = [];   /* S2 */
-var CHV_PRACTICE = { q:"", choices:[] };  /* S2 */
-var CHV_GATE_QS = [];        /* S2 */
-var CHV_BOOKS = [];          /* S2 */
-var CHV_DESK = {             /* S3 */
+/* ---------- Chapter Venus: the lesson pavilions. M20 S2. Four sites,
+   each a different facet of a moneyless, designed, automated city, and
+   each carrying both an honest strength and an honest difficulty. ---------- */
+var CHV_LESSONS = {
+  allochub: {
+    host: "STEWARD ANSA",
+    speech: "No coin changes hands here. You state a need and the city answers it, the way a valley answers rain. The giving was never the hard part. Knowing how much to make, with no price to whisper what is scarce, is the whole of the work.",
+    question: "A district asks for more of a thing than the fabs can easily make this season. With no price to ration it, how does the Hub decide?",
+    choices: [
+      { t: "It measures the need directly, models the tradeoff against everything else the city wants, and allocates by that, since there is no price to do the measuring for it", ok: true,
+        why: "This is the calculation problem, named honestly. Without prices, the system must gather and weigh need itself, by survey and model. That measuring is the central, hardest task of a moneyless economy, and it never fully goes away." },
+      { t: "It simply makes an unlimited amount, because abundance means no limits at all", ok: false,
+        why: "Abundance is not infinity. Fabs, energy, and materials are still finite, so something must still decide how much, which is exactly the problem prices used to solve. Try again." },
+      { t: "It quietly brings prices back and lets them ration it", ok: false,
+        why: "That is a different system entirely. The whole premise here is allocation by need without money. The challenge is to do the rationing some other way, not to smuggle the price back in. Try again." }
+    ],
+    insight: { title: "INSIGHT: ALLOCATION WITHOUT A PRICE",
+      body: "In a moneyless city, need replaces price as the signal. But with no price to mark what is scarce, the system has to measure and model demand itself. That measuring is the heart of the design, and the sharpest doubt about whether it can work at scale." }
+  },
+  fabfarm: {
+    host: "TENDER ORI",
+    speech: "The farms grow themselves and the fabs build themselves, near enough. So people ask me what is left for us to do. Plenty, it turns out. Someone has to tend what tends us, and someone has to decide what the abundance is for.",
+    question: "If the machines make nearly everything, what is the honest account of human work in this city?",
+    choices: [
+      { t: "It shrinks and shifts rather than vanishing: people design, maintain, and judge what the machines cannot, and the open question becomes what to do with the freed time", ok: true,
+        why: "Automation makes plenty cheap, but design, repair, care, and judgment stay human. The labor does not disappear, it changes shape, and the new problem abundance creates is meaning, not survival." },
+      { t: "Nothing at all: the machines do everything and humans are simply obsolete", ok: false,
+        why: "Overstated. Machines still need designing, maintaining, and directing, and people still want purpose. A city that believes its residents are useless has misread its own abundance. Try again." },
+      { t: "The tenders are paid a wage for their hours, like any job", ok: false,
+        why: "There are no wages here, because there is no money. People contribute for other reasons, status, interest, duty, the work itself. Whether that is enough motivation is the real open question. Try again." }
+    ],
+    insight: { title: "INSIGHT: WHO TENDS THE MACHINES",
+      body: "Automated abundance does not erase human work, it shrinks and shifts it toward design, maintenance, and judgment, and toward deciding what plenty is for. The hopeful claim is that people will contribute without a wage. Whether they reliably do is unsettled." }
+  },
+  designlab: {
+    host: "DESIGNER KOA",
+    speech: "The whole city is one design, planned end to end, every system speaking to every other. That coherence is the dream. The nightmare is a plan so total it stops listening to the people living inside it.",
+    question: "The master design is elegant on the model, but a neighborhood keeps using a space in a way the plan never intended. What does good design do?",
+    choices: [
+      { t: "Treat the unplanned use as information, and let the design bend to the local knowledge it could not see from above", ok: true,
+        why: "This is the warning in Seeing Like a State. A design works while it stays legible to the people inside it and open to what they know on the ground. The strength of total design is coherence; its failure mode is overriding the local truth it cannot model." },
+      { t: "Hold the plan exactly as drawn, since the master design is by definition correct", ok: false,
+        why: "That is the high modernist trap. A plan that cannot be corrected by the people living it is the very thing Scott warns about, however elegant the model. Try again." },
+      { t: "Abandon planning entirely and let the city sort itself out by chance", ok: false,
+        why: "That is the opposite pole, not this system. Venus is order by total design. The lesson is how to design humbly, not whether to design at all. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE DESIGNED CITY",
+      body: "Total design gives a city coherence no patchwork can match. Its danger, in the critics' strongest form, is the plan that flattens the local, tacit knowledge it cannot see. A good design stays legible to its residents and keeps learning from them." }
+  },
+  archive: {
+    host: "ARCHIVIST VESH",
+    speech: "Fresco drew a city with no money in it and asked us to take the drawing seriously. We keep the dream and the doubts on the same shelf, because this is the one chapter describing a world that has never actually run.",
+    question: "A visitor asks whether the Resource Based Economy is proven. By this Archive's own honesty, what is the right answer?",
+    choices: [
+      { t: "That it has never run at full scale, so we hold it as informed speculation and keep the strongest case for and against it side by side", ok: true,
+        why: "Honesty is the whole method here. The nearest real things are the Venus Project's research center and commons production like open knowledge. As a complete economy it is untested, so it is flagged as speculation, not history." },
+      { t: "That it is proven and working, with the receipts to show it", ok: false,
+        why: "No such receipts exist. No society has run a full moneyless, fully automated economy. Claiming proof would be exactly the kind of straw selling this game refuses. Try again." },
+      { t: "That it is obviously impossible and not worth a serious look", ok: false,
+        why: "Too quick, and just as dishonest the other way. The serious objections are specific, the calculation problem and the knowledge problem, not a shrug. Dismissing without the argument is its own straw man. Try again." }
+    ],
+    insight: { title: "INSIGHT: A DREAM HELD HONESTLY",
+      body: "The Venus Project is a designed ideal that has never run at full scale. The closest real examples are its own research center and commons production where value is made with no price tag. We study it as serious speculation, both edges stocked at full strength." }
+  }
+};
+
+/* ---------- The Institute lesson: how a moneyless city is meant to hold ---------- */
+var CHV_LESSON_CARDS = [
+  { t: "HOW A MONEYLESS CITY IS MEANT TO RUN",
+    b: "Picture a city where automation makes most things cheaply, resources are allocated by stated need rather than by price, and the whole place is run as one coherent design. You saw the pieces on the ring: the Allocation Hub answers need without a price, the Farm and Fabrication block makes the plenty, the Design Lab plans the system end to end, and the Archive keeps the vision and its critics together. Inspired by Jacque Fresco, it is order by total design, the exact opposite of the stateless sea you just left." },
+  { t: "WHY THE HARD PART IS KNOWING HOW MUCH",
+    b: "Strip out money and a deep problem appears. Prices were how the old systems knew what was scarce and how much of each thing to make. Remove them and the city must measure and model need directly, which is the calculation problem at the center of the whole debate. A second difficulty rides alongside it: a plan total enough to run a city can stop seeing the local, on the ground knowledge of the people inside it. The Hub taught you the first, the Design Lab the second." },
+  { t: "BOTH EDGES",
+    b: "Strengths first, at full strength: no artificial scarcity, no one priced out of food or care, no effort wasted chasing profit over use, and a coherence a market never reaches. Now the failure modes, just as strong: without prices the system may not be able to compute what to make and how much, the calculation problem its critics say is fatal; a total design can override the knowledge it cannot see, the warning of Seeing Like a State; status and meaning do not vanish just because money does; and above all, this has never run at full scale, so it is informed speculation, not settled fact. The shelf argues both edges honestly, and you decide." }
+];
+
+var CHV_PRACTICE = {
+  q: "PRACTICE REP. A new fab line could make one of several things and cannot make them all at once. By this system's own logic, how is the choice made?",
+  choices: [
+    { t: "By measuring and modeling the city's needs directly and weighing them, since there is no price to rank them", ok: true,
+      why: "Right. With money gone, the system itself has to do the work price once did, gathering need and modeling the tradeoff. Doing that well is the whole challenge." },
+    { t: "By setting a price and seeing what sells", ok: false,
+      why: "There is no money here, so there is no price and nothing to sell. The point is to ration without it. Run it again." },
+    { t: "By a committee picking on a hunch with no method at all", ok: false,
+      why: "A hunch is not a system. The design's claim is that it can measure and model need rigorously. Whether it truly can is the open question, but the method is the point. Run it again." }
+  ]
+};
+
+var CHV_GATE_QS = [
+  { q: "GATE 1 OF 2. With money and prices gone, what actually does the job a price used to do, telling the city what is scarce and how much to make?",
+    choices: [
+      { t: "Direct measurement and modeling of need, which becomes the system's central and hardest task", ok: true,
+        why: "Just so. The price was a signal, and removing it means the system must generate that signal itself, by measuring and modeling. Whether it can do this at scale is the live debate, named honestly." },
+      { t: "Nothing is needed, because abundance means making an unlimited amount of everything", ok: false,
+        why: "Resources and energy stay finite, so something must still decide how much. Pretending the limit vanishes dodges the whole problem. The gate resets." },
+      { t: "Prices quietly return under another name", ok: false,
+        why: "Then it would not be a moneyless economy at all. The challenge is to ration without the price, not to sneak it back. The gate resets." }
+    ]},
+  { q: "GATE 2 OF 2. In the critics' strongest form, what is the hard truth about this designed, moneyless city?",
+    choices: [
+      { t: "Without prices the system may not be able to calculate what to make, and a total plan can miss the local knowledge it cannot see", ok: true,
+        why: "Mises and Scott, at full strength. The calculation problem and the knowledge problem are the serious objections, and neither has been answered at the scale of a whole economy. That is the honest critique." },
+      { t: "It cannot work because people are naturally too lazy and greedy", ok: false,
+        why: "That makes it about character, the straw man this game refuses. The real objections are about information and computation, not human wickedness. The gate resets." },
+      { t: "No designed system of any kind can ever function", ok: false,
+        why: "Too sweeping, and false. Designed systems run all around us. The specific claim is about running a whole economy without prices, not about design as such. The gate resets." }
+    ]}
+];
+
+var CHV_BOOKS = [
+  { id:"fresco", side:"for", title:"The Best That Money Can't Buy", author:"Jacque Fresco, 2002",
+    link:"https://en.wikipedia.org/wiki/Jacque_Fresco",
+    summary:"The founder of the Venus Project lays out his vision of a Resource Based Economy: a world where money, barter, and debt are gone, and the planet's resources are treated as the shared inheritance of everyone, allocated by need through automation and intelligent design. Fresco argues that most scarcity is artificial, manufactured by a price system that profits from it, and that modern technology could comfortably provide for all if we organized production around human need rather than sale. It is the fullest statement of the dream this chapter is built around, sweeping, optimistic, and unafraid of how strange it sounds." },
+  { id:"bastani", side:"for", title:"Fully Automated Luxury Communism", author:"Aaron Bastani, 2019",
+    link:"https://en.wikipedia.org/wiki/Fully_Automated_Luxury_Communism",
+    summary:"A contemporary writer makes the modern case that automation, cheap energy, and abundant information are pushing the cost of more and more things toward zero, opening a path to broad post scarcity. Bastani reads the falling price of computing, solar power, and synthetic production as evidence that a life of plenty for all is becoming technically possible, if politics can be reorganized to share the gains rather than hoard them. It is the strongest recent argument that automated abundance is not a fantasy but a trajectory, and the closest living cousin to Fresco's vision." },
+  { id:"mises", side:"against", title:"Economic Calculation in the Socialist Commonwealth", author:"Ludwig von Mises, 1920",
+    link:"https://en.wikipedia.org/wiki/Economic_Calculation_in_the_Socialist_Commonwealth",
+    summary:"The founding statement of the calculation problem, and the deepest objection this chapter faces. Mises argues that without market prices for the means of production, a planner has no way to compare the countless possible uses of scarce resources, and so cannot rationally decide what to make or how. Prices, in his account, are not a trick of capitalism but a vast information system that no survey or model can replace, because they carry knowledge that only emerges from people actually trading. Strip them out, he insists, and an economy is left groping in the dark. If he is right, a moneyless city has a hole at its center." },
+  { id:"scott", side:"against", title:"Seeing Like a State", author:"James C. Scott, 1998",
+    link:"https://en.wikipedia.org/wiki/Seeing_Like_a_State",
+    summary:"An anthropologist examines why grand, rationally designed schemes to improve the human condition so often fail, from planned cities to collective farms. Scott's argument is that high modernist plans flatten the messy, local, hard to measure knowledge that real communities run on, the tacit know how he calls metis, and that a design legible to its planners from above can be unlivable for the people inside it. He does not say design is impossible, only that it must stay humble and open to what it cannot see. For a city run as one total design, it is the sharpest warning against the very ambition that makes the place beautiful." }
+];
+
+/* ---------- Chapter Venus interiors. M20 S2. Bespoke pavilion props,
+   plus the two temptation sites. The institute keeps the shared learning
+   set, as every chapter does. ---------- */
+
+function propFlowBoard(th){
+  // a glowing distribution board: a central core feeding radial channels
+  ctx.fillStyle = "#10242e"; ctx.fillRect(96, 60, 320, 190);
+  ctx.fillStyle = "#0a1a22"; ctx.fillRect(104, 68, 304, 174);
+  var cx = 256, cy = 150;
+  ctx.fillStyle = "rgba(120,225,224,.16)"; ctx.beginPath(); ctx.arc(cx, cy, 26, 0, 7); ctx.fill();
+  ctx.fillStyle = "#bfe9ea"; ctx.beginPath(); ctx.arc(cx, cy, 10, 0, 7); ctx.fill();
+  var fl = (G.time / 36) % 22;
+  for (var i = 0; i < 6; i++){
+    var a = i * 1.047;
+    var ex = cx + Math.cos(a) * 120, ey = cy + Math.sin(a) * 80;
+    ctx.strokeStyle = "rgba(90,200,210,.4)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+    // a pulse of light running outward along the channel
+    var pt = ((fl + i * 4) % 22) / 22;
+    ctx.fillStyle = "#78e9e0";
+    ctx.fillRect(cx + (ex - cx) * pt - 2, cy + (ey - cy) * pt - 2, 4, 4);
+    ctx.fillStyle = "#46a06a"; ctx.fillRect(ex - 4, ey - 4, 9, 9);  // a district node
+  }
+  ctx.lineWidth = 1;
+}
+function propNeedPanel(th){
+  // a wall panel of need indicators, bars filling toward met
+  ctx.fillStyle = "#152a36"; ctx.fillRect(452, 60, 150, 196);
+  ctx.fillStyle = "#0d1c24"; ctx.fillRect(460, 68, 134, 180);
+  for (var r = 0; r < 6; r++){
+    var y = 78 + r * 28;
+    var lvl = (Math.sin(G.time / 900 + r) + 1) / 2;
+    ctx.fillStyle = "#234a52"; ctx.fillRect(470, y, 116, 14);
+    ctx.fillStyle = r % 2 === 0 ? "#78e9e0" : "#7fb2e5"; ctx.fillRect(470, y, Math.round(116 * (0.4 + lvl * 0.6)), 14);
+    ctx.fillStyle = "#bfe9ea"; ctx.fillRect(470, y, 4, 14);
+  }
+}
+function propGrowRack(th){
+  // tiered hydroponic racks under magenta grow light, leaves nodding
+  for (var t2 = 0; t2 < 4; t2++){
+    var y = 90 + t2 * 42;
+    ctx.fillStyle = "#1c3a2c"; ctx.fillRect(96, y, 200, 30);
+    ctx.fillStyle = "rgba(232,150,210,.18)"; ctx.fillRect(96, y - 6, 200, 6);
+    var nod = Math.round(Math.sin(G.time / 600 + t2) * 2);
+    for (var p = 0; p < 7; p++){
+      ctx.fillStyle = "#46a06a"; ctx.fillRect(104 + p * 26, y - 6 + (p % 2 ? nod : -nod), 10, 10);
+      ctx.fillStyle = "#5fc080"; ctx.fillRect(106 + p * 26, y - 4 + (p % 2 ? nod : -nod), 4, 4);
+    }
+    ctx.fillStyle = "#9aa6b8"; ctx.fillRect(96, y + 26, 200, 4);
+  }
+}
+function propFabArm(th){
+  // a fabrication arm assembling a small object on a turntable
+  var sw = Math.round(Math.sin(G.time / 360) * 18);
+  var lift = Math.round(Math.sin(G.time / 360 + 1.5) * 8);
+  ctx.fillStyle = "#2a3340"; ctx.fillRect(470, 110, 16, 130);   // base column
+  ctx.fillStyle = "#9aa6b8"; ctx.fillRect(478, 120, 60 + sw, 10); // upper arm
+  ctx.fillStyle = "#cfd8e0"; ctx.fillRect(478 + 50 + sw, 120 + lift, 10, 40); // forearm
+  ctx.fillStyle = "#78e9e0"; ctx.fillRect(478 + 50 + sw, 158 + lift, 10, 6);  // tool tip glow
+  // turntable and the piece being built
+  ctx.fillStyle = "#1c2a32"; ctx.fillRect(500, 226, 70, 14);
+  var built = Math.floor((G.time / 700) % 4);
+  ctx.fillStyle = "#e8b04b";
+  for (var b = 0; b <= built; b++){ ctx.fillRect(520, 222 - b * 6, 24, 5); }
+  // sparks
+  if (Math.floor(G.time / 200) % 2 === 0){ ctx.fillStyle = "#bfe9ea"; ctx.fillRect(478 + 52 + sw, 164 + lift, 2, 2); }
+}
+function propWireModel(th){
+  // a floating wireframe of the city, slowly rotating above a dais
+  ctx.fillStyle = "#1a2c44"; ctx.fillRect(180, 220, 150, 16);
+  ctx.fillStyle = "rgba(120,225,224,.12)"; ctx.fillRect(170, 70, 170, 150);
+  var rot = G.time / 1000;
+  ctx.strokeStyle = "rgba(120,225,224,.7)"; ctx.lineWidth = 1;
+  var cx = 255, cy = 150, R = 60;
+  // concentric rings of the circular city
+  for (var ring = 1; ring <= 3; ring++){
+    ctx.beginPath();
+    if (ctx.ellipse) ctx.ellipse(cx, cy, R * ring / 3, (R * ring / 3) * 0.4, 0, 0, 7);
+    else ctx.arc(cx, cy, R * ring / 3, 0, 7);
+    ctx.stroke();
+  }
+  // radial spokes turning
+  for (var s = 0; s < 8; s++){
+    var a = rot + s * 0.785;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.4); ctx.stroke();
+  }
+  ctx.fillStyle = "#bfe9ea"; ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 7); ctx.fill();
+}
+function propDesignTable(th){
+  // a lit drafting table with a shifting plan and a stylus
+  ctx.fillStyle = "#16303c"; ctx.fillRect(384, 150, 180, 96);
+  ctx.fillStyle = "#0e2029"; ctx.fillRect(392, 158, 164, 80);
+  ctx.strokeStyle = "rgba(90,200,210,.4)"; ctx.lineWidth = 1;
+  for (var gx = 400; gx < 552; gx += 16){ ctx.beginPath(); ctx.moveTo(gx, 162); ctx.lineTo(gx, 232); ctx.stroke(); }
+  for (var gy = 166; gy < 236; gy += 16){ ctx.beginPath(); ctx.moveTo(396, gy); ctx.lineTo(552, gy); ctx.stroke(); }
+  // a glowing route being drawn
+  var seg = Math.floor((G.time / 500) % 5);
+  ctx.strokeStyle = "#78e9e0"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(410, 224);
+  var pts = [[410,224],[440,200],[470,210],[500,180],[540,190]];
+  for (var pi = 1; pi <= seg && pi < pts.length; pi++){ ctx.lineTo(pts[pi][0], pts[pi][1]); }
+  ctx.stroke(); ctx.lineWidth = 1;
+}
+function propSpindleStack(th){
+  // a quiet stack of lit data spindles, the city's memory
+  for (var col = 0; col < 4; col++){
+    var x = 110 + col * 44;
+    ctx.fillStyle = "#1a1834"; ctx.fillRect(x, 70, 30, 180);
+    for (var s = 0; s < 7; s++){
+      var lit = Math.floor(G.time / 300 + col * 2 + s) % 4 === 0;
+      ctx.fillStyle = lit ? "rgba(190,160,235,.9)" : "rgba(120,100,170,.4)";
+      ctx.fillRect(x + 4, 80 + s * 24, 22, 16);
+    }
+    ctx.fillStyle = "#6e6a9e"; ctx.fillRect(x, 70, 30, 4);
+  }
+}
+function propHoloDebate(th){
+  // two facing holographic busts, the dream and the doubt, side by side
+  var br = Math.floor(G.time / 600) % 2 === 0;
+  // the dream, warm teal
+  ctx.fillStyle = br ? "rgba(120,225,224,.5)" : "rgba(120,225,224,.3)";
+  ctx.beginPath(); ctx.arc(360, 120, 18, 0, 7); ctx.fill();
+  ctx.fillRect(346, 138, 28, 40);
+  // the doubt, cool violet
+  ctx.fillStyle = br ? "rgba(150,130,235,.3)" : "rgba(150,130,235,.5)";
+  ctx.beginPath(); ctx.arc(450, 120, 18, 0, 7); ctx.fill();
+  ctx.fillRect(436, 138, 28, 40);
+  // a thin line of argument flickering between them
+  ctx.strokeStyle = "rgba(190,235,240,.4)"; ctx.setLineDash && ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(378, 120); ctx.lineTo(432, 120); ctx.stroke();
+  ctx.setLineDash && ctx.setLineDash([]);
+  ctx.fillStyle = "#1a1834"; ctx.fillRect(340, 178, 130, 8);   // shared shelf
+}
+function propImmersionPods(th){
+  // reclined immersion pods glowing with shifting dream colors
+  for (var i = 0; i < 3; i++){
+    var x = 110 + i * 130;
+    ctx.fillStyle = "#1a1430"; ctx.fillRect(x, 150, 110, 60);
+    ctx.fillStyle = "#2a2050"; ctx.fillRect(x, 150, 110, 10);
+    var cyc = Math.floor((G.time / 360) + i) % 3;
+    var col = cyc === 0 ? "rgba(232,90,200,.5)" : cyc === 1 ? "rgba(120,140,235,.5)" : "rgba(120,225,224,.5)";
+    ctx.fillStyle = col; ctx.fillRect(x + 8, 162, 94, 36);
+    // a resident lost in the dream, only a glow where the face is
+    ctx.fillStyle = "rgba(232,210,150,.5)"; ctx.fillRect(x + 44, 172, 18, 14);
+  }
+}
+function propDreamField(th){
+  // a swirling field of soft color motes overhead, the pull of endless leisure
+  for (var m = 0; m < 28; m++){
+    var a = G.time / 1200 + m * 0.7;
+    var rad = 30 + (m % 7) * 14;
+    var mx = 300 + Math.cos(a) * rad;
+    var my = 90 + Math.sin(a * 1.3) * 40;
+    var hue = m % 3;
+    ctx.fillStyle = hue === 0 ? "rgba(232,90,200,.5)" : hue === 1 ? "rgba(120,140,235,.5)" : "rgba(120,225,224,.5)";
+    ctx.fillRect(mx, my, 4, 4);
+  }
+}
+function propPodium(th){
+  // a ranked podium, the top step gilded and glinting
+  var steps = [[230, 200, 64], [300, 180, 64], [370, 220, 64]];
+  var heights = [60, 90, 40];
+  for (var i = 0; i < 3; i++){
+    var s = steps[i];
+    ctx.fillStyle = i === 1 ? "#caa23f" : "#8a6a3c";
+    ctx.fillRect(s[0], s[1], s[2], heights[i] + 40);
+    ctx.fillStyle = i === 1 ? "#e8c66a" : "#a8842f"; ctx.fillRect(s[0], s[1], s[2], 6);
+    // a figure standing on each
+    ctx.fillStyle = "#cfb89a"; ctx.fillRect(s[0] + s[2] / 2 - 8, s[1] - 30, 16, 30);
+    ctx.fillStyle = "#e8c39e"; ctx.fillRect(s[0] + s[2] / 2 - 6, s[1] - 40, 12, 12);
+  }
+  var gl = Math.floor(G.time / 300) % 2 === 0;
+  ctx.fillStyle = gl ? "#ffe9b0" : "#caa23f"; ctx.fillRect(300 + 24, 174, 16, 6); // the prize glint
+}
+function propRankBoard(th){
+  // a leaderboard of glowing rank bars, no readable text, shuffling slowly
+  ctx.fillStyle = "#241a30"; ctx.fillRect(96, 60, 180, 200);
+  ctx.fillStyle = "#1a1320"; ctx.fillRect(104, 68, 164, 184);
+  for (var r = 0; r < 7; r++){
+    var y = 78 + r * 25;
+    var w = 40 + ((Math.sin(G.time / 1000 + r * 1.3) + 1) / 2) * 110;
+    ctx.fillStyle = r === 0 ? "#e8b04b" : "#8a6a9e";
+    ctx.fillRect(112, y, w, 16);
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(112, y, 4, 16);
+  }
+}
+
+ROOM_PROPS.flowboard     = propFlowBoard;
+ROOM_PROPS.needpanel     = propNeedPanel;
+ROOM_PROPS.growrack      = propGrowRack;
+ROOM_PROPS.fabarm        = propFabArm;
+ROOM_PROPS.wiremodel     = propWireModel;
+ROOM_PROPS.designtable   = propDesignTable;
+ROOM_PROPS.spindlestack  = propSpindleStack;
+ROOM_PROPS.holodebate    = propHoloDebate;
+ROOM_PROPS.immersionpods = propImmersionPods;
+ROOM_PROPS.dreamfield    = propDreamField;
+ROOM_PROPS.podium        = propPodium;
+ROOM_PROPS.rankboard     = propRankBoard;
+
+ROOM_THEMES.allochubV  = { back:"#0d1f2a", floor:"#13303f", counter:"#244c63", accent:"#78e9e0",
+  props:["flowboard","needpanel"],
+  bust:{ skin:"#8a5a3c", top:"#244c63", collar:"#bfe9ea", hair:"short", hairC:"#1d2a30", acc:"glasses" } };
+ROOM_THEMES.fabfarmV   = { back:"#0f2418", floor:"#163826", counter:"#28543c", accent:"#5fc080",
+  props:["growrack","fabarm"],
+  bust:{ skin:"#caa06a", top:"#28543c", collar:"#bfe9ea", hair:"bun", hairC:"#3a2a1a", acc:"apron" } };
+ROOM_THEMES.designlabV = { back:"#101c30", floor:"#16263f", counter:"#314e72", accent:"#7fb2e5",
+  props:["wiremodel","designtable"],
+  bust:{ skin:"#e0a06a", top:"#314e72", collar:"#cfe2ef", hair:"curls", hairC:"#2a1c12", acc:"none" } };
+ROOM_THEMES.archiveV   = { back:"#161430", floor:"#201c3c", counter:"#474472", accent:"#bfa9ea",
+  props:["spindlestack","holodebate"],
+  bust:{ skin:"#a86a48", top:"#474472", collar:"#cfc8e0", hair:"long", hairC:"#cfc8b8", acc:"none" } };
+ROOM_THEMES.immersionV = { back:"#150f2a", floor:"#1e1640", counter:"#3a3060", accent:"#e85ac8",
+  props:["immersionpods","dreamfield"],
+  bust:{ skin:"#e8b48a", top:"#3a3060", collar:"#c89ae0", hair:"short", hairC:"#2a1c40", acc:"none" } };
+ROOM_THEMES.statusV    = { back:"#241a14", floor:"#34281a", counter:"#5d4524", accent:"#e8b04b",
+  props:["podium","rankboard"],
+  bust:{ skin:"#d79a6e", top:"#5d4524", collar:"#e8c66a", hair:"bun", hairC:"#3a2a1a", acc:"none" } };
+ROOM_THEMES.instituteV = { back:"#0e2630", floor:"#163640", counter:"#2f6e7a", accent:"#78e9e0",
+  props:["bookshelves","beam"],
+  bust:{ skin:"#caa06a", top:"#1f4f5a", collar:"#78e9e0", hair:"short", hairC:"#cfc8b8", acc:"glasses" } };
+
+/* ---------- The arrival cards for every landing ---------- */
+ARRIVALS.chV = {
+  institute: { who: "THE FACULTY",
+    hello: "You hold the four pieces now: allocation, abundance, design, and the honest record. Inside we fit them into one city and ask whether a world with no money can really run. Ready?",
+    action: "STEP INSIDE",
+    bye: "Now go run it from the chair. The desk is where the ideal meets its stress test." },
+  allochub: { who: "STEWARD ANSA",
+    hello: "State a need and the city answers it, no coin required. The trick is knowing how much to make with no price to ask. Want to see how the Hub decides?",
+    action: "READ THE FLOW",
+    bye: "Mind the hard part out there: measuring need is the whole of the work." },
+  fabfarm: { who: "TENDER ORI",
+    hello: "The farms and the fabs all but run themselves. Come see the plenty, and then tell me what you think the people are for.",
+    action: "TOUR THE FLOOR",
+    bye: "Abundance is the easy half. What to do with it is the question that follows you out." },
+  designlab: { who: "DESIGNER KOA",
+    hello: "The whole city is one design, every system speaking to the next. Step up and I will show you where a total plan helps, and where it stops listening.",
+    action: "OPEN THE PLAN",
+    bye: "Design boldly, and keep listening. The model is never the whole truth." },
+  archive: { who: "ARCHIVIST VESH",
+    hello: "We keep the dream and the doubts on one shelf, because no one has ever built this for real. Care to see how the Archive holds both at once?",
+    action: "OPEN THE ARCHIVE",
+    bye: "Hold it honestly. A vision worth taking seriously is worth doubting seriously." },
+  immersion: { who: "THE IMMERSION COMMONS",
+    hello: "A host in soft light waves you toward a free pod. No work, no want, no clock. Stay as long as you like. That is rather the point, and rather the trap.",
+    action: "TRY A POD",
+    bye: "The dream releases you, gently. Your hours were always yours to lose." },
+  status: { who: "THE STATUS COURT",
+    hello: "Money is gone, but the wanting to be first is not. Step up, stake your standing, and see how you rank. Recognition is the one thing still scarce here.",
+    action: "ENTER THE CONTEST",
+    bye: "The ranking shuffles behind you. Status never did need a currency." },
+  ansa: { who: "STEWARD ANSA",
+    hello: "We measure need and model it, because there is no price to do it for us. Got a moment to talk allocation?",
+    action: "TALK ALLOCATION",
+    bye: "The measuring never stops. That is the job, and the doubt." },
+  ori: { who: "TENDER ORI",
+    hello: "I tend the things that tend us, and wonder what all this free time is for. A word?",
+    action: "ASK THE TENDER",
+    bye: "Plenty is real. So is the question of what it is for." },
+  vesh: { who: "ARCHIVIST VESH",
+    hello: "Five hundred years on and it has still never run at full scale. We say so plainly. Want the honest version?",
+    action: "ASK THE ARCHIVIST",
+    bye: "Both edges, at full strength. That is the only fair way to keep a dream." },
+  desk: { who: "THE CITY ASSEMBLY",
+    hello: "The pieces are studied and the city has handed you the design. Four needles, no labels, the system's own logic, under real stress. Take the chair?",
+    action: "TAKE THE DESK",
+    bye: "The assembly waits whenever you are ready to test the ideal again." }
+};
+
+/* ---------- The Immersion Commons: endless leisure as a quiet trap.
+   The bar slowdown is the reference: freely chosen, mechanically real. ---------- */
+var immersionDove = false;
+function buildImmersionRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "HOST LUMEN"));
+  room.appendChild(el("div", "speech",
+    "Welcome, neighbor. There is nothing you owe and nothing you lack, so why not stay? The pod asks nothing of you. That is its gift, and its hook. A city that frees your time also frees you to lose it."));
+  var verdict = el("div", "verdict");
+
+  var dive = el("button", "choice", "Dive into the immersion  (+10 pts, but SLOWED for 30s once you leave)");
+  dive.addEventListener("click", function(){
+    if (immersionDove) return;
+    immersionDove = true;
+    G.runPoints += 10;
+    verdict.style.display = "block";
+    verdict.classList.add("bad");
+    verdict.innerHTML = "Hours melt pleasantly away, freely chosen. Abundance frees your time and then tempts you to pour it out. +10 pts, and the city will feel slow when you surface.";
+    dive.disabled = true; dive.style.opacity = .4;
+    refreshHUD();
+  });
+
+  var resist = el("button", "choice", "Just look in, then step back out  (+5 pts)");
+  resist.addEventListener("click", function(){
+    if (room._resisted || immersionDove) return;
+    room._resisted = true;
+    G.runPoints += 5;
+    verdict.style.display = "block";
+    verdict.classList.remove("bad");
+    verdict.innerHTML = "Temptation passed. The Commons never made you come in, and it never makes you stay. The freed time is yours to spend with intent.";
+    refreshHUD();
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE CITY");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(dive); room.appendChild(resist); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- The Status Court: status returns even when money does not.
+   The casino bet is the reference: posted odds, a positional good. ---------- */
+function buildStatusRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "HERALD VANTA"));
+  room.appendChild(el("div", "speech",
+    "No one here is rich, because no one here is poor. But everyone still wants to be first. Stake your standing on the next contest. You place 9 times in 20. The rest go home a rung lower. Recognition is the one thing we never made abundant."));
+  var verdict = el("div", "verdict");
+
+  [10, 25, 50].forEach(function(stake){
+    var btn = el("button", "choice", "Stake " + stake + " run points on your standing");
+    btn.addEventListener("click", function(){
+      if (G.runPoints < stake){
+        verdict.style.display = "block"; verdict.classList.add("bad");
+        verdict.innerHTML = "Standing is staked in points here. You need " + stake + " to enter.";
+        return;
+      }
+      var win = rng() < 0.45;
+      verdict.style.display = "block";
+      if (win){
+        G.runPoints += stake;
+        verdict.classList.remove("bad");
+        verdict.innerHTML = "YOU PLACED. +" + stake + " pts. You rose a rung. Someone else fell one, because rank is the one thing that cannot be shared.";
+      } else {
+        G.runPoints -= stake;
+        verdict.classList.add("bad");
+        verdict.innerHTML = "YOU SLIPPED. " + stake + " pts gone. Status is a game where the city as a whole gains nothing. That is the cost it hides.";
+      }
+      refreshHUD();
+    });
+    room.appendChild(btn);
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE CITY");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- The Decision Desk. M20 S3. Labels off, the finale. The four
+   needles wear their future names: ABUNDANCE, ACCESS, AUTONOMY, HARMONY,
+   mapped onto the shared engine's prosperity, equality, freedom, and
+   stability. Built as a stress test of the ideal, not a victory lap. Every
+   option moves at least two needles and almost never all four one way, and
+   even the best read of the system carries an honest cost. ---------- */
+var CHV_DESK = {
   chapter: "CHAPTER 6: THE VENUS PROJECT",
   labelsOn: false,
   needleNames: { prosperity:"ABUNDANCE", equality:"ACCESS", freedom:"AUTONOMY", stability:"HARMONY" },
-  intro: "",
+  intro: "The city has handed you its design. Five decisions wait, and this desk names no principles. Read each option on its merits, run the city by the design's own logic, and keep all four needles off the floor. Abundance is the plenty the machines make, access is allocation by need, autonomy is the room the design leaves for people, and harmony is the consensus a moneyless city runs on. This is a stress test, not a victory lap. No society has ever run this for real, so press on the seams and see whether the ideal holds. Let any one needle hit zero and the design fails under the strain.",
   collapseTitle: "THE DESIGN UNDER STRESS",
   collapseLines: {
-    prosperity: "", equality: "", freedom: "", stability: ""
+    prosperity: "The fabs and the farms fell behind the city's needs and the plenty ran out. With no price to ration the little that was left, the promise at the very heart of the design could not be kept.",
+    equality:   "Allocation by need broke down, and the city split into those the design still served and those it quietly forgot. A moneyless city that cannot reach everyone has lost the one thing that justified it.",
+    freedom:    "The plan grew so total it stopped listening, and a city that ran flawlessly on the model became unlivable on the ground. The residents had abundance and no say, the exact future Seeing Like a State warned of.",
+    stability:  "Disagreement over need, over status, and over who does the work boiled over, and with no money and no market to absorb the friction, the consensus the whole city depended on came apart at once."
   },
-  beats: []
+  beats: [
+    { id:"shortfall",
+      prompt: "BEAT 1. A material the fabs cannot fully synthesize runs short this season. With no price to ration it, how does the city decide who gets the little there is?",
+      options: [
+        { t:"Measure the competing needs directly, model the tradeoff across the whole city, and send the short supply to the most urgent uses first", fit:2,
+          fx:{ equality:6, stability:2, prosperity:-2 },
+          why:"The calculation problem answered the system's own way. With no price, the city has to gather and weigh need itself. It is the right method and the hard one, slow and never quite exact, and the shortfall still pinches the plenty." },
+        { t:"Split the scarce material equally among everyone, no matter who needs it most", fit:1,
+          fx:{ equality:2, freedom:2, prosperity:-4, stability:-2 },
+          why:"Fair on its face and blind to urgency. The clinic and the hobbyist draw the same ration, so the urgent need goes unmet and the supply stretches thinner. Equal is not the same as by need." },
+        { t:"Let districts quietly barter the scarce material among themselves", fit:1,
+          fx:{ freedom:4, prosperity:2, equality:-6, stability:-2 },
+          why:"The market slipping back in through a side door. It clears the shortage fast and rebuilds the price system the city was built to do without, and access tilts toward whoever has the most to trade." },
+        { t:"Declare there is no shortage and keep allocating as though supply were full", fit:0,
+          fx:{ stability:-18, prosperity:-8, equality:-6 },
+          why:"The calculation problem denied instead of solved. Pretend the limit is not there and the shelves empty anyway, only now with no plan at all for who goes without. Denial is the fastest road to collapse." }
+      ]},
+    { id:"defineneed",
+      prompt: "BEAT 2. Two residents both call their request a need: one wants a medical implant, one wants a private workshop the size of a house. With no price to sort want from need, who draws the line, and how?",
+      options: [
+        { t:"Set transparent, revisable criteria for need through open deliberation, and let residents contest them", fit:2,
+          fx:{ equality:6, stability:2, freedom:-2 },
+          why:"Defining need is the political heart of a moneyless city. Doing it openly and revisably is the honest method, and it costs a little autonomy, because the city, not the individual, ends up drawing the line." },
+        { t:"Let a standing panel of experts rank every request by a fixed standard", fit:1,
+          fx:{ stability:4, equality:2, freedom:-6 },
+          why:"Tidy and quick, and it hands the meaning of need to a few hands. Efficient, and a long step toward the very paternalism Scott warns about." },
+        { t:"Grant whatever anyone calls a need, no questions asked", fit:1,
+          fx:{ freedom:6, equality:2, prosperity:-8 },
+          why:"Generous to a fault. With no scarcity signal and no limit, every want inflates into a need and the fabs cannot keep pace. Plenty is not infinity." },
+        { t:"Refuse to define need at all and let the loudest voices prevail", fit:0,
+          fx:{ equality:-16, stability:-10, freedom:2 },
+          why:"Abdication dressed up as freedom. With no method, allocation goes to whoever pushes hardest, the law of the jungle in a clean uniform." }
+      ]},
+    { id:"wantsmore",
+      prompt: "BEAT 3. A gifted resident demands far more than her share of fab time and threatens to withdraw her work if refused. There is no money to charge her and no wage to dock. What do you do?",
+      options: [
+        { t:"Meet the motivation problem head on: offer recognition and a fair, larger project rather than private hoarding, since the city cannot pay her", fit:2,
+          fx:{ stability:4, freedom:2, equality:2, prosperity:-2 },
+          why:"With no wage, a moneyless city trades in recognition and meaningful work. It can hold a talented hand without buying her, though it bends a little to do it, and whether recognition is always enough is the open question." },
+        { t:"Give her whatever she demands to keep her contributing", fit:1,
+          fx:{ prosperity:4, equality:-8, stability:-2 },
+          why:"Productive and corrosive. Reward the threat and you teach everyone that leverage, not need, gets the goods, and access quietly becomes a contest of who can hold out longest." },
+        { t:"Refuse flatly: everyone gets the same share, no exceptions", fit:1,
+          fx:{ equality:6, stability:-4, prosperity:-4 },
+          why:"Principled and brittle. Pure equal shares ignore that some contributions are rare, and the gifted hand may simply stop, taking her gift with her. Fairness can cost the plenty it meant to protect." },
+        { t:"Let her take what she wants and trade the surplus to others privately", fit:0,
+          fx:{ freedom:4, equality:-16, stability:-8 },
+          why:"Money reborn in all but name. Private trade in surplus is the seed of the whole price system, and the moneyless city dissolves back into the market it was designed to replace." }
+      ]},
+    { id:"planstreet",
+      prompt: "BEAT 4. A neighborhood keeps using a designed plaza in a way the master plan never intended, and it plainly works for them. The design says otherwise. Which gives way?",
+      options: [
+        { t:"Treat the unplanned use as information and revise the design to fit how people actually live", fit:2,
+          fx:{ freedom:6, stability:2, prosperity:-2 },
+          why:"Scott's lesson applied. A total design survives only by staying legible to the people inside it. Bending to local knowledge costs a little coherence and buys a city that is actually livable." },
+        { t:"Hold the plan and gently retrain residents toward the intended use", fit:1,
+          fx:{ stability:4, prosperity:2, freedom:-6 },
+          why:"The model wins and the people lose a little of themselves. It keeps the design pure and begins the slow slide into a city that serves its plan rather than its residents." },
+        { t:"Carve out a permanent exception for that plaza and change nothing else", fit:1,
+          fx:{ freedom:2, stability:2, equality:-2 },
+          why:"A patch, not a lesson. The plaza is fixed, and the deeper blindness, a design that could not see this use coming, goes unexamined for the next time." },
+        { t:"Enforce the master plan exactly and override the neighborhood", fit:0,
+          fx:{ freedom:-18, stability:-8, prosperity:-2 },
+          why:"High modernism at full volume. A plan that cannot be corrected by the people living it is the precise failure Seeing Like a State describes: elegant on the model, unlivable on the ground." }
+      ]},
+    { id:"hardwork",
+      prompt: "BEAT 5. Some work is still unpleasant or demands rare skill, and there are no wages to draw anyone to it. How does the city get it done?",
+      options: [
+        { t:"Lean on a mix of rotation, recognition, genuine interest, and more automation wherever the task can be machined away", fit:2,
+          fx:{ stability:4, prosperity:2, equality:2, freedom:-2 },
+          why:"The honest answer, and an unproven one. Without money the city must motivate by other means and automate the rest. It plausibly works, and whether it works reliably at scale is the doubt this whole chapter rests on." },
+        { t:"Assign the unpleasant work by quota, the same hours for everyone", fit:1,
+          fx:{ equality:6, freedom:-6, stability:2 },
+          why:"Scrupulously fair and faintly coercive. Compulsory rotas get the work done and chip at the autonomy that was supposed to be the reward of abundance." },
+        { t:"Wait for volunteers and leave undone whatever no one chooses", fit:1,
+          fx:{ freedom:6, prosperity:-6, stability:-2 },
+          why:"Maximally free and quietly failing. Some necessary, thankless work finds no taker, and the plenty comes to depend on jobs the dream forgot to staff." },
+        { t:"Quietly bring back extra rewards, a currency, for the hard jobs", fit:0,
+          fx:{ equality:-14, prosperity:4, freedom:2, stability:-4 },
+          why:"The money the city abolished, walking back in through the loading dock. Pay for the hard work and you have rebuilt wage labor and the inequality that rides along with it." }
+      ]}
+  ]
 };
 var CHV_ARCADE = {           /* S4 */
   engine: "lander", title: "SOFT LANDING", skin: "lander",
@@ -11958,7 +12524,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M20.S1",
+  version: "M20.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
