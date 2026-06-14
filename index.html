@@ -418,7 +418,7 @@ function rebuildCollision(){
     solid[y]=[];
     for (var x=0;x<MAP_W;x++){
       var c = MAP_ROWS[y][x];
-      solid[y][x] = (c==="T"||c==="F"||c==="C") ? 1 : 0;
+      solid[y][x] = (c==="T"||c==="F"||c==="C"||c==="~") ? 1 : 0;
     }
   }
   BUILDINGS.forEach(function(b){
@@ -440,7 +440,7 @@ function isSolid(tx,ty){
    so a returning player keeps Free Play and cleared chapter state
    across sessions. Short runs, permanent progress. */
 var PROGRESS_KEY = "mf_progress";
-var CHAPTER_ORDER = ["ch1", "ch2", "ch3", "ch4"];
+var CHAPTER_ORDER = ["ch0", "ch1", "ch2", "ch3", "ch4"];
 function blankChapterProgress(){ return { cleared: false, clears: 0, bestDesk: 0, bestArcade: 0 }; }
 function freshProgress(){
   var p = {};
@@ -473,6 +473,7 @@ function freeUnlocked(chId){
 function chapterUnlocked(id){
   var ch = CHAPTERS[id];
   if (!ch) return false;
+  if (Progress[id] && Progress[id].cleared) return true;
   return ch.unlock ? !!(Progress[ch.unlock] && Progress[ch.unlock].cleared) : true;
 }
 
@@ -730,7 +731,7 @@ function updateCritters(dt){
     var dx = c.tx - c.x, dy = c.ty - c.y;
     var d = Math.sqrt(dx*dx + dy*dy);
     if (d > 2){
-      var sp = c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : 52;
+      var sp = c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : 52;
       c.x += dx/d * sp * dt/1000;
       c.y += dy/d * sp * dt/1000;
       c.flip = dx < 0 ? -1 : 1;
@@ -749,6 +750,7 @@ function updateCritters(dt){
 }
 
 function drawDecorItem(d, sx, sy){
+  if (CUR.theme === "stoneage") return drawStoneAgeDecor(d, sx, sy);
   if (d.kind === "billboard"){
     // a digital board cycling abstract color bars, no readable text
     ctx.fillStyle = "#26282e"; ctx.fillRect(sx+4, sy-30, 5, 48); ctx.fillRect(sx+52, sy-30, 5, 48);
@@ -900,6 +902,7 @@ function drawDecorItem(d, sx, sy){
 }
 
 function drawCritter(c, sx, sy){
+  if (CUR.theme === "stoneage") return drawStoneAgeCritter(c, sx, sy);
   if (c.kind === "pigeon"){
     var peck = Math.floor(G.time/420) % 3 === 0 ? 2 : 0;
     ctx.fillStyle = "#7a8494"; ctx.fillRect(sx, sy+4, 10, 7);
@@ -1238,6 +1241,7 @@ function drawMixedGround(c, x, y, sx, sy){
 }
 
 function drawGroundTile(c, x, y, sx, sy){
+  if (CUR.theme === "stoneage") return drawStoneAgeGround(c, x, y, sx, sy);
   if (CUR.theme === "metro") return drawMetroGround(c, x, y, sx, sy);
   if (CUR.theme === "commons") return drawCommonsGround(c, x, y, sx, sy);
   if (CUR.theme === "planned") return drawPlannedGround(c, x, y, sx, sy);
@@ -2078,13 +2082,38 @@ function propCandles(th){
     ctx.fillStyle = "rgba(232,176,75,.15)"; ctx.fillRect(cx3-12, 232, 34, 46);
   }
 }
+function propFirePit(th){
+  // a fire burning in a stone ring against the wall
+  ctx.fillStyle = "#3a342c"; ctx.fillRect(70, 150, 150, 90);
+  ctx.fillStyle = "#2a2620"; ctx.fillRect(84, 168, 122, 64);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(92, 220, 30, 12); ctx.fillRect(150, 222, 34, 10);
+  var fl = Math.floor(G.time / 130) % 3;
+  ctx.fillStyle = "#b5662f"; ctx.fillRect(108, 188 - fl * 4, 70, 44 + fl * 4);
+  ctx.fillStyle = "#e8922b"; ctx.fillRect(120, 176 - fl * 5, 46, 54 + fl * 5);
+  ctx.fillStyle = "#f2c84b"; ctx.fillRect(132, 170 - fl * 6, 22, 56 + fl * 6);
+  ctx.fillStyle = "#fff0c0"; ctx.fillRect(138, 196 - fl * 3, 10, 28);
+  ctx.fillStyle = "rgba(232,146,43,.10)"; ctx.fillRect(40, 130, 210, 130);
+}
+function propPelts(th){
+  // hides and furs hung to cure along a beam
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(360, 60, 230, 8);
+  var cols = ["#8a6a44", "#a3835a", "#6e5436", "#b58a5c"];
+  for (var i = 0; i < 4; i++){
+    var px = 380 + i * 54, sw = Math.round(Math.sin(G.time / 700 + i) * 2);
+    ctx.fillStyle = cols[i];
+    ctx.fillRect(px + sw, 68, 40, 64 + (i % 2) * 14);
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(px + sw, 68, 40, 6);
+    ctx.fillStyle = th.accent || "#e8b04b"; ctx.fillRect(px + 16 + sw, 64, 8, 6);
+  }
+}
 var ROOM_PROPS = {
   windowrow: propWindowRow, machines: propMachines, columns: propColumns,
   vault: propVault, board: propBoard, bulb: propBulb, bench: propBench,
   barrels: propBarrels, crackedmirror: propCrackedMirror, chandelier: propChandelier,
   lights: propLights, wheel: propWheel, bookshelves: propBookshelves, beam: propBeam,
   banner: propBanner, crowd: propCrowd, benchrow: propBenchRow, handsup: propHandsUp,
-  pipes: propPipes, gauges: propGauges, agendaboard: propAgendaBoard, candles: propCandles
+  pipes: propPipes, gauges: propGauges, agendaboard: propAgendaBoard, candles: propCandles,
+  firepit: propFirePit, pelts: propPelts
 };
 
 function drawRoomBust(cx2, midY, cfg){
@@ -2650,6 +2679,7 @@ function openBuildingInterior(b){
   else if (b.id === "blackmarket") buildBlackMarketRoom(b);
   else if (b.id === "cinema") buildCinemaRoom(b);
   else if (b.id === "permit") buildPermitRoom(b);
+  else if (b.id === "cache") buildCacheRoom(b);
   else if (b.kind === "institute") buildInstituteRoom(b);
   openInterior();
 }
@@ -4648,7 +4678,7 @@ function renderArcadeSummary(s){
   }
   var fp = el("button", "btn", "FREE PLAY: RUN THE TOWN");
   fp.addEventListener("click", function(){ openFreePlay(); });
-  room.appendChild(fp);
+  if (CUR.freeplay) room.appendChild(fp);
   var walk = el("button", "btn ghost", "WALK AGAIN");
   walk.addEventListener("click", function(){
     closeArcade();
@@ -4810,6 +4840,7 @@ var freeEls = null;       // live element refs for cheap per tick updates
 function openFreePlay(chId){
   if (typeof chId !== "string" || !CHAPTERS[chId]) chId = CHAPTER_ID;
   if (!freeUnlocked(chId)) return;
+  if (!CHAPTERS[chId].freeplay) return;
   freeFrom = (G.scene === "COMPLETE" || G.scene === "ARCADE_MENU") ? G.scene : "TITLE";
   panelTitle.classList.remove("open");
   panelComplete.classList.remove("open");
@@ -5027,10 +5058,17 @@ function completeChapter(){
 
   completeInner.appendChild(el("div", "banked",
     "LIFETIME TOTAL: " + G.lifetime + (Store.usingMemory() ? "<br>(saved for this session)" : "<br>(saved on this device)")));
-  completeInner.appendChild(el("div", "sub",
-    nextChapterId()
-      ? "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Three doors are open now: the arcade is pure candy, Free Play hands you the chair with no script and no clock, and the next town just unlocked its gates."
-      : "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Two doors are open now: the arcade is pure candy, and Free Play hands you the chair with no script and no clock."));
+  if (CUR.freeplay){
+    completeInner.appendChild(el("div", "sub",
+      nextChapterId()
+        ? "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Three doors are open now: the arcade is pure candy, Free Play hands you the chair with no script and no clock, and the next town just unlocked its gates."
+        : "You gathered the parts, passed the lesson, and ran the system from the chair without being asked to believe a word of it. Two doors are open now: the arcade is pure candy, and Free Play hands you the chair with no script and no clock."));
+  } else {
+    completeInner.appendChild(el("div", "sub",
+      nextChapterId()
+        ? "You learned the controls, read both sides of the shelf, and ran the band from the chair. Two doors are open now: the arcade is pure candy, and the first full chapter just unlocked its gates."
+        : "You learned the controls, read both sides of the shelf, and ran the band from the chair. The arcade is pure candy whenever you want it."));
+  }
 
   var play = el("button", "btn tick", "PLAY THE ARCADE");
   play.addEventListener("click", openArcade);
@@ -5044,7 +5082,7 @@ function completeChapter(){
 
   var fp = el("button", "btn", "FREE PLAY: RUN THE TOWN");
   fp.addEventListener("click", function(){ openFreePlay(); });
-  completeInner.appendChild(fp);
+  if (CUR.freeplay) completeInner.appendChild(fp);
 
   var again = el("button", "btn ghost", "WALK AGAIN");
   again.addEventListener("click", resetRun);
@@ -5127,7 +5165,7 @@ function refreshTitle(){
       go.addEventListener("click", function(){ startChapter(id); });
       row.appendChild(go);
     }
-    if (p.cleared){
+    if (p.cleared && ch.freeplay){
       var fp = el("button", "btn ghost", "FREE PLAY");
       fp.addEventListener("click", function(){ openFreePlay(id); });
       row.appendChild(fp);
@@ -5380,6 +5418,18 @@ function render(){
       ctx.fillStyle = "#9a2f2a"; ctx.fillRect(hx+h.w-13, hy+h.h-11, 9, 9);
       ctx.fillStyle = "#7a231f"; ctx.font="6px 'Press Start 2P', monospace"; ctx.textAlign="center";
       ctx.fillText("ORDER", hx+h.w/2, hy+6);
+    } else if (h.skin==="predator"){
+      // a prowling beast: low body, ears, a pale watchful eye
+      var pface = (h.dir !== undefined && h.dir < 0) ? -1 : 1;
+      ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(hx+2, hy+h.h-3, h.w-4, 5);
+      ctx.fillStyle = "#7a5a36"; ctx.fillRect(hx+2, hy+6, h.w-4, h.h-10);
+      ctx.fillStyle = "#6a4c2c"; ctx.fillRect(hx+2, hy+h.h-8, h.w-4, 4);
+      ctx.fillStyle = "#8a6a40"; ctx.fillRect(pface>0?hx+h.w-12:hx, hy+3, 12, 12);
+      ctx.fillStyle = "#5c4326";
+      ctx.fillRect(pface>0?hx+h.w-11:hx+2, hy, 3, 4); ctx.fillRect(pface>0?hx+h.w-5:hx+6, hy, 3, 4);
+      ctx.fillStyle = "#f2e8b0"; ctx.fillRect(pface>0?hx+h.w-6:hx+3, hy+6, 3, 3);
+      ctx.fillStyle = "#5c4326";
+      ctx.fillRect(hx+4, hy+h.h-4, 3, 4); ctx.fillRect(hx+h.w-7, hy+h.h-4, 3, 4);
     } else if (h.type==="cart"){
       ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(hx+2, hy+h.h-3, h.w-4, 5);
       ctx.fillStyle = "#6e4a24"; ctx.fillRect(hx, hy+4, h.w, h.h-8);
@@ -6073,7 +6123,7 @@ function renderCrosser(){
 
 function renderArcade(){
   if (arcade && arcade.kind === "stack"){ renderStack(); return; }
-  if (arcade && arcade.kind === "catch"){ renderCatchNet(); return; }
+  if (arcade && arcade.kind === "catch"){ if (arcade.cfg.skin === "gather") renderCatchGather(); else renderCatchNet(); return; }
   if (arcade && arcade.kind === "crosser"){ renderCrosser(); return; }
   if (arcade && arcade.cfg.skin === "dispatch") renderArcadeDispatch();
   else renderArcadeTerminal();
@@ -7177,7 +7227,7 @@ var CHAPTERS = {
     name: "CHAPTER 1: CAPITALISM",
     titleSub: "Walk the market town. Gather four insights. Mind the traffic.",
     walkToast: "THE WALK. Four starred buildings hold the town's insights.<br>Step to a door and press A or SPACE.",
-    unlock: null,
+    unlock: "ch0",
     map: CH1_MAP,
     buildings: CH1_BUILDINGS,
     npcs: CH1_NPCS,
@@ -7289,6 +7339,837 @@ CHAPTERS.ch4 = {
   palette: { bg: "#181d1b", g1: "#2c322e", g2: "#272d29" }
 };
 
+/* ===== LEVEL 0 PROLOGUE INJECTION (ch0) ===== */
+/* =====================================================
+   LEVEL 0: THE PROLOGUE. THE FIRST TRADE.
+   The world before money, in a Stone Age river valley.
+   Lowest stakes in the game: it teaches the controls, the
+   shelf, and the Decision Desk, and sets up the one live
+   question the curriculum circles back to, where money came
+   from. Built on the established data patterns, reusing the
+   catch engine for the bonus round. Free Play is omitted on
+   purpose so the prologue stays short.
+   ===================================================== */
+var CH0_MAP = [
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTT.....TT.....TT.....TTTTTT",
+  "TTT.....TT.....TT.....TTTTTT",
+  "TTT.....TT.....TT.....TTTTTT",
+  "TTT...................TTTTTT",
+  "TTT.................C.....TT",
+  "TTT.......................TT",
+  "TTT.....C.................TT",
+  "TTT..............C.......TTT",
+  "TTTTTTTTTTT..FFTTTTTTTTTTTTT",
+  "TTTTTTTTTTT..FFTTTTTTTTTTTTT",
+  "TTTTTTTTTTT....TTTTTTTTTTTTT",
+  "T~~~~~~~~~~~...~~~~~~~~~~~~T",
+  "T~~~~~~~~~~~...~~~~~~~~~~~~T",
+  "T~~~~~~~~~~~...~~~~~~~~~~~~T",
+  "TTTTTT.C.............TTTTTTT",
+  "TTTTTT............C..TTTTTTT",
+  "TTTTTT...............TTTTTTT",
+  "TTTTTT...............TTTTTTT",
+  "TTTTTT...............TTTTTTT",
+  "TTTTTT...............TTTTTTT",
+  "TTTTTT...............TTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTTTT"
+];
+
+var CH0_BUILDINGS = [
+  { id:"hearth",     name:"THE HEARTH",         kind:"lesson",     x:3,  y:2,  w:5, h:3, door:{x:5,  y:4},  hue:"#8a5a36", roof:"#5c3a22", sign:"HEARTH" },
+  { id:"giftcircle", name:"THE GIFT CIRCLE",    kind:"lesson",     x:10, y:2,  w:5, h:3, door:{x:12, y:4},  hue:"#7a6a44", roof:"#4f432a", sign:"GIFTS" },
+  { id:"institute",  name:"THE GATHERING ROCK", kind:"institute",  x:17, y:2,  w:5, h:3, door:{x:19, y:4},  hue:"#6e6052", roof:"#473d33", sign:"ELDERS" },
+  { id:"cache",      name:"THE HIDDEN CACHE",   kind:"temptation", x:22, y:6,  w:4, h:3, door:{x:23, y:8},  hue:"#6a5a3c", roof:"#473d28", sign:"CACHE" },
+  { id:"farbank",    name:"THE FAR BANK",       kind:"lesson",     x:10, y:18, w:6, h:3, door:{x:13, y:20}, hue:"#5b7f7a", roof:"#3c5651", sign:"TRADE" }
+];
+
+var CH0_LESSONS = {
+  hearth: {
+    host: "ELDER ROHA",
+    speech: "The hunt feeds the whole camp, not the hand that threw the spear. Meat spoils in a day and a body keeps for a lifetime. So we share the kill, and the sharing is the first economy any people ever ran.",
+    question: "A young hunter wants to keep his whole kill for his own family this time. By the band's own way, the answer is?",
+    choices: [
+      { t: "Bring it to the hearth and share it out", ok: true,
+        why: "Demand sharing. Where meat rots and no one can store it, the band itself is the storehouse. You feed it on your good days so it feeds you on your bad ones." },
+      { t: "Let him keep it all, he earned it", ok: false,
+        why: "He earned today. The lean week, when his own spear misses, he will want the hearth that he walked away from. Sharing is the savings here. Try again." },
+      { t: "Make him hand it all to the elder", ok: false,
+        why: "No chief skims the kill in this camp. It goes to the hearth and back out to everyone, not up to one hand. Try again." }
+    ],
+    insight: { title: "INSIGHT: SHARING IS THE FIRST ECONOMY",
+      body: "Before money or markets, bands met need by sharing the catch. With no way to store food, the group is the savings account: you give when you can so you can take when you cannot." }
+  },
+  giftcircle: {
+    host: "KINSWOMAN SELA",
+    speech: "When the band across the water sends us a basket of dried fish, it is not charity and it is not a sale. It is a gift, and a gift carries a quiet debt. One day they will come, and one day we will give back, a little more than we got.",
+    question: "The neighbors send a generous gift and ask for nothing. What does the gift actually do?",
+    choices: [
+      { t: "It opens a bond they expect you to answer in time", ok: true,
+        why: "Reciprocity. The gift is a thread, not a free lunch. Marcel Mauss called the obligation to give, receive, and return the oldest social glue there is." },
+      { t: "Nothing, it is free and forgotten by morning", ok: false,
+        why: "A gift you never answer is an insult that ends the friendship. The debt is unwritten but it is real. Try again." },
+      { t: "It is a trick, refuse it and stay clear", ok: false,
+        why: "Refuse every gift and you cut every tie. The bond is the point, and the band that gives nothing receives nothing when the river floods. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE GIFT CARRIES A DEBT",
+      body: "Gift exchange binds groups through the obligation to give, receive, and return. It is not a market and not charity. It is a web of standing debts that holds allies together across distance and time." }
+  },
+  farbank: {
+    host: "THE FAR TRADER",
+    speech: "She speaks no word of your tongue. She holds up dried fish, points at the flint axe on your back, and waits. No hearth ties you two, so the gift will not carry. Out here at the edge between bands, only one thing works: a straight swap, goods for goods.",
+    question: "She wants your axe and you want her fish. The swap happens only when?",
+    choices: [
+      { t: "Both of you want what the other holds, at the same moment", ok: true,
+        why: "The double coincidence of wants. Barter needs your need and her need to line up exactly, right now. Most days they do not, which is the whole problem money would later solve." },
+      { t: "Whenever either of you simply asks", ok: false,
+        why: "Asking is the hearth's way, for kin. Between strangers with no bond, a one way handover is begging or theft, not trade. Try again." },
+      { t: "Once a chief sets the official price", ok: false,
+        why: "There is no chief at the edge of the world and no coin to price anything in. There is only what each of you will hand over today. Try again." }
+    ],
+    insight: { title: "INSIGHT: BARTER LIVES AT THE EDGES",
+      body: "Direct barter, goods for goods, appears mainly between groups that share no bond of kin or gift. It works only when wants coincide exactly, a hard match that sets the stage for money." }
+  }
+};
+
+var CH0_NPCS = [
+  { id:"miro", name:"ELDER MIRO", tx:8, ty:6, hue:"#a3683a",
+    lines:["The pot is shared, the hide is shared, the hunt is shared. That is not kindness, child. It is how we all eat through a hard winter.",
+           "We keep no count and no coin out here. We keep each other. That is the only savings worth the name."] },
+  { id:"bran", name:"BRAN THE HOARDER", tx:21, ty:9, hue:"#6e5a3c",
+    lines:["Why hand over the whole catch? I keep a little back, hidden, just for mine. Feels clever, does it not.",
+           "Though when the lean season bit last, the circle I had snubbed was slow to take me back in. Funny, that."] },
+  { id:"ula", name:"FAR TRADER ULA", tx:18, ty:17, hue:"#5b9e8f",
+    lines:["She holds up a dried fish, then points at your axe, then waits. No shared tongue, only the goods between you.",
+           "A trade happens only when her want and yours meet at once. Most days they do not, and you both walk on."] }
+];
+
+var CH0_HAZARDS = [
+  { id:"beast1", type:"cart", skin:"predator", x:5*TILE, y:8*TILE, w:34, h:22, dir:1, speed:62,
+    minX:3*TILE, maxX:24*TILE, cost:4,
+    line:"A cave lion broke from the reeds and you barely twisted clear. Minus 4." },
+  { id:"beast2", type:"bubble", skin:"predator", x:9*TILE, y:9*TILE, w:30, h:22, vx:46, vy:34,
+    minX:4*TILE, maxX:22*TILE, minY:8*TILE, maxY:12*TILE, cost:4,
+    line:"A wolf slunk in from the long grass and got a swipe in. Minus 4." }
+];
+
+var CH0_LESSON_CARDS = [
+  { t: "THREE WAYS TO MEET A NEED",
+    b: "Before there was money, people got what they needed in three ways. Inside the band, they shared. Between friendly bands, they gave gifts that carried a debt. At the edges, with strangers, they bartered, goods for goods. You watched all three in the valley." },
+  { t: "WHERE DID MONEY COME FROM",
+    b: "Money has not arrived yet in this valley. How it eventually did is a real argument among thinkers, not a settled fact. One side says it grew out of barter to fix the hard match of wants. The other says it grew out of debt and the gift long before any coin. The shelf has both sides at full strength." }
+];
+
+var CH0_PRACTICE = {
+  q: "PRACTICE REP. At the far bank you want her fish and she wants your axe, but only if it happens this very afternoon. What is the catch that makes pure barter so hard?",
+  choices: [
+    { t: "Both wants must line up at the same time, the double coincidence", ok: true,
+      why: "Right. Barter needs a perfect match of wants in the same moment. Miss it and nobody trades. That hard match is exactly the gap money would later fill." },
+    { t: "There are too many coins to count", ok: false,
+      why: "There are no coins here at all. That is the point of the prologue. Run it again." },
+    { t: "The chief has banned the trade", ok: false,
+      why: "No chief, no ban, no price list. Just two people and whether their wants meet. Run it again." }
+  ]
+};
+
+var CH0_GATE_QS = [
+  { q: "GATE 1 OF 2. Inside the band, a good hunter shares the whole kill at the hearth and keeps almost none. By the band's own logic, why?",
+    choices: [
+      { t: "The band is the only storehouse, so sharing is saving", ok: true,
+        why: "With no way to store meat, you bank it in the group by feeding it. The hearth pays you back on the day your own hunt fails. The gate opens." },
+      { t: "Because sharing makes everyone exactly equal in all things", ok: false,
+        why: "Equality is not the claim. The claim is survival: you cannot store meat, so you store goodwill. The gate resets." },
+      { t: "Because a chief orders it and punishes hoarders", ok: false,
+        why: "No chief runs this hearth. The sharing is a custom that keeps the whole band alive, not an order from above. The gate resets." }
+    ]},
+  { q: "GATE 2 OF 2. A gift from a neighboring band is not charity and not a sale. What is it, in the band's own terms?",
+    choices: [
+      { t: "A bond that quietly expects a return in time", ok: true,
+        why: "The gift opens a standing debt and ties the two bands together. Give, receive, return. That is reciprocity. The gate opens." },
+      { t: "A free handout with no strings of any kind", ok: false,
+        why: "A gift never answered ends the friendship. The string is unwritten but real. The gate resets." },
+      { t: "A straight market price paid in shells", ok: false,
+        why: "No price and no shells are involved yet. It is a bond, not a sale. The gate resets." }
+    ]}
+];
+
+var CH0_BOOKS = [
+  { id:"smith0", side:"for", title:"The Wealth of Nations", author:"Adam Smith, 1776",
+    link:"https://www.gutenberg.org/ebooks/3300",
+    summary:"Smith opens the modern story of money with a picture of early people held back by barter. A butcher with surplus meat and a need for bread is stuck until he finds a baker who happens to want meat that very day. To escape that hard match, Smith argues, people gradually settled on one good that everyone would accept, first cattle or salt, later metal, and money was born as a tool to smooth exchange. It is the classic account in which the market comes first and coin arrives to serve it." },
+  { id:"menger0", side:"for", title:"On the Origins of Money", author:"Carl Menger, 1892",
+    link:"https://en.wikipedia.org/wiki/Carl_Menger",
+    summary:"Menger sharpened Smith's story into a careful argument. Nobody, he says, sat down and invented money. Each trader, trying to escape the barter trap, learned to accept the goods that were easiest to pass on later, the most saleable ones. Over time everyone converged on the same few highly saleable goods, and those became money with no law or decree. It is the strongest version of the claim that money emerges from the bottom up, as the unplanned solution to the coincidence of wants." },
+  { id:"graeber0", side:"against", title:"Debt: The First 5000 Years", author:"David Graeber, 2011",
+    link:"https://en.wikipedia.org/wiki/David_Graeber",
+    summary:"Graeber, an anthropologist, argues the barter story is a myth that researchers have never actually found in the field. Real societies without money did not haggle good for good, he says. They ran on credit, favor, and debt: you took what you needed and the obligation was remembered. Money and even coinage, in his telling, often arrived later, pushed by states, temples, and armies that needed to count what was owed. It is the leading modern case that debt came first and barter is a tidy fable." },
+  { id:"mauss0", side:"against", title:"The Gift", author:"Marcel Mauss, 1925",
+    link:"https://en.wikipedia.org/wiki/The_Gift_(essay)",
+    summary:"Mauss studied how archaic societies exchanged long before markets and found not barter but the gift. Across many cultures he saw the same threefold rule, the obligation to give, to receive, and to return, binding people through generosity that always expected an answer. Exchange, in his account, was woven into kinship, honor, and ritual, not driven by price. It is the foundational case that the deep root of economic life is the social bond of reciprocity, not the lone trader looking to truck and barter." }
+];
+
+var CH0_DESK = {
+  chapter: "PROLOGUE: THE FIRST TRADE",
+  labelsOn: true,
+  intro: "The elders give you a voice at the rock. Three choices face the band before winter. Run the camp by the band's own ways, sharing inside, gifts between friends, barter at the edges, and keep all four needles off the floor. Any needle at zero and the band scatters.",
+  collapseTitle: "THE CAMP BREAKS UP",
+  collapseLines: {
+    prosperity: "The stores run empty and the children go hungry. A band that cannot feed itself does not last the winter, and this one walks off in search of fuller ground.",
+    equality:   "A few hoard and the rest go without, and the bond that held the hearth together snaps. Resentment does what no beast could: it scatters the band.",
+    freedom:    "Every choice now runs through one heavy hand, and people who came and went as they pleased simply leave. A camp nobody is free in empties out.",
+    stability:  "Raids answer hunger and hunger answers raids, until no one can rest by the fire. The valley empties as families slip away in the night."
+  },
+  beats: [
+    { id:"hunt",
+      prompt: "BEAT 1. A great hunt brings in far more meat than your own family can eat before it spoils. The whole camp is watching what you do with it.",
+      options: [
+        { label:"DEMAND SHARING", t:"Carry it to the hearth and share the kill", fit:2,
+          fx:{ prosperity:4, equality:6, stability:4, freedom:-2 },
+          why:"The band is the only storehouse there is. Feed it now and it feeds you the week your own spear misses. This is how every hunting people banked against hunger." },
+        { label:"TRADE OUTWARD", t:"Carry the surplus to the far band and swap it for goods", fit:1,
+          fx:{ prosperity:6, equality:-2, freedom:2, stability:-2 },
+          why:"Not wrong, just early. Barter at the edge can turn meat that would rot into tools that last, but it skips the hearth that keeps your own people loyal." },
+        { label:"PRIVATE CACHE", t:"Hide the surplus away, only for your own family", fit:0,
+          fx:{ prosperity:-2, equality:-8, stability:-4, freedom:4 },
+          why:"A lone cache spoils, draws mice, and answers to no one when your luck turns. Step outside the sharing circle and there is nothing to catch you." }
+      ]},
+    { id:"lean",
+      prompt: "BEAT 2. The lean season bites and your own hunt fails for a week. The hearth has fed you before, and the neighbors owe you a gift from the autumn.",
+      options: [
+        { label:"CALL IN THE GIFT", t:"Send word to the band that owes you and call the debt in kindly", fit:2,
+          fx:{ equality:6, stability:4, prosperity:2, freedom:-2 },
+          why:"The autumn gift carried a quiet debt, and this is what it was for. Reciprocity is the safety net between bands. You answer their lean weeks too." },
+        { label:"HOLD THE NORM", t:"Say nothing and lean on the hearth's own sharing", fit:1,
+          fx:{ equality:4, stability:2, prosperity:-2 },
+          why:"The hearth will carry you, as custom says it must. It strains the stores a little, but the band holds. Quiet need is what sharing is for." },
+        { label:"TAKE BY FORCE", t:"Raid a neighbor's cache and take what you need", fit:0,
+          fx:{ prosperity:2, stability:-10, equality:-6, freedom:-2 },
+          why:"You eat tonight and the valley remembers for a generation. Force turns a web of gifts into a feud, and feuds scatter bands faster than any winter." }
+      ]},
+    { id:"token",
+      prompt: "BEAT 3. A stranger from a distant band offers a smooth polished shell for your spare axe. The shell feeds no one and cuts nothing. He says others far off will take it gladly.",
+      options: [
+        { label:"ACCEPT THE TOKEN", t:"Take the shell, betting others will accept it later", fit:2,
+          fx:{ prosperity:6, freedom:4, stability:2, equality:-2 },
+          why:"The first glimmer of money. A thing worth nothing in itself becomes worth something once everyone will take it. Accept the most tradeable good and you are halfway to a coin." },
+        { label:"TRUST ONLY GOODS", t:"Refuse the shell, swap only for things you can use", fit:1,
+          fx:{ stability:2, prosperity:-2, freedom:-2 },
+          why:"Safe and sound, and stuck in the barter trap. Goods only means you trade only when wants line up exactly. You keep the certainty and pay for it in missed swaps." },
+        { label:"SEIZE THE GOODS", t:"Take the stranger's pack and send him off empty", fit:0,
+          fx:{ prosperity:2, stability:-8, freedom:-4, equality:-4 },
+          why:"One full pack today, no trader who ever returns. Rob the first stranger and you wall your valley off from every band beyond it. The road closes." }
+      ]}
+  ]
+};
+
+var CH0_ARCADE = {
+  engine: "catch",
+  title: "THE GATHER",
+  skin: "gather",
+  startLabel: "TAKE THE BASKET",
+  endTitle: "THE LIGHT GOES",
+  hitVerb: "GATHER A FIND",
+  sumLabel: "Finds gathered",
+  sumUnit: "finds",
+  spoilUnit: "lost or pricked",
+  intro: "The river has loosened the bank and the day's finds are tumbling down it: berries, fish, and roots to catch, and now and then a prized shard of flint that falls fastest of all. Catch them in the woven basket before they roll into the water and are lost. Let the thorny tangles flutter past, because a pricked hand gathers nothing. Fill the basket for the hearth.",
+  cleanLine: "Every find in the basket and not one thorn caught. The hearth eats well tonight, and the gather goes down as a good one.",
+  hitLine: "A few finds rolled into the river and a thorn or two found your hand, and the basket still came home full enough. That is a day of gathering.",
+  lines: { through: "A FIND ROLLED INTO THE RIVER", drop: "A THORN PRICKED YOUR HAND" },
+  rulesHtml: "<b>GATHER A FIND</b> +2, prized flint +4 and it falls fastest<br>"
+    + "<b>STREAK OF 5</b> +5 each time, miss nothing and catch no thorns to keep it alive<br>"
+    + "<b>CLEAN BASKET</b> +25 if no find is lost and no thorn is caught<br>"
+    + "<b>THE LIGHT</b> up to +25 for finishing before dusk<br>"
+    + "MOVE: LEFT and RIGHT \u2022 DASH: SPACE or A, a burst of speed on a cooldown",
+  par: 60,
+  speedCap: 25,
+  noHitBonus: 25,
+  hitPts: 2,
+  comboEvery: 5,
+  comboBonus: 5,
+  net: { w: 66, h: 14, speed: 240 },
+  hustle: { mult: 1.8, duration: 700, cooldown: 2200 },
+  waves: [
+    { count: 9,  fall: 46, sway: 12, spawnGap: 1000, griefShare: 0.12, urgentEvery: 5 },
+    { count: 11, fall: 56, sway: 16, spawnGap: 850,  griefShare: 0.16, urgentEvery: 4 }
+  ]
+};
+
+function drawStoneAgeGround(c, x, y, sx, sy){
+  // forest floor: earthy duff with scattered undergrowth
+  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  var h = (x * 7 + y * 13) % 5;
+  if (c === "." && h === 0){
+    ctx.fillStyle = "rgba(90,110,54,.35)";
+    ctx.fillRect(sx + 6, sy + 20, 4, 6); ctx.fillRect(sx + 18, sy + 22, 4, 5);
+  } else if (c === "." && h === 2){
+    ctx.fillStyle = "rgba(120,90,60,.30)";
+    ctx.fillRect(sx + 10, sy + 12, 3, 3); ctx.fillRect(sx + 20, sy + 24, 3, 3);
+  }
+  if (c === "~"){
+    ctx.fillStyle = "#2f4f59"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#3a606c"; ctx.fillRect(sx, sy + 4, TILE, TILE - 8);
+    var rp = Math.floor((G.time / 320) + x + y) % 3;
+    ctx.fillStyle = "rgba(180,214,224,.30)";
+    ctx.fillRect(sx + 2 + rp * 4, sy + 8, 10, 2);
+    ctx.fillRect(sx + 14 - rp * 3, sy + 20, 9, 2);
+    ctx.fillStyle = "rgba(13,10,18,.18)"; ctx.fillRect(sx, sy, TILE, 2);
+  } else if (c === "T"){
+    // a layered forest tree, gently swaying, with a touch of variety per tile
+    var vary = (x * 5 + y * 3) % 3;
+    var sway = Math.round(Math.sin(G.time / 900 + x * 0.6 + y * 0.4) * 1.5);
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx + 6, sy + TILE - 5, TILE - 12, 4);
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx + TILE / 2 - 2, sy + 16, 4, TILE - 16);
+    var c1 = vary === 0 ? "#2f4a24" : vary === 1 ? "#36531f" : "#2a4420";
+    var c2 = vary === 0 ? "#3f6a2e" : vary === 1 ? "#4a7328" : "#3a6428";
+    var c3 = "#5a8a3c";
+    ctx.fillStyle = c1; ctx.fillRect(sx + 3 + sway, sy + 8, TILE - 6, 14);
+    ctx.fillStyle = c2; ctx.fillRect(sx + 5 + sway, sy + 3, TILE - 10, 12);
+    ctx.fillStyle = c3; ctx.fillRect(sx + 8 + sway, sy + 1, TILE - 16, 8);
+    ctx.fillStyle = "rgba(180,210,120,.18)"; ctx.fillRect(sx + 9 + sway, sy + 2, 5, 4);
+  } else if (c === "F"){
+    // a standing stone: the gate marker, a forest menhir
+    ctx.fillStyle = "rgba(0,0,0,.24)"; ctx.fillRect(sx + 4, sy + TILE - 6, TILE - 8, 5);
+    ctx.fillStyle = "#7d7264"; ctx.fillRect(sx + 7, sy + 1, TILE - 14, TILE - 4);
+    ctx.fillStyle = "#938778"; ctx.fillRect(sx + 9, sy + 3, TILE - 20, TILE - 11);
+    ctx.fillStyle = "#5f564b"; ctx.fillRect(sx + 12, sy + 8, 4, 11);
+    ctx.fillStyle = "#6e8a4a"; ctx.fillRect(sx + 7, sy + 1, TILE - 14, 3);
+  } else if (c === "C"){
+    // a mossy boulder
+    ctx.fillStyle = "#6a5f52"; ctx.fillRect(sx + 5, sy + 8, TILE - 10, TILE - 12);
+    ctx.fillStyle = "#807565"; ctx.fillRect(sx + 8, sy + 6, TILE - 18, TILE - 16);
+    ctx.fillStyle = "#4a6a30"; ctx.fillRect(sx + 6, sy + 8, 6, 4); ctx.fillRect(sx + TILE - 12, sy + 14, 5, 4);
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx + 6, sy + TILE - 7, TILE - 12, 3);
+  }
+}
+
+function drawStoneAgeDecor(d, sx, sy){
+  if (d.kind === "campfire"){
+    ctx.fillStyle = "#3a2a1a"; ctx.fillRect(sx + 2, sy + 14, 26, 8);
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx, sy + 16, 6, 4); ctx.fillRect(sx + 24, sy + 16, 6, 4);
+    var fl = Math.floor(G.time / 150) % 3;
+    ctx.fillStyle = "#e8922b"; ctx.fillRect(sx + 9, sy + 4 - fl, 12, 14 + fl);
+    ctx.fillStyle = "#f2c84b"; ctx.fillRect(sx + 12, sy + 2 - fl, 6, 12 + fl);
+    ctx.fillStyle = "#fff0c0"; ctx.fillRect(sx + 13, sy + 8 - fl, 3, 6);
+    var sm = Math.floor(G.time / 240) % 4;
+    ctx.fillStyle = "rgba(220,214,205,.22)"; ctx.fillRect(sx + 13, sy - 10 - sm * 3, 3, 6);
+  } else if (d.kind === "dryingrack"){
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx, sy - 10, 3, 32); ctx.fillRect(sx + 30, sy - 10, 3, 32);
+    ctx.fillRect(sx, sy - 10, 33, 3);
+    var sway = Math.round(Math.sin(G.time / 400) * 2);
+    ctx.fillStyle = "#9e6a4a";
+    for (var i = 0; i < 4; i++){ ctx.fillRect(sx + 5 + i * 7 + (i % 2 ? sway : -sway), sy - 6, 4, 12); }
+  } else if (d.kind === "totem"){
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx + 6, sy + 20, 18, 4);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx + 10, sy - 14, 10, 36);
+    ctx.fillStyle = "#9a2f2a"; ctx.fillRect(sx + 10, sy - 12, 10, 6);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 10, sy - 2, 10, 5);
+    ctx.fillStyle = "#3f5128"; ctx.fillRect(sx + 10, sy + 8, 10, 5);
+    ctx.fillStyle = "#f2e8d5"; ctx.fillRect(sx + 12, sy - 10, 2, 2); ctx.fillRect(sx + 16, sy - 10, 2, 2);
+  } else if (d.kind === "rockpile"){
+    ctx.fillStyle = "#6a5f52"; ctx.fillRect(sx + 2, sy + 10, 12, 12); ctx.fillRect(sx + 14, sy + 6, 12, 16);
+    ctx.fillStyle = "#807565"; ctx.fillRect(sx + 4, sy + 12, 7, 7); ctx.fillRect(sx + 16, sy + 8, 8, 8);
+  } else if (d.kind === "mushrooms"){
+    ctx.fillStyle = "#e8e0d0"; ctx.fillRect(sx + 6, sy + 14, 3, 8); ctx.fillRect(sx + 14, sy + 16, 3, 6); ctx.fillRect(sx + 20, sy + 13, 3, 9);
+    ctx.fillStyle = "#b5402f"; ctx.fillRect(sx + 3, sy + 11, 9, 4); ctx.fillRect(sx + 18, sy + 10, 8, 4);
+    ctx.fillStyle = "#caa14b"; ctx.fillRect(sx + 12, sy + 13, 7, 4);
+    ctx.fillStyle = "#f2e8d5"; ctx.fillRect(sx + 5, sy + 12, 2, 2); ctx.fillRect(sx + 21, sy + 11, 2, 2);
+  } else if (d.kind === "berrybush"){
+    var bs = Math.round(Math.sin(G.time / 600 + sx) * 1.5);
+    ctx.fillStyle = "#2f4a24"; ctx.fillRect(sx + 2 + bs, sy + 6, 26, 18);
+    ctx.fillStyle = "#3f6a2e"; ctx.fillRect(sx + 5 + bs, sy + 3, 20, 14);
+    ctx.fillStyle = "#9a2f4a";
+    ctx.fillRect(sx + 7 + bs, sy + 10, 3, 3); ctx.fillRect(sx + 15 + bs, sy + 8, 3, 3);
+    ctx.fillRect(sx + 20 + bs, sy + 13, 3, 3); ctx.fillRect(sx + 11 + bs, sy + 16, 3, 3);
+  } else if (d.kind === "hollowlog"){
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx + 2, sy + 18, 36, 4);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx, sy + 6, 40, 14);
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx, sy + 6, 40, 3);
+    ctx.fillStyle = "#241a12"; ctx.beginPath(); ctx.arc(sx + 7, sy + 13, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#3f5128"; ctx.fillRect(sx + 26, sy + 3, 5, 5); ctx.fillRect(sx + 33, sy + 4, 5, 5);
+  } else if (d.kind === "fern"){
+    var fsw = Math.round(Math.sin(G.time / 500 + sy) * 2);
+    ctx.fillStyle = "#3f6a2e";
+    for (var fb = 0; fb < 5; fb++){
+      var ang = (fb - 2) * 5;
+      ctx.fillRect(sx + 14 + ang + (fb % 2 ? fsw : -fsw), sy + 4, 3, 18);
+    }
+    ctx.fillStyle = "#5a8a3c";
+    for (var fb2 = 0; fb2 < 5; fb2++){ ctx.fillRect(sx + 14 + (fb2 - 2) * 5 + fsw, sy + 4, 2, 7); }
+  } else if (d.kind === "vines"){
+    var vsw = Math.round(Math.sin(G.time / 700 + sx) * 2);
+    ctx.fillStyle = "#3f5a28";
+    ctx.fillRect(sx + 6 + vsw, sy - 20, 3, 30); ctx.fillRect(sx + 18 - vsw, sy - 20, 3, 36);
+    ctx.fillStyle = "#5a8a3c";
+    ctx.fillRect(sx + 4 + vsw, sy - 6, 6, 4); ctx.fillRect(sx + 16 - vsw, sy - 2, 6, 4); ctx.fillRect(sx + 17 - vsw, sy + 8, 5, 4);
+  } else if (d.kind === "fishjump"){
+    // a fish leaping from the river on a slow loop, pure ambient candy
+    var t = (G.time / 1400 + (sx % 7) * 0.1) % 1;
+    if (t < 0.45){
+      var arc = Math.sin(t / 0.45 * Math.PI);
+      var fx = sx + t * 40, fy = sy + 6 - arc * 26;
+      ctx.fillStyle = "#7fb2c8"; ctx.fillRect(fx, fy, 9, 5);
+      ctx.fillStyle = "#a8d4e2"; ctx.fillRect(fx + 1, fy + 1, 4, 2);
+      ctx.fillStyle = "#5b8fa6"; ctx.fillRect(fx + 8, fy - 1, 4, 6);
+      ctx.fillStyle = "rgba(200,228,236,.5)"; ctx.fillRect(sx + 2, sy + 8, 3, 2); ctx.fillRect(sx + 7, sy + 9, 2, 2);
+    } else {
+      ctx.fillStyle = "rgba(200,228,236,.35)";
+      ctx.fillRect(sx + 2, sy + 8, 5, 2); ctx.fillRect(sx + 10, sy + 9, 4, 2);
+    }
+  } else if (d.kind === "butterflies"){
+    // two butterflies looping around a point
+    for (var bi = 0; bi < 2; bi++){
+      var ph = G.time / 700 + bi * 3.1;
+      var bx = sx + 10 + Math.cos(ph) * 16, by = sy + 8 + Math.sin(ph * 1.3) * 12;
+      var wing = Math.floor(G.time / 120 + bi) % 2 === 0;
+      ctx.fillStyle = bi === 0 ? "#e8b04b" : "#d87fb2";
+      if (wing){ ctx.fillRect(bx - 3, by - 2, 3, 5); ctx.fillRect(bx + 2, by - 2, 3, 5); }
+      else { ctx.fillRect(bx - 2, by - 1, 2, 3); ctx.fillRect(bx + 2, by - 1, 2, 3); }
+      ctx.fillStyle = "#3a2a1a"; ctx.fillRect(bx, by - 2, 1, 5);
+    }
+  } else if (d.kind === "leaffall"){
+    // a few leaves drifting down under the canopy
+    for (var li = 0; li < 4; li++){
+      var lt = (G.time / 2600 + li * 0.27) % 1;
+      var lx = sx + 4 + li * 7 + Math.sin(lt * 6.28 + li) * 5;
+      var ly = sy - 16 + lt * 44;
+      ctx.fillStyle = ["#caa14b", "#b5662f", "#9a8a3c", "#c98a4a"][li % 4];
+      ctx.fillRect(lx, ly, 3, 3);
+    }
+  } else if (d.kind === "birdtree"){
+    // a little bird hopping on a branch, chirping flick now and then
+    var hop = Math.floor(G.time / 500) % 2 === 0 ? 0 : 2;
+    ctx.fillStyle = "#5c4326"; ctx.fillRect(sx, sy + 10, 26, 3);
+    ctx.fillStyle = "#6a86a0"; ctx.fillRect(sx + 10, sy + 3 - hop, 7, 6);
+    ctx.fillStyle = "#a8c0d4"; ctx.fillRect(sx + 11, sy + 4 - hop, 3, 2);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 16, sy + 5 - hop, 3, 2);
+    ctx.fillStyle = "#3a2a1a"; ctx.fillRect(sx + 12, sy + 9 - hop, 1, 2); ctx.fillRect(sx + 15, sy + 9 - hop, 1, 2);
+  }
+}
+
+function drawStoneAgeCritter(c, sx, sy){
+  var f = c.flip < 0 ? -1 : 1;          // facing
+  var hb = Math.abs(Math.sin(G.time / 220 + (c.hx || 0)));   // a hop or bob phase
+  if (c.kind === "rabbit"){
+    var hop = Math.round(hb * 5);
+    ctx.fillStyle = "rgba(0,0,0,.20)"; ctx.fillRect(sx, sy + 12, 12, 3);
+    ctx.fillStyle = "#a89274"; ctx.fillRect(sx + 1, sy + 4 - hop, 10, 8);
+    ctx.fillStyle = "#c4b196"; ctx.fillRect(sx + (f > 0 ? 8 : 1), sy + 2 - hop, 4, 6);
+    ctx.fillStyle = "#8a7458"; ctx.fillRect(sx + (f > 0 ? 8 : 1), sy - 3 - hop, 2, 6); ctx.fillStyle = "#8a7458"; ctx.fillRect(sx + (f > 0 ? 11 : 4), sy - 3 - hop, 2, 6);
+    ctx.fillStyle = "#f2e8d5"; ctx.fillRect(sx + (f > 0 ? 1 : 9), sy + 9 - hop, 3, 3);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 9 : 2), sy + 4 - hop, 1, 1);
+  } else if (c.kind === "fox"){
+    var tr = Math.round(Math.sin(G.time / 160 + sx) * 1.5);
+    ctx.fillStyle = "rgba(0,0,0,.20)"; ctx.fillRect(sx, sy + 13, 18, 3);
+    ctx.fillStyle = "#c2622a"; ctx.fillRect(sx + 2, sy + 5, 13, 8);
+    ctx.fillStyle = "#c2622a"; ctx.fillRect(sx + (f > 0 ? 12 : 0), sy + 3, 6, 7);
+    ctx.fillStyle = "#7a3a18"; ctx.fillRect(sx + (f > 0 ? 13 : 1), sy, 2, 4); ctx.fillRect(sx + (f > 0 ? 16 : 3), sy, 2, 4);
+    ctx.fillStyle = "#f2e8d5"; ctx.fillRect(sx + (f > 0 ? 16 : -2), sy + 6, 3, 4);
+    ctx.fillStyle = "#e8d2b0"; ctx.fillRect(sx + (f > 0 ? -3 : 15), sy + 6, 6, 4);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 14 : 2), sy + 5, 1, 1);
+    ctx.fillStyle = "#3a2218"; ctx.fillRect(sx + 4, sy + 12 + tr, 2, 3); ctx.fillRect(sx + 10, sy + 12 - tr, 2, 3);
+  } else if (c.kind === "squirrel"){
+    var dart = Math.round(hb * 3);
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx + 2, sy + 12, 9, 2);
+    ctx.fillStyle = "#8a6a44"; ctx.fillRect(sx + 3, sy + 5 - dart, 7, 7);
+    ctx.fillStyle = "#a3835a"; ctx.fillRect(sx + (f > 0 ? 8 : 2), sy + 3 - dart, 4, 4);
+    // the big bushy tail
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx + (f > 0 ? -3 : 9), sy - 2 - dart, 5, 12);
+    ctx.fillStyle = "#8a6a44"; ctx.fillRect(sx + (f > 0 ? -2 : 10), sy - 1 - dart, 3, 9);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 10 : 4), sy + 4 - dart, 1, 1);
+  } else if (c.kind === "deer" || c.kind === "fawn"){
+    var big = c.kind === "deer";
+    var bw = big ? 18 : 13, bh = big ? 11 : 8, lg = big ? 8 : 6;
+    var graze = Math.floor(G.time / 800 + sx) % 4 === 0 ? 4 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.20)"; ctx.fillRect(sx, sy + 13 + lg, bw, 3);
+    ctx.fillStyle = big ? "#9a7048" : "#b58a5c"; ctx.fillRect(sx + 2, sy + 6, bw, bh);
+    // legs
+    ctx.fillStyle = "#6e4e30";
+    ctx.fillRect(sx + 4, sy + 6 + bh, 2, lg); ctx.fillRect(sx + bw - 2, sy + 6 + bh, 2, lg);
+    // neck and head, dipping to graze
+    ctx.fillStyle = big ? "#9a7048" : "#b58a5c";
+    ctx.fillRect(sx + (f > 0 ? bw - 2 : 0), sy + 2 + graze, 5, 8);
+    ctx.fillRect(sx + (f > 0 ? bw + 1 : -3), sy + 4 + graze, 5, 5);
+    if (!big){ ctx.fillStyle = "#f2e8d5"; ctx.fillRect(sx + 5, sy + 8, 2, 2); ctx.fillRect(sx + 10, sy + 9, 2, 2); }
+    if (big){ ctx.fillStyle = "#6e4e30"; ctx.fillRect(sx + (f > 0 ? bw + 2 : -4), sy - 2 + graze, 1, 6); ctx.fillRect(sx + (f > 0 ? bw + 5 : -1), sy - 2 + graze, 1, 6); }
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? bw + 2 : -2), sy + 5 + graze, 1, 1);
+  } else if (c.kind === "hedgehog"){
+    var wad = Math.floor(G.time / 300) % 2;
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx + 1, sy + 11, 12, 2);
+    ctx.fillStyle = "#4a3826"; ctx.fillRect(sx + 1, sy + 4 + wad, 11, 7);
+    ctx.fillStyle = "#6e5436";
+    for (var s = 0; s < 6; s++){ ctx.fillRect(sx + 1 + s * 2, sy + 2 + wad, 2, 4); }
+    ctx.fillStyle = "#caa07a"; ctx.fillRect(sx + (f > 0 ? 10 : 0), sy + 6 + wad, 4, 4);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 12 : 1), sy + 7 + wad, 1, 1);
+  } else if (c.kind === "boar"){
+    var sn = Math.floor(G.time / 260) % 2;
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx, sy + 13, 18, 3);
+    ctx.fillStyle = "#544334"; ctx.fillRect(sx + 2, sy + 5, 14, 9);
+    ctx.fillStyle = "#3f3127"; ctx.fillRect(sx + 4, sy + 3, 9, 4);
+    ctx.fillStyle = "#544334"; ctx.fillRect(sx + (f > 0 ? 14 : -2), sy + 7 + sn, 5, 6);
+    ctx.fillStyle = "#2a2018"; ctx.fillRect(sx + (f > 0 ? 18 : -3), sy + 9 + sn, 2, 3);
+    ctx.fillStyle = "#e8e0d0"; ctx.fillRect(sx + (f > 0 ? 17 : 0), sy + 12 + sn, 2, 2);
+    ctx.fillStyle = "#3f3127";
+    ctx.fillRect(sx + 4, sy + 13, 2, 3); ctx.fillRect(sx + 12, sy + 13, 2, 3);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (f > 0 ? 13 : 3), sy + 6, 1, 1);
+  } else {
+    // a small ground bird, as a gentle fallback
+    var pk = Math.floor(G.time / 420) % 3 === 0 ? 2 : 0;
+    ctx.fillStyle = "#7a8474"; ctx.fillRect(sx, sy + 4, 10, 7);
+    ctx.fillStyle = "#9aa68a"; ctx.fillRect(sx + (f > 0 ? 8 : -2), sy + pk, 5, 5);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (f > 0 ? 13 : -4), sy + 2 + pk, 3, 2);
+  }
+}
+
+function renderCatchGather(){
+  if (!ctx || !arcade) return;
+  var A = arcade, W = A.W, H = A.H;
+  ctx.fillStyle = "#4a3a3e"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#6a523c"; ctx.fillRect(0, 60, W, 44);
+  ctx.fillStyle = "#566a36"; ctx.fillRect(0, 100, W, A.floorY - 100);
+  ctx.fillStyle = "#4c5f30";
+  for (var g = 0; g < W; g += 26){ ctx.fillRect(g, 100, 13, A.floorY - 100); }
+  ctx.fillStyle = "#6e6258";
+  ctx.fillRect(60, 150, 26, 18); ctx.fillRect(W - 120, 208, 30, 20); ctx.fillRect(W / 2 - 14, 128, 22, 16);
+  ctx.fillStyle = "#36505f"; ctx.fillRect(0, A.floorY, W, H - A.floorY);
+  ctx.fillStyle = "#456678";
+  var rp = Math.floor(A.elapsed / 280) % 5;
+  for (var rx = -rp * 8; rx < W; rx += 44){ ctx.fillRect(rx, A.floorY + 12, 24, 4); ctx.fillRect(rx + 16, A.floorY + 30, 18, 4); }
+  ctx.strokeStyle = "rgba(226,85,73,.45)"; ctx.setLineDash([6, 6]);
+  ctx.beginPath(); ctx.moveTo(0, A.floorY + 0.5); ctx.lineTo(W, A.floorY + 0.5); ctx.stroke(); ctx.setLineDash([]);
+  ctx.textAlign = "right"; ctx.font = "8px 'Press Start 2P', monospace";
+  ctx.fillStyle = "rgba(226,85,73,.55)"; ctx.fillText("THE RIVER", W - 10, A.floorY - 6);
+  ctx.textAlign = "left"; ctx.fillStyle = "#f2e0c4";
+  ctx.fillText("FINDS " + A.hits, 14, 20);
+  ctx.fillStyle = A.combo >= A.cfg.comboEvery ? "#e8b04b" : "#d8c19a";
+  ctx.fillText("STREAK x" + A.combo, 14, 36);
+  ctx.textAlign = "right"; ctx.fillStyle = "#f2e0c4";
+  ctx.fillText("GATHER " + (A.wave + 1) + "/" + A.cfg.waves.length, W - 14, 20);
+  ctx.fillText(Math.floor(A.elapsed / 1000) + "s", W - 14, 36);
+  for (var i = 0; i < A.items.length; i++){
+    var it = A.items[i];
+    if (it.type === "grievance"){
+      ctx.fillStyle = "#5a4326"; ctx.fillRect(it.x + it.w / 2 - 2, it.y, 4, it.h);
+      ctx.fillStyle = "#3f5128";
+      ctx.fillRect(it.x, it.y + 4, it.w, 3); ctx.fillRect(it.x + 2, it.y + it.h - 6, it.w - 4, 3);
+      ctx.fillStyle = "#2e3a1f";
+      ctx.fillRect(it.x - 2, it.y + 2, 4, 2); ctx.fillRect(it.x + it.w - 2, it.y + 8, 4, 2);
+    } else if (it.type === "urgent"){
+      var sp = Math.floor(A.elapsed / 160) % 2 === 0;
+      ctx.fillStyle = "#8a8f7c";
+      ctx.beginPath(); ctx.moveTo(it.x + it.w / 2, it.y); ctx.lineTo(it.x + it.w, it.y + it.h);
+      ctx.lineTo(it.x, it.y + it.h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#b8bcae"; ctx.fillRect(it.x + it.w / 2 - 1, it.y + 3, 3, it.h - 6);
+      if (sp){ ctx.fillStyle = "#f2e8d5"; ctx.fillRect(it.x + it.w / 2 + 2, it.y + 4, 2, 2); }
+    } else if (it.type === "bread"){
+      ctx.fillStyle = "#a3324a"; ctx.fillRect(it.x + 2, it.y + 4, 6, 6); ctx.fillRect(it.x + 10, it.y + 6, 6, 6);
+      ctx.fillStyle = "#c14b63"; ctx.fillRect(it.x + 4, it.y + 6, 3, 3); ctx.fillRect(it.x + 12, it.y + 8, 3, 3);
+      ctx.fillStyle = "#3f5128"; ctx.fillRect(it.x + 7, it.y, 4, 5);
+    } else if (it.type === "med"){
+      ctx.fillStyle = "#5b7f9e"; ctx.fillRect(it.x, it.y + 5, it.w - 4, it.h - 8);
+      ctx.fillRect(it.x + it.w - 5, it.y + 3, 5, it.h - 4);
+      ctx.fillStyle = "#cfe2ef"; ctx.fillRect(it.x + 3, it.y + 7, 3, 3);
+      ctx.fillStyle = "#3a5a6e"; ctx.fillRect(it.x + 2, it.y + 8, 2, 2);
+    } else {
+      ctx.fillStyle = "#a3683a"; ctx.fillRect(it.x + 2, it.y + 3, it.w - 4, it.h - 4);
+      ctx.fillStyle = "#c98a4a"; ctx.fillRect(it.x + 4, it.y + 5, 4, 4);
+      ctx.fillStyle = "#5a6e3a"; ctx.fillRect(it.x + it.w / 2 - 1, it.y, 3, 4);
+    }
+  }
+  var N = A.net;
+  var flash = N.flash > 0 && Math.floor(N.flash / 90) % 2 === 0;
+  var nx = N.x, ny = N.y;
+  ctx.fillStyle = flash ? "#e25549" : "#7a5a32";
+  ctx.fillRect(nx, ny - 4, N.w, N.h + 6);
+  ctx.fillStyle = flash ? "#e25549" : "#9a7a44";
+  for (var wv = nx + 3; wv < nx + N.w - 2; wv += 8){ ctx.fillRect(wv, ny - 4, 3, N.h + 6); }
+  ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(nx, ny - 4, N.w, 3);
+  ctx.fillStyle = "#7a4a2e"; ctx.fillRect(nx + N.w / 2 - 7, ny - 22, 14, 18);
+  ctx.fillStyle = "#c08f5a"; ctx.fillRect(nx + N.w / 2 - 5, ny - 30, 10, 9);
+  ctx.fillStyle = "#3a2a1a"; ctx.fillRect(nx + N.w / 2 - 5, ny - 32, 10, 4);
+  ctx.fillStyle = N.cooldown <= 0 ? "#e8b04b" : "rgba(232,176,75,.25)";
+  ctx.fillRect(nx + N.w / 2 - 2, ny - 36, 4, 4);
+  ctx.textAlign = "center"; ctx.font = "8px 'Press Start 2P', monospace";
+  for (var f = 0; f < A.fx.length; f++){
+    var fxi = A.fx[f];
+    ctx.fillStyle = fxi.bad ? "#e25549" : "#e8d28a";
+    ctx.globalAlpha = Math.min(1, fxi.t / 500);
+    ctx.fillText(fxi.text, fxi.x, fxi.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function buildCacheRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "OUT OF SIGHT OF THE FIRE"));
+  room.appendChild(el("div", "speech",
+    "Away from the hearth you could stash a little of your catch, only for yourself. It feels like a gain. But out here there is no granary and no bank. The sharing circle is the only savings there is, and a lone hoard answers to no one when the lean season comes."));
+  var verdict = el("div", "verdict");
+
+  var share = el("button", "choice", "Add your surplus to the hearth share  (plus 8, builds the circle)");
+  share.addEventListener("click", function(){
+    if (room._done) return;
+    room._done = true;
+    G.runPoints += 8;
+    verdict.style.display = "block"; verdict.classList.remove("bad");
+    verdict.innerHTML = "Into the common share it goes. The circle is your savings account, and you just paid in. The day your own hunt fails, it pays you back. Plus 8.";
+    refreshHUD();
+  });
+
+  var hoard = el("button", "choice", "Stash a private cache  (a gamble: it may hold, it may not)");
+  hoard.addEventListener("click", function(){
+    if (room._done) return;
+    if (G.runPoints < 6){
+      verdict.style.display = "block"; verdict.classList.add("bad");
+      verdict.innerHTML = "You have too little put by to set any aside. The cache stays empty.";
+      return;
+    }
+    room._done = true;
+    var holds = rng() < 0.5;
+    verdict.style.display = "block";
+    if (holds){
+      G.runPoints += 12;
+      verdict.classList.remove("bad");
+      verdict.innerHTML = "The cache held this time. Plus 12. But a lone stash has no one behind it, and luck is not a savings plan. The circle would have been the surer bet.";
+    } else {
+      G.runPoints = Math.max(0, G.runPoints - 6);
+      verdict.classList.add("bad");
+      verdict.innerHTML = "Damp, mice, or a neighbor's quiet hand, and the stash is gone. Minus 6. Outside the sharing circle there is nothing to fall back on. Where there is no bank, sharing is the bank.";
+    }
+    refreshHUD();
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE VALLEY");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(share); room.appendChild(hoard); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+
+ARRIVALS.ch0 = {
+  hearth: { who: "ELDER ROHA",
+    hello: "The kill is shared here, never sold. Sit, and I will show you why the band eats as one.",
+    action: "SIT BY THE FIRE",
+    bye: "Remember it out there. The hearth is the only bank a body like ours ever had." },
+  giftcircle: { who: "KINSWOMAN SELA",
+    hello: "A basket came from across the water, with nothing asked. Let me tell you what it really costs.",
+    action: "HEAR THE GIFT",
+    bye: "Give, receive, and one day return. That thread is older than any coin." },
+  institute: { who: "THE ELDERS",
+    hello: "You have walked the valley and seen its three ways. Come, and we will name them at the rock.",
+    action: "STEP TO THE ROCK",
+    bye: "Carry it to the rock by the standing stone. The band is the real test." },
+  cache: { who: "THE HIDDEN CACHE",
+    hello: "Nobody is watching. You could keep a little back, just for yours. Tempting, is it not.",
+    action: "WEIGH THE CACHE",
+    bye: "Out here, the only savings that holds is the circle you share with." },
+  farbank: { who: "THE FAR TRADER",
+    hello: "She holds up a fish and points at your axe, and waits without a word. Trade?",
+    action: "TRY THE TRADE",
+    bye: "Goods for goods, and only when both wants meet. That is barter at the edge." },
+  miro: { who: "ELDER MIRO", hello: "", action: "", bye: "" },
+  bran: { who: "BRAN THE HOARDER", hello: "", action: "", bye: "" },
+  ula:  { who: "FAR TRADER ULA", hello: "", action: "", bye: "" }
+};
+
+/* ----- Prologue shelters: no buildings, only what a band could make ----- */
+BUILDING_ART.hearth0 = function(b, bx, by, bw, bh){
+  // an open hide lean to over the communal fire
+  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(bx + 6, by + bh - 6, bw - 12, 6);
+  // back poles and the slanted hide roof
+  ctx.fillStyle = "#6e5230"; ctx.fillRect(bx + 8, by + 8, 4, bh - 8); ctx.fillRect(bx + bw - 14, by + 8, 4, bh - 8);
+  ctx.fillStyle = "#8a6a44"; ctx.fillRect(bx + bw - 20, by - 16, 6, bh + 12);
+  ctx.fillStyle = "#b5895a";
+  ctx.beginPath(); ctx.moveTo(bx + 4, by + 20); ctx.lineTo(bx + bw - 8, by - 14);
+  ctx.lineTo(bx + bw - 2, by - 6); ctx.lineTo(bx + 10, by + 28); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#9a7048";
+  ctx.fillRect(bx + 14, by - 6, 3, 24); ctx.fillRect(bx + 30, by - 12, 3, 26);
+  // the fire underneath, flickering
+  var fl = Math.floor(G.time / 150) % 3;
+  ctx.fillStyle = "#3a2a1a"; ctx.fillRect(bx + bw / 2 - 12, by + bh - 16, 24, 8);
+  ctx.fillStyle = "#e8922b"; ctx.fillRect(bx + bw / 2 - 6, by + bh - 24 - fl, 12, 14 + fl);
+  ctx.fillStyle = "#f2c84b"; ctx.fillRect(bx + bw / 2 - 3, by + bh - 26 - fl, 6, 12 + fl);
+  ctx.fillStyle = "#fff0c0"; ctx.fillRect(bx + bw / 2 - 1, by + bh - 20 - fl, 3, 6);
+  var sm = Math.floor(G.time / 260) % 4;
+  ctx.fillStyle = "rgba(220,214,205,.18)"; ctx.fillRect(bx + bw / 2, by - 18 - sm * 4, 3, 7);
+};
+
+BUILDING_ART.giftcircle0 = function(b, bx, by, bw, bh){
+  // a makeshift hide tent, a cone of skins on crossed poles
+  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(bx + 10, by + bh - 6, bw - 20, 6);
+  // crossed pole tips
+  ctx.strokeStyle = "#6e5230"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2 - 8, by - 18); ctx.lineTo(bx + bw / 2 + 4, by - 26); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2 + 8, by - 18); ctx.lineTo(bx + bw / 2 - 4, by - 26); ctx.stroke();
+  ctx.lineWidth = 1;
+  // the hide cone
+  ctx.fillStyle = "#a8784e";
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2, by - 20); ctx.lineTo(bx + 8, by + bh - 4);
+  ctx.lineTo(bx + bw - 8, by + bh - 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#92653f";
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2, by - 20); ctx.lineTo(bx + bw / 2, by + bh - 4);
+  ctx.lineTo(bx + bw - 8, by + bh - 4); ctx.closePath(); ctx.fill();
+  // seams and the dark doorway flap
+  ctx.fillStyle = "rgba(60,40,24,.55)";
+  ctx.fillRect(bx + bw / 2 - 1, by - 16, 2, bh + 8);
+  ctx.fillStyle = "#3a2418";
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2, by + 6); ctx.lineTo(bx + bw / 2 - 7, by + bh - 4);
+  ctx.lineTo(bx + bw / 2 + 7, by + bh - 4); ctx.closePath(); ctx.fill();
+  // gift baskets at the mouth
+  ctx.fillStyle = "#9a7a44"; ctx.fillRect(bx + 6, by + bh - 12, 9, 8); ctx.fillRect(bx + bw - 15, by + bh - 10, 9, 6);
+  ctx.fillStyle = "#b5402f"; ctx.fillRect(bx + 8, by + bh - 14, 5, 3);
+};
+
+BUILDING_ART.institute0 = function(b, bx, by, bw, bh){
+  // a cave mouth in a mossy rock face, where the elders gather
+  ctx.fillStyle = "#5a5048"; ctx.fillRect(bx - 2, by - 14, bw + 4, bh + 14);
+  ctx.fillStyle = "#6a5f54"; ctx.fillRect(bx + 2, by - 18, bw - 4, 12);
+  // moss on the rock
+  ctx.fillStyle = "#4a6a30";
+  ctx.fillRect(bx + 4, by - 16, 10, 5); ctx.fillRect(bx + bw - 18, by - 12, 12, 4); ctx.fillRect(bx + 8, by + 4, 8, 4);
+  // the dark mouth
+  ctx.fillStyle = "#120f0a";
+  ctx.beginPath();
+  ctx.moveTo(bx + 10, by + bh);
+  ctx.quadraticCurveTo(bx + 10, by + 4, bx + bw / 2, by + 2);
+  ctx.quadraticCurveTo(bx + bw - 10, by + 4, bx + bw - 10, by + bh);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(232,176,75,.10)"; ctx.fillRect(bx + bw / 2 - 8, by + bh - 18, 16, 16);
+  // a torch beside the mouth, flickering
+  var tl = Math.floor(G.time / 170) % 2;
+  ctx.fillStyle = "#6e5230"; ctx.fillRect(bx + bw - 8, by + bh - 24, 3, 22);
+  ctx.fillStyle = "#e8922b"; ctx.fillRect(bx + bw - 10, by + bh - 30 - tl, 7, 8 + tl);
+  ctx.fillStyle = "#f2c84b"; ctx.fillRect(bx + bw - 9, by + bh - 28 - tl, 4, 5 + tl);
+  // a couple of boulders at the base
+  ctx.fillStyle = "#807565"; ctx.fillRect(bx, by + bh - 10, 10, 10); ctx.fillRect(bx + bw - 9, by + bh - 8, 9, 8);
+};
+
+BUILDING_ART.cache0 = function(b, bx, by, bw, bh){
+  // a covered storage pit, half hidden under a leaning log
+  ctx.fillStyle = "rgba(0,0,0,.26)"; ctx.fillRect(bx + 4, by + bh - 5, bw - 8, 5);
+  // mound of earth
+  ctx.fillStyle = "#5a4326"; ctx.fillRect(bx + 4, by + bh - 18, bw - 8, 16);
+  ctx.fillStyle = "#6e5436"; ctx.fillRect(bx + 8, by + bh - 22, bw - 16, 8);
+  // the hide cover, pegged down
+  ctx.fillStyle = "#92653f"; ctx.fillRect(bx + 6, by + bh - 20, bw - 12, 9);
+  ctx.fillStyle = "#3a2418"; ctx.fillRect(bx + 8, by + bh - 18, bw - 16, 4);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(bx + 6, by + bh - 12, 2, 4); ctx.fillRect(bx + bw - 8, by + bh - 12, 2, 4);
+  // a leaning log over it for cover
+  ctx.fillStyle = "#6e5436"; ctx.fillRect(bx + 2, by - 2, bw - 4, 7);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(bx + 2, by - 2, bw - 4, 2);
+  ctx.fillStyle = "#241a12"; ctx.beginPath(); ctx.arc(bx + 6, by + 2, 4, 0, 7); ctx.fill();
+  // a basket peeking out
+  ctx.fillStyle = "#9a7a44"; ctx.fillRect(bx + bw / 2 - 4, by + bh - 16, 8, 7);
+};
+
+BUILDING_ART.farbank0 = function(b, bx, by, bw, bh){
+  // a large tree house across the water: thick trunk, a platform hut, a ladder
+  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(bx + bw / 2 - 12, by + bh - 5, 24, 5);
+  // canopy behind
+  ctx.fillStyle = "#2f4a24"; ctx.fillRect(bx - 2, by - 22, bw + 4, 22);
+  ctx.fillStyle = "#3f6a2e"; ctx.fillRect(bx + 4, by - 28, bw - 8, 16);
+  // trunk
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(bx + bw / 2 - 7, by + 6, 14, bh - 6);
+  ctx.fillStyle = "#4a3420"; ctx.fillRect(bx + bw / 2 - 7, by + 6, 4, bh - 6);
+  // the platform
+  ctx.fillStyle = "#6e5436"; ctx.fillRect(bx + 4, by + 2, bw - 8, 6);
+  ctx.fillStyle = "#5c4326"; for (var pl = bx + 6; pl < bx + bw - 6; pl += 7){ ctx.fillRect(pl, by + 2, 1, 6); }
+  // the hide hut on the platform
+  ctx.fillStyle = "#a8784e"; ctx.fillRect(bx + 12, by - 14, bw - 24, 16);
+  ctx.fillStyle = "#8a6038";
+  ctx.beginPath(); ctx.moveTo(bx + 8, by - 12); ctx.lineTo(bx + bw / 2, by - 24);
+  ctx.lineTo(bx + bw - 8, by - 12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#3a2418"; ctx.fillRect(bx + bw / 2 - 4, by - 8, 8, 10);
+  // a little pennant that sways
+  var pf = Math.round(Math.sin(G.time / 300) * 2);
+  ctx.fillStyle = "#b5402f"; ctx.fillRect(bx + bw / 2 + 1, by - 30, 6 + pf, 4);
+  ctx.fillStyle = "#6e5436"; ctx.fillRect(bx + bw / 2, by - 30, 1, 8);
+  // the rope ladder
+  ctx.strokeStyle = "#8a6a44"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2 - 3, by + 8); ctx.lineTo(bx + bw / 2 - 3, by + bh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2 + 3, by + 8); ctx.lineTo(bx + bw / 2 + 3, by + bh); ctx.stroke();
+  for (var rg = by + 12; rg < by + bh; rg += 6){ ctx.beginPath(); ctx.moveTo(bx + bw / 2 - 3, rg); ctx.lineTo(bx + bw / 2 + 3, rg); ctx.stroke(); }
+};
+
+/* ----- Prologue interiors: firelit hides, never a modern room ----- */
+ROOM_THEMES.hearth0 = { back:"#2a1d12", floor:"#3a2a1a", counter:"#5c4326", accent:"#e8922b",
+  props:["pelts","firepit"],
+  bust:{ skin:"#c08f5a", top:"#7a5a32", collar:"#5c4326", hair:"bun", hairC:"#3a2a1a", acc:"none" } };
+ROOM_THEMES.giftcircle0 = { back:"#3a2a1c", floor:"#4a3320", counter:"#5c4326", accent:"#b5895a",
+  props:["pelts"],
+  bust:{ skin:"#b58a5c", top:"#92653f", collar:"#6e5436", hair:"curls", hairC:"#2a1c12", acc:"none" } };
+ROOM_THEMES.institute0 = { back:"#1c1812", floor:"#2a2620", counter:"#4a4038", accent:"#e8b04b",
+  props:["firepit"],
+  bust:{ skin:"#caa06a", top:"#6e5436", collar:"#5c4326", hair:"short", hairC:"#15121c", acc:"none" } };
+ROOM_THEMES.cache0 = { back:"#241a10", floor:"#3a2a18", counter:"#5c4326", accent:"#9a7a44",
+  props:["pelts"],
+  bust:{ skin:"#c08f5a", top:"#7a5a32", collar:"#5c4326", hair:"short", hairC:"#3a2a1a", acc:"none" } };
+ROOM_THEMES.farbank0 = { back:"#1f2a18", floor:"#3a2e1c", counter:"#5c4326", accent:"#5a8a3c",
+  props:["pelts"],
+  bust:{ skin:"#a8784e", top:"#5b7f7a", collar:"#3c5651", hair:"bun", hairC:"#2a1c12", acc:"none" } };
+
+/* ----- A forest full of motion: ambient decor, never a city prop ----- */
+CH_DECOR.ch0 = [
+  { kind:"campfire",    tx:12, ty:6 },
+  { kind:"dryingrack",  tx:5,  ty:6 },
+  { kind:"totem",       tx:19, ty:6 },
+  { kind:"berrybush",   tx:8,  ty:8 }, { kind:"berrybush", tx:20, ty:8 },
+  { kind:"mushrooms",   tx:7,  ty:16 }, { kind:"mushrooms", tx:18, ty:16 },
+  { kind:"hollowlog",   tx:15, ty:9 },
+  { kind:"fern",        tx:6,  ty:17 }, { kind:"fern", tx:19, ty:17 }, { kind:"fern", tx:11, ty:7 },
+  { kind:"vines",       tx:23, ty:6 },
+  { kind:"rockpile",    tx:8,  ty:21 },
+  { kind:"birdtree",    tx:4,  ty:5 }, { kind:"birdtree", tx:21, ty:18 },
+  { kind:"butterflies", tx:14, ty:7 }, { kind:"butterflies", tx:10, ty:17 },
+  { kind:"leaffall",    tx:6,  ty:8 }, { kind:"leaffall", tx:17, ty:8 },
+  { kind:"fishjump",    tx:8,  ty:14 }, { kind:"fishjump", tx:20, ty:14 }
+];
+
+/* ----- The furry residents: a screen always alive with critters ----- */
+CH_CRITTERS.ch0 = [
+  { kind:"rabbit",   x:10, y:6 }, { kind:"rabbit", x:16, y:7 }, { kind:"rabbit", x:12, y:21 },
+  { kind:"squirrel", x:6,  y:5 }, { kind:"squirrel", x:20, y:5 },
+  { kind:"fox",      x:14, y:8 },
+  { kind:"deer",     x:9,  y:16 },
+  { kind:"fawn",     x:11, y:17 },
+  { kind:"hedgehog", x:8,  y:21 },
+  { kind:"boar",     x:17, y:16 }
+];
+
+CHAPTERS.ch0 = {
+  id: "ch0",
+  name: "PROLOGUE: THE FIRST TRADE",
+  titleSub: "Walk a Stone Age valley. Learn the controls, the shelf, and the desk at the lowest stakes in the game.",
+  walkToast: "THE WALK. Three starred sites hold the band's insights.<br>Step to a site and press A or SPACE.",
+  unlock: null,
+  map: CH0_MAP,
+  buildings: CH0_BUILDINGS,
+  npcs: CH0_NPCS,
+  hazards: CH0_HAZARDS,
+  lessons: CH0_LESSONS,
+  lessonCards: CH0_LESSON_CARDS,
+  practice: CH0_PRACTICE,
+  gateQs: CH0_GATE_QS,
+  books: CH0_BOOKS,
+  desk: CH0_DESK,
+  arcade: CH0_ARCADE,
+  freeplay: null,
+  gate: { tx: 13.5, ty: 10.5 },
+  spawn: { x: 13, y: 6 },
+  gatePlace: "the standing stone",
+  charterName: "THE BAND'S ACCORD",
+  charterShort: "The Band's Accord",
+  logicName: "the band's own ways",
+  theme: "stoneage",
+  streets: {},
+  palette: { bg: "#191309", g1: "#3a2d1a", g2: "#332715" }
+};
+
+/* ===== END LEVEL 0 PROLOGUE ===== */
+
 var CHAPTER_ID = "ch1";
 var CUR = CHAPTERS.ch1;
 var DESK_CFG = CH1_DESK;
@@ -7345,7 +8226,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M13.S3",
+  version: "M13.S5",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
