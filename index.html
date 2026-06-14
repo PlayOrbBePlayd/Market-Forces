@@ -696,7 +696,14 @@ var CH_DECOR = {
     { kind: "subway", tx: 11, ty: 18 },
     { kind: "scaffold", tx: 23, ty: 3 },
     { kind: "neon", tx: 33, ty: 16 },
-    { kind: "crates", tx: 10, ty: 18 }, { kind: "crates", tx: 25, ty: 8 }
+    { kind: "crates", tx: 10, ty: 18 }, { kind: "crates", tx: 25, ty: 8 },
+    { kind: "fountain", tx: 14, ty: 11 },
+    { kind: "ticker", tx: 24, ty: 9 },
+    { kind: "stall", tx: 11, ty: 11 }, { kind: "stall", tx: 20, ty: 20 },
+    { kind: "trafficlight", tx: 12, ty: 16 }, { kind: "trafficlight", tx: 23, ty: 10 },
+    { kind: "hydrant", tx: 10, ty: 12 }, { kind: "hydrant", tx: 25, ty: 19 },
+    { kind: "scooters", tx: 19, ty: 14 },
+    { kind: "recycling", tx: 14, ty: 19 }, { kind: "recycling", tx: 21, ty: 9 }
   ],
   ch2: [
     { kind: "bunting", tx: 13, ty: 8 },
@@ -723,7 +730,12 @@ var CH_CRITTERS = {
     { kind: "pigeon", x: 14, y: 9 }, { kind: "pigeon", x: 21, y: 15 },
     { kind: "pigeon", x: 19, y: 19 },
     { kind: "drone", x: 17, y: 8 },
-    { kind: "cat", x: 11, y: 19 }
+    { kind: "cat", x: 11, y: 19 },
+    { kind: "rat", x: 12, y: 18 }, { kind: "rat", x: 24, y: 17 },
+    { kind: "seagull", x: 20, y: 7 }, { kind: "seagull", x: 12, y: 15 },
+    { kind: "sparrow", x: 16, y: 14 }, { kind: "sparrow", x: 22, y: 20 },
+    { kind: "squirrel", x: 8, y: 8 }, { kind: "squirrel", x: 18, y: 9 },
+    { kind: "dog", x: 25, y: 20 }
   ],
   ch2: [
     { kind: "pigeon", x: 19, y: 9 }, { kind: "pigeon", x: 13, y: 15 },
@@ -751,7 +763,7 @@ function updateCritters(dt){
     var dx = c.tx - c.x, dy = c.ty - c.y;
     var d = Math.sqrt(dx*dx + dy*dy);
     if (d > 2){
-      var sp = c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : 52;
+      var sp = c.kind === "rat" ? 92 : c.kind === "seagull" ? 48 : c.kind === "sparrow" ? 66 : c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : 52;
       c.x += dx/d * sp * dt/1000;
       c.y += dy/d * sp * dt/1000;
       c.flip = dx < 0 ? -1 : 1;
@@ -847,6 +859,107 @@ function drawDecorItem(d, sx, sy){
     ctx.fillStyle = ph2 === 1 ? "#1a2a3a" : "#3fb8af"; ctx.fillRect(sx+2, sy-32, 26, 9);
     ctx.fillStyle = ph2 === 2 ? "#3a2e14" : "#e8b04b"; ctx.fillRect(sx+2, sy-20, 26, 9);
     ctx.fillStyle = "rgba(226,85,73,.10)"; ctx.fillRect(sx-10, sy-50, 50, 64);
+  } else if (d.kind === "fountain"){
+    // the plaza fountain: a stone basin, a column, three jetting streams
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx-6, sy+20, 56, 6);
+    ctx.fillStyle = "#6b6f78"; ctx.fillRect(sx-6, sy+8, 56, 14);
+    ctx.fillStyle = "#54585f"; ctx.fillRect(sx-6, sy+8, 56, 3);
+    ctx.fillStyle = "#2f6b6a"; ctx.fillRect(sx-2, sy+11, 48, 9);
+    var rip = Math.floor(G.time/300) % 3;
+    ctx.fillStyle = "rgba(190,235,232,.5)";
+    ctx.fillRect(sx+4+rip*2, sy+14, 8, 1); ctx.fillRect(sx+30-rip*2, sy+17, 8, 1);
+    ctx.fillStyle = "#7c818a"; ctx.fillRect(sx+18, sy-8, 8, 18);
+    ctx.fillStyle = "#9aa0a8"; ctx.fillRect(sx+16, sy-10, 12, 4);
+    var jt = Math.sin(G.time/180), jt2 = Math.sin(G.time/180 + 1.4);
+    ctx.fillStyle = "rgba(160,225,225,.8)";
+    ctx.fillRect(sx+21, sy-22 - Math.round(jt*4), 2, 16);
+    ctx.fillStyle = "rgba(160,225,225,.6)";
+    ctx.fillRect(sx+13, sy-14 - Math.round(jt2*3), 2, 12);
+    ctx.fillRect(sx+29, sy-14 - Math.round(jt*3), 2, 12);
+    var dp = Math.floor(G.time/160) % 4;
+    ctx.fillStyle = "rgba(200,240,240,.7)";
+    ctx.fillRect(sx+10, sy-6+dp*3, 2, 2); ctx.fillRect(sx+32, sy-4+((dp+2)%4)*3, 2, 2);
+  } else if (d.kind === "ticker"){
+    // a financial ticker board, abstract green and red bars scrolling, no text
+    ctx.fillStyle = "#2a2a30"; ctx.fillRect(sx+4, sy-30, 5, 50); ctx.fillRect(sx+52, sy-30, 5, 50);
+    ctx.fillStyle = "#0c0e14"; ctx.fillRect(sx-2, sy-46, 64, 22);
+    ctx.fillStyle = "#06080c"; ctx.fillRect(sx, sy-44, 60, 18);
+    var off = Math.floor(G.time/70) % 72;
+    for (var ti = 0; ti < 8; ti++){
+      var bx2 = sx + 2 + ((ti*12 - off + 144) % 72);
+      if (bx2 > sx + 54 || bx2 < sx) continue;
+      var up = (ti % 3 !== 0);
+      var bh2 = up ? 6 + (ti%3)*3 : 5 + (ti%2)*3;
+      ctx.fillStyle = up ? "#43d17c" : "#e25549";
+      ctx.fillRect(bx2, sy-30 - (up?bh2:0), 6, bh2);
+      ctx.fillStyle = up ? "rgba(67,209,124,.4)" : "rgba(226,85,73,.4)";
+      ctx.fillRect(bx2, sy-30, 6, 2);
+    }
+    var dt2 = Math.floor(G.time/90) % 58;
+    ctx.fillStyle = "#e8b04b";
+    for (var di = 0; di < 6; di++){ ctx.fillRect(sx + ((di*11 + dt2) % 58), sy-39, 3, 2); }
+  } else if (d.kind === "stall"){
+    // an open market stall, a striped awning over crates of bright produce
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx, sy+20, 42, 5);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx+2, sy-2, 4, 24); ctx.fillRect(sx+36, sy-2, 4, 24);
+    ctx.fillStyle = "#5c4632"; ctx.fillRect(sx, sy+8, 42, 12);
+    ctx.fillStyle = "#8a5a3c"; ctx.fillRect(sx+3, sy+9, 16, 9); ctx.fillRect(sx+22, sy+9, 16, 9);
+    ctx.fillStyle = "#e25549"; ctx.fillRect(sx+4, sy+10, 4, 4); ctx.fillRect(sx+9, sy+10, 4, 4); ctx.fillRect(sx+14, sy+10, 4, 4);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+23, sy+10, 4, 4); ctx.fillRect(sx+28, sy+10, 4, 4); ctx.fillRect(sx+33, sy+10, 4, 4);
+    ctx.fillStyle = "#5fae54"; ctx.fillRect(sx+4, sy+15, 14, 3); ctx.fillRect(sx+23, sy+15, 14, 3);
+    var sw2 = Math.round(Math.sin(G.time/500));
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(sx-2, sy-12, 46, 4);
+    for (var ai = 0; ai < 6; ai++){
+      ctx.fillStyle = (ai % 2 === 0) ? "#c34a40" : "#efe6d2";
+      ctx.fillRect(sx-2 + ai*8, sy-8, 8, 6 + (ai%2?sw2:-sw2));
+    }
+  } else if (d.kind === "trafficlight"){
+    // a street signal cycling red, amber, green over the crossing
+    ctx.fillStyle = "#23252c"; ctx.fillRect(sx+12, sy-30, 5, 54);
+    ctx.fillStyle = "#15171c"; ctx.fillRect(sx+6, sy-44, 18, 18);
+    var ph3 = Math.floor(G.time/1100) % 3;
+    ctx.fillStyle = ph3 === 0 ? "#e25549" : "#3a1614"; ctx.beginPath(); ctx.arc(sx+15, sy-39, 3, 0, 7); ctx.fill();
+    ctx.fillStyle = ph3 === 1 ? "#e8b04b" : "#3a2e10"; ctx.beginPath(); ctx.arc(sx+15, sy-35, 3, 0, 7); ctx.fill();
+    ctx.fillStyle = ph3 === 2 ? "#43d17c" : "#10301f"; ctx.beginPath(); ctx.arc(sx+15, sy-31, 3, 0, 7); ctx.fill();
+    ctx.fillStyle = "#15171c"; ctx.fillRect(sx+18, sy-22, 9, 9);
+    ctx.fillStyle = ph3 === 2 ? "#7fe5b0" : "#e8843a"; ctx.fillRect(sx+21, sy-20, 3, 5);
+  } else if (d.kind === "hydrant"){
+    // a fire hydrant, brass cap, an occasional drip at the base
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+2, sy+18, 16, 4);
+    ctx.fillStyle = "#c2473c"; ctx.fillRect(sx+5, sy+2, 9, 18);
+    ctx.fillStyle = "#a3392f"; ctx.fillRect(sx+5, sy+2, 9, 3);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+6, sy-2, 7, 5);
+    ctx.fillStyle = "#c2473c"; ctx.fillRect(sx+1, sy+7, 5, 5); ctx.fillRect(sx+13, sy+7, 5, 5);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx+1, sy+8, 2, 3); ctx.fillRect(sx+16, sy+8, 2, 3);
+    var drip = Math.floor(G.time/500) % 5;
+    if (drip < 2){ ctx.fillStyle = "rgba(160,210,225,.7)"; ctx.fillRect(sx+3, sy+13+drip*3, 2, 2); }
+  } else if (d.kind === "scooters"){
+    // a rack of shared e scooters, the tech town commute, blinking charge lights
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx, sy+18, 40, 4);
+    var cols2 = ["#3fb8af","#e8b04b","#7fb2e5"];
+    for (var si = 0; si < 3; si++){
+      var sxo = sx + 2 + si*13;
+      ctx.fillStyle = "#2a2c33"; ctx.fillRect(sxo+2, sy+4, 8, 2);
+      ctx.fillStyle = cols2[si]; ctx.fillRect(sxo+9, sy-12, 2, 18);
+      ctx.fillStyle = "#3a3d47"; ctx.fillRect(sxo+5, sy-13, 9, 2);
+      ctx.fillStyle = "#1a1c22"; ctx.beginPath(); ctx.arc(sxo+3, sy+8, 3, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(sxo+10, sy+8, 3, 0, 7); ctx.fill();
+      var chg = Math.floor(G.time/600 + si) % 2 === 0;
+      ctx.fillStyle = chg ? "#43d17c" : "#1f3a2a"; ctx.fillRect(sxo+8, sy-11, 2, 2);
+    }
+  } else if (d.kind === "recycling"){
+    // a trash and recycling pair on the curb, a stray paper scrap tumbling past
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx, sy+18, 34, 4);
+    ctx.fillStyle = "#3a5e4a"; ctx.fillRect(sx+1, sy+2, 14, 18);
+    ctx.fillStyle = "#2e4c3c"; ctx.fillRect(sx+1, sy+2, 14, 3);
+    ctx.fillStyle = "#2e7d5a"; ctx.fillRect(sx+4, sy+6, 8, 3);
+    ctx.fillStyle = "#4a4d55"; ctx.fillRect(sx+18, sy+2, 14, 18);
+    ctx.fillStyle = "#3a3d44"; ctx.fillRect(sx+18, sy+2, 14, 3);
+    ctx.fillStyle = "#2a2c33"; ctx.fillRect(sx+18, sy, 14, 3); ctx.fillRect(sx+1, sy, 14, 3);
+    var pf = (Math.floor(G.time/120) % 44);
+    var pflip = Math.floor(G.time/240) % 2;
+    ctx.fillStyle = "rgba(235,230,215,.8)";
+    ctx.fillRect(sx - 6 + pf, sy - 8 - Math.round(Math.sin(G.time/200)*4), pflip?3:4, pflip?4:3);
   } else if (d.kind === "bikes"){
     // the rack of parked bicycles, the commons commute
     ctx.fillStyle = "#5a5e66"; ctx.fillRect(sx, sy+18, 34, 3);
@@ -1017,6 +1130,58 @@ function drawCritter(c, sx, sy){
     ctx.fillStyle = "#5a4a2a"; ctx.fillRect(sx + (c.flip>0?12:-3), sy+1-hp, 3, 2);
     ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?9:1), sy+1-hp, 2, 2);
     ctx.fillStyle = "#3a3742"; ctx.fillRect(sx+3, sy+10-hp, 2, 3); ctx.fillRect(sx+7, sy+10-hp, 2, 3);
+  } else if (c.kind === "rat"){
+    // a quick city rat, low to the ground, long tail, nose twitching
+    var scurry = Math.floor(G.time/120) % 2 === 0 ? 1 : 0;
+    var twitch = Math.floor(G.time/200) % 3 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+1, sy+9, 13, 3);
+    ctx.fillStyle = "#52535c"; ctx.fillRect(sx, sy+3, 13, 6);
+    ctx.fillStyle = "#43444c"; ctx.fillRect(sx+2, sy+5, 8, 3);
+    ctx.fillStyle = "#52535c"; ctx.fillRect(sx + (c.flip>0?11:-2), sy+2, 5, 5);
+    ctx.fillStyle = "#3a3b42"; ctx.fillRect(sx + (c.flip>0?11:-2), sy, 2, 3); // ear
+    ctx.fillStyle = "#f2b6c0"; ctx.fillRect(sx + (c.flip>0?15+twitch:-4-twitch), sy+4, 2, 2); // nose
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?13:0), sy+3, 1, 1);
+    ctx.strokeStyle = "#6a6b72"; ctx.beginPath();
+    ctx.moveTo(sx + (c.flip>0?0:13), sy+7); ctx.lineTo(sx + (c.flip>0?-8:21), sy+5+scurry*2); ctx.stroke();
+    ctx.fillStyle = "#3a3b42"; ctx.fillRect(sx+3, sy+8+scurry, 2, 2); ctx.fillRect(sx+8, sy+8-scurry, 2, 2);
+  } else if (c.kind === "seagull"){
+    // a scavenging gull, hopping with the odd wing flap, yellow beak
+    var hop = Math.floor(G.time/260) % 2 === 0 ? 2 : 0;
+    var flap = Math.floor(G.time/170) % 4 === 0;
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx+2, sy+13-hop, 12, 3);
+    ctx.fillStyle = "#f4f1ea"; ctx.fillRect(sx+1, sy+4-hop, 13, 8);
+    ctx.fillStyle = "#d9d6cd"; ctx.fillRect(sx+2, sy+7-hop, 9, 4);
+    if (flap){ ctx.fillStyle = "#b9b6ad"; ctx.fillRect(sx-3, sy+2-hop, 6, 3); ctx.fillRect(sx+11, sy+2-hop, 6, 3); }
+    else { ctx.fillStyle = "#9a978f"; ctx.fillRect(sx+9, sy+5-hop, 5, 3); }
+    ctx.fillStyle = "#f4f1ea"; ctx.fillRect(sx + (c.flip>0?11:-2), sy-hop, 6, 6);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (c.flip>0?16:-5), sy+2-hop, 4, 2);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?13:1), sy+1-hop, 2, 2);
+    ctx.fillStyle = "#e8843a"; ctx.fillRect(sx+3, sy+12-hop, 2, 2); ctx.fillRect(sx+9, sy+12-hop, 2, 2);
+  } else if (c.kind === "sparrow"){
+    // a tiny brown sparrow, hopping and bobbing
+    var sb = Math.floor(G.time/180) % 2 === 0 ? 2 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(sx+1, sy+9-sb, 8, 2);
+    ctx.fillStyle = "#9a7a4e"; ctx.fillRect(sx, sy+3-sb, 8, 6);
+    ctx.fillStyle = "#b8a072"; ctx.fillRect(sx+1, sy+5-sb, 5, 3);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(sx+1, sy+3-sb, 6, 2);
+    ctx.fillStyle = "#9a7a4e"; ctx.fillRect(sx + (c.flip>0?6:-2), sy+1-sb, 5, 5);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (c.flip>0?10:-3), sy+3-sb, 2, 2);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?8:0), sy+2-sb, 1, 1);
+    ctx.fillStyle = "#5a4a2a"; ctx.fillRect(sx+2, sy+8-sb, 1, 2); ctx.fillRect(sx+5, sy+8-sb, 1, 2);
+  } else if (c.kind === "squirrel"){
+    // a grey city park squirrel, bushy tail flicking, sitting up to nibble
+    var tf = Math.floor(G.time/240) % 2 === 0 ? 2 : 0;
+    var nib = Math.floor(G.time/300) % 3 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+2, sy+13, 11, 3);
+    ctx.fillStyle = "#8a8a92"; ctx.fillRect(sx + (c.flip>0?-4:11), sy-2-tf, 6, 14); // bushy tail
+    ctx.fillStyle = "#74747c"; ctx.fillRect(sx + (c.flip>0?-3:12), sy-tf, 4, 10);
+    ctx.fillStyle = "#8a8a92"; ctx.fillRect(sx+2, sy+4, 9, 9);   // body, upright
+    ctx.fillStyle = "#a6a6ae"; ctx.fillRect(sx+4, sy+6, 5, 5);   // pale belly
+    ctx.fillStyle = "#8a8a92"; ctx.fillRect(sx + (c.flip>0?6:1), sy-nib, 6, 6); // head
+    ctx.fillStyle = "#74747c"; ctx.fillRect(sx + (c.flip>0?6:1), sy-2-nib, 2, 2); // ear
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?9:3), sy+1-nib, 1, 1);
+    ctx.fillStyle = "#5a4a32"; ctx.fillRect(sx+5, sy+3-nib, 2, 2); // a nut held up
+    ctx.fillStyle = "#5e5e66"; ctx.fillRect(sx+3, sy+12, 2, 2); ctx.fillRect(sx+8, sy+12, 2, 2);
   }
 }
 
@@ -1716,22 +1881,22 @@ function drawBuildingArt(b, bx, by, bw, bh){
    whenever the room's photo is absent. Theme keys follow the scene ids. */
 var ROOM_THEMES = {
   factory1:   { back:"#2c2f33", floor:"#3c3f44", counter:"#4a4034", accent:"#e8b04b",
-                props:["windowrow","machines"],
+                props:["assemblyline","windowrow"],
                 bust:{ skin:"#e0a06a", top:"#6e4a24", collar:"#caa06a", hair:"bun",   hairC:"#3a2a1a", acc:"apron" } },
   bank1:      { back:"#33301f", floor:"#4a3f2a", counter:"#5c4a2e", accent:"#e8b04b",
-                props:["columns","vault"],
+                props:["tellercage","vaultdoor"],
                 bust:{ skin:"#8a5a3c", top:"#22262e", collar:"#efe6d2", hair:"short", hairC:"#15121c", acc:"none" } },
   exchange1:  { back:"#222a3a", floor:"#2e3a4e", counter:"#3a4660", accent:"#3fb8af",
-                props:["board","windowrow"],
+                props:["tradingpit","tickerwall"],
                 bust:{ skin:"#caa06a", top:"#3a4660", collar:"#efe6d2", hair:"curls", hairC:"#2a1c12", acc:"none" } },
   garage1:    { back:"#2e2a26", floor:"#3a342e", counter:"#4a4036", accent:"#e8b04b",
-                props:["bulb","bench"],
+                props:["whiteboard","beanbags"],
                 bust:{ skin:"#d79a6e", top:"#5b7f9e", collar:"#cfe2ef", hair:"short", hairC:"#1d1610", acc:"none" } },
   bar1:       { back:"#3a2a22", floor:"#2e221c", counter:"#54301a", accent:"#e8b04b",
-                props:["barrels","crackedmirror"],
+                props:["bottleshelf","neonsign"],
                 bust:{ skin:"#e8b48a", top:"#6e3231", collar:"#caa06a", hair:"bun",   hairC:"#4a3018", acc:"apron" } },
   casino1:    { back:"#33152a", floor:"#451d38", counter:"#5d2538", accent:"#e8b04b",
-                props:["chandelier","lights","wheel"],
+                props:["roulette","lights","chandelier"],
                 bust:{ skin:"#caa06a", top:"#e8b04b", collar:"#33152a", hair:"long",  hairC:"#1d1610", acc:"none" } },
   institute1: { back:"#1f3329", floor:"#2a4032", counter:"#3a5444", accent:"#3fb8af",
                 props:["bookshelves","beam"],
@@ -2073,6 +2238,170 @@ function propLectern(th){
   ctx.fillStyle = th.accent || "#cfc0e6"; ctx.fillRect(330 + qx, 184, 6, 6);
 }
 
+/* ---------- Market town bespoke interior props. Milestone 16, Stage 2. ----------
+   Each Capitalism room leads with one of these, so the exchange, bank, factory,
+   garage, bar, and casino each read as themselves and not as the shared set. */
+function propAssemblyLine(th){
+  // a conveyor running across the back, boxes riding it, a stamping arm
+  ctx.fillStyle = "#1d1f24"; ctx.fillRect(30, 150, VIEW_W-60, 40);
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(30, 158, VIEW_W-60, 22);
+  var roll = Math.floor(G.time/60) % 24;
+  ctx.fillStyle = "#2a2e34";
+  for (var i = 0; i < 26; i++){ ctx.fillRect(34 + ((i*24 + roll) % (VIEW_W-64)), 176, 12, 4); }
+  ctx.fillStyle = "#1d1f24"; ctx.fillRect(60, 190, 10, 70); ctx.fillRect(VIEW_W-70, 190, 10, 70);
+  var brun = Math.floor(G.time/24) % (VIEW_W-40);
+  for (var b = 0; b < 5; b++){
+    var bxp = 20 + ((b*150 + brun) % (VIEW_W-40));
+    ctx.fillStyle = "#8a5a3c"; ctx.fillRect(bxp, 132, 30, 26);
+    ctx.fillStyle = "#6e4426"; ctx.fillRect(bxp, 142, 30, 4);
+    ctx.fillStyle = th.accent; ctx.fillRect(bxp+10, 138, 10, 6);
+  }
+  var stamp = Math.abs(Math.sin(G.time/300)) * 14;
+  ctx.fillStyle = "#5a5e66"; ctx.fillRect(300, 60, 16, 50);
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(290, 60 + stamp, 36, 18);
+  ctx.fillStyle = th.accent; ctx.fillRect(296, 58, 8, 6);
+}
+function propTellerCage(th){
+  // a brass barred teller cage along the back wall, a blinking deposit lamp
+  ctx.fillStyle = "#22262e"; ctx.fillRect(150, 50, 340, 150);
+  ctx.fillStyle = "#11141a"; ctx.fillRect(162, 62, 316, 110);
+  ctx.fillStyle = th.accent;
+  for (var i = 0; i < 9; i++){ ctx.fillRect(170 + i*36, 62, 5, 110); }
+  ctx.fillRect(162, 96, 316, 5);
+  ctx.fillStyle = "#0c0e14"; ctx.fillRect(250, 150, 140, 22);
+  ctx.fillStyle = "#3a3f48"; ctx.fillRect(250, 150, 140, 5);
+  var on = Math.floor(G.time/600) % 2 === 0;
+  ctx.fillStyle = on ? "#43d17c" : "#1f3a2a"; ctx.fillRect(300, 70, 12, 8);
+}
+function propVaultDoor(th){
+  // a heavy round vault door, bolts on the rim, a dial that slowly turns
+  ctx.fillStyle = "#22262e"; ctx.fillRect(40, 90, 150, 150);
+  ctx.fillStyle = "#3a4046"; ctx.beginPath(); ctx.arc(115, 165, 64, 0, 7); ctx.fill();
+  ctx.fillStyle = "#4a5158"; ctx.beginPath(); ctx.arc(115, 165, 52, 0, 7); ctx.fill();
+  ctx.fillStyle = "#2e333a"; ctx.beginPath(); ctx.arc(115, 165, 40, 0, 7); ctx.fill();
+  ctx.fillStyle = th.accent;
+  for (var i = 0; i < 8; i++){
+    var a = i/8 * 6.283;
+    ctx.fillRect(115 + Math.cos(a)*58 - 3, 165 + Math.sin(a)*58 - 3, 6, 6);
+  }
+  var da = G.time/900;
+  ctx.fillStyle = th.accent; ctx.fillRect(110, 160, 10, 10);
+  ctx.fillStyle = "#15121c"; ctx.fillRect(115 + Math.cos(da)*22 - 2, 165 + Math.sin(da)*22 - 2, 4, 4);
+  ctx.fillStyle = "#5a5e66"; ctx.fillRect(113, 135, 4, 60); ctx.fillRect(85, 163, 60, 4);
+}
+function propTradingPit(th){
+  // a tiered trading pit, little traders waving slips, out of phase
+  for (var t2 = 0; t2 < 3; t2++){
+    ctx.fillStyle = ["#2e3a4e","#33425a","#3a4660"][t2];
+    ctx.fillRect(60, 120 + t2*40, VIEW_W-120, 38);
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(60, 120 + t2*40, VIEW_W-120, 5);
+  }
+  for (var i = 0; i < 9; i++){
+    var tx = 90 + i*52, row = i % 3;
+    var up = Math.sin(G.time/200 + i) > 0;
+    ctx.fillStyle = ["#a3504f","#5b7f9e","#7a9e5b","#caa06a"][i % 4];
+    ctx.fillRect(tx, 126 + row*40, 16, 22);
+    ctx.fillStyle = "#e8c79a"; ctx.fillRect(tx+4, 116 + row*40, 8, 8);
+    ctx.fillStyle = "#efe6d2";
+    ctx.fillRect(tx + (i%2?16:-4), (up?112:120) + row*40, 6, 6);
+  }
+}
+function propTickerWall(th){
+  // a wall ticker, abstract green and red bars scrolling, no readable text
+  ctx.fillStyle = "#0c1118"; ctx.fillRect(120, 40, 400, 70);
+  ctx.fillStyle = "#06080c"; ctx.fillRect(128, 48, 384, 54);
+  var off = Math.floor(G.time/50) % 24;
+  for (var i = 0; i < 20; i++){
+    var bx = 130 + ((i*24 - off + 480) % 384);
+    if (bx > 500) continue;
+    var up = (i % 3 !== 0);
+    var bh = up ? 10 + (i%4)*4 : 8 + (i%3)*4;
+    ctx.fillStyle = up ? "#43d17c" : "#e25549";
+    ctx.fillRect(bx, 92 - (up?bh:0), 7, bh);
+  }
+  var d2 = Math.floor(G.time/60) % 384;
+  ctx.fillStyle = th.accent;
+  for (var di = 0; di < 14; di++){ ctx.fillRect(128 + ((di*30 + d2) % 380), 50, 4, 3); }
+}
+function propWhiteboard(th){
+  // a startup whiteboard: a climbing growth curve, a flow box, sticky notes
+  ctx.fillStyle = "#3a342e"; ctx.fillRect(70, 50, 360, 160);
+  ctx.fillStyle = "#e9e6dd"; ctx.fillRect(78, 58, 344, 144);
+  ctx.strokeStyle = "#3fb8af"; ctx.fillStyle = "#3fb8af";
+  ctx.fillRect(98, 180, 4, 4); ctx.fillRect(140, 170, 4, 4); ctx.fillRect(190, 150, 4, 4);
+  ctx.fillRect(250, 116, 4, 4); ctx.fillRect(320, 76, 4, 4);
+  ctx.beginPath(); ctx.moveTo(98, 182); ctx.lineTo(360, 70); ctx.stroke();
+  ctx.fillStyle = "#e25549"; ctx.fillRect(96, 70, 40, 24);
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(160, 96, 40, 24);
+  ctx.strokeStyle = "#15121c";
+  ctx.beginPath(); ctx.moveTo(136, 82); ctx.lineTo(160, 104); ctx.stroke();
+  var fl = Math.floor(G.time/500) % 2;
+  ctx.fillStyle = "#f2d24b"; ctx.fillRect(370, 70 - fl, 26, 26);
+  ctx.fillStyle = "#7fb2e5"; ctx.fillRect(372, 110 + fl, 24, 24);
+}
+function propBeanbags(th){
+  // beanbags and a laptop on a low desk, the garage culture
+  ctx.fillStyle = "#a3504f"; ctx.beginPath(); ctx.arc(120, 270, 34, 0, 7); ctx.fill();
+  ctx.fillStyle = "#8c4140"; ctx.fillRect(92, 270, 56, 24);
+  ctx.fillStyle = "#5b7f9e"; ctx.beginPath(); ctx.arc(200, 276, 30, 0, 7); ctx.fill();
+  ctx.fillStyle = "#4a6a86"; ctx.fillRect(174, 276, 52, 20);
+  ctx.fillStyle = "#4a4036"; ctx.fillRect(430, 250, 150, 16);
+  ctx.fillStyle = "#3a342e"; ctx.fillRect(440, 266, 10, 30); ctx.fillRect(560, 266, 10, 30);
+  ctx.fillStyle = "#2a2c33"; ctx.fillRect(478, 224, 54, 30);
+  var gl = Math.floor(G.time/500) % 2 === 0;
+  ctx.fillStyle = gl ? "#7fe5b0" : "#3fb8af"; ctx.fillRect(482, 228, 46, 22);
+  ctx.fillStyle = "#1a1c22"; ctx.fillRect(474, 252, 62, 6);
+  ctx.fillStyle = "#efe6d2"; ctx.fillRect(548, 240, 12, 12);
+  var stm = Math.floor(G.time/350) % 3;
+  ctx.fillStyle = "rgba(240,240,245,.4)"; ctx.fillRect(552, 232 - stm*2, 3, 4);
+}
+function propBottleShelf(th){
+  // the backbar: lit shelves of bottles with glints, a brass rail
+  ctx.fillStyle = "#2a1c14"; ctx.fillRect(120, 50, 400, 150);
+  for (var r = 0; r < 3; r++){
+    ctx.fillStyle = "#3a261a"; ctx.fillRect(128, 60 + r*48, 384, 40);
+    ctx.fillStyle = "rgba(232,176,75,.18)"; ctx.fillRect(128, 60 + r*48, 384, 6);
+    for (var b = 0; b < 12; b++){
+      var bxp = 138 + b*31;
+      ctx.fillStyle = ["#7a9e5b","#a3504f","#caa06a","#3fb8af","#b9a0d8"][(r+b) % 5];
+      ctx.fillRect(bxp, 64 + r*48, 12, 32);
+      ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(bxp+2, 68 + r*48, 3, 22);
+      ctx.fillStyle = "#2a1c14"; ctx.fillRect(bxp+3, 60 + r*48, 6, 5);
+    }
+  }
+  ctx.fillStyle = th.accent; ctx.fillRect(120, 196, 400, 5);
+}
+function propNeonSign(th){
+  // an abstract neon mark behind the bar, flickering, no readable text
+  var flick = Math.floor(G.time/120) % 9 !== 0;
+  var c1 = flick ? "#e25549" : "#5a2420";
+  var c2 = flick ? "#3fb8af" : "#1f4a47";
+  ctx.fillStyle = c1; ctx.fillRect(70, 70, 60, 6);
+  ctx.fillRect(74, 76, 52, 6);
+  ctx.fillRect(94, 82, 12, 34);
+  ctx.fillRect(80, 116, 40, 6);
+  ctx.fillStyle = c2; ctx.fillRect(86, 82, 28, 6);
+  if (flick){ ctx.fillStyle = "rgba(226,85,73,.16)"; ctx.fillRect(56, 56, 90, 80); }
+}
+function propRoulette(th){
+  // a roulette wheel with alternating pockets and a ball circling the rim
+  var cxp = 470, cyp = 250, R = 70;
+  ctx.fillStyle = "#2a1422"; ctx.beginPath(); ctx.arc(cxp, cyp, R, 0, 7); ctx.fill();
+  ctx.fillStyle = "#15121c"; ctx.beginPath(); ctx.arc(cxp, cyp, R-6, 0, 7); ctx.fill();
+  for (var i = 0; i < 12; i++){
+    var a = i/12 * 6.283;
+    ctx.fillStyle = i % 2 === 0 ? "#e25549" : "#15121c";
+    ctx.fillRect(cxp + Math.cos(a)*(R-22) - 7, cyp + Math.sin(a)*(R-22) - 7, 14, 14);
+  }
+  ctx.fillStyle = "#3a5e4a"; ctx.fillRect(cxp - 7, cyp - (R-22) - 7, 14, 14);
+  ctx.fillStyle = th.accent; ctx.beginPath(); ctx.arc(cxp, cyp, 14, 0, 7); ctx.fill();
+  ctx.fillStyle = "#15121c"; ctx.beginPath(); ctx.arc(cxp, cyp, 6, 0, 7); ctx.fill();
+  var ba = G.time/180;
+  ctx.fillStyle = "#efe6d2"; ctx.beginPath(); ctx.arc(cxp + Math.cos(ba)*(R-3), cyp + Math.sin(ba)*(R-3), 5, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(232,176,75,.5)";
+  ctx.fillRect(cxp-2, cyp-R+6, 4, R*2-12);
+}
+
 var ROOM_PROPS = {
   windowrow: propWindowRow, machines: propMachines, columns: propColumns,
   vault: propVault, board: propBoard, bulb: propBulb, bench: propBench,
@@ -2083,7 +2412,11 @@ var ROOM_PROPS = {
   firepit: propFirePit, pelts: propPelts,
   hearth: propHearth, tapestry: propTapestry, armorstand: propArmorStand,
   altar: propAltar, stainedglass: propStainedGlass, grainsacks: propGrainSacks,
-  alembic: propAlembic, lectern: propLectern
+  alembic: propAlembic, lectern: propLectern,
+  assemblyline: propAssemblyLine, tellercage: propTellerCage, vaultdoor: propVaultDoor,
+  tradingpit: propTradingPit, tickerwall: propTickerWall, whiteboard: propWhiteboard,
+  beanbags: propBeanbags, bottleshelf: propBottleShelf, neonsign: propNeonSign,
+  roulette: propRoulette
 };
 
 function drawRoomBust(cx2, midY, cfg){
@@ -8813,7 +9146,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M15.S3",
+  version: "M16.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
