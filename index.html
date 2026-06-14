@@ -628,6 +628,18 @@ var SCENES = {
   maudeF:       "Images/maudeF.jpg",
   rolfF:        "Images/rolfF.jpg",
   deskF:        "Images/deskF.jpg",
+  // Chapter 5, Piracy
+  articlesP:     "Images/articlesP.jpg",
+  freeportP:     "Images/freeportP.jpg",
+  prizecourtP:   "Images/prizecourtP.jpg",
+  anchorageP:    "Images/anchorageP.jpg",
+  grogP:         "Images/grogP.jpg",
+  gamblinghulkP: "Images/gamblinghulkP.jpg",
+  instituteP:    "Images/instituteP.jpg",
+  sableP:        "Images/sableP.jpg",
+  reefP:         "Images/reefP.jpg",
+  magsP:         "Images/magsP.jpg",
+  deskP:         "Images/deskP.jpg",
 };
 var fadeEl = document.getElementById("fade");
 var fadeTimer = null;
@@ -10899,16 +10911,47 @@ var CHP_DESK = {
       ]}
   ]
 };
+/* ---------- Free Play. M19 S5. A tick loop over the same four needles
+   with the levers exposed, no win condition, collapse borrowed from the
+   desk. A thin layer over the shared engine, never a second simulation. ---------- */
 var CHP_FREEPLAY = {
-  chapter:"CHAPTER 5: PIRACY", tickMs:1600,
-  needleNames:{ prosperity:"PLUNDER", equality:"LOYALTY", freedom:"LIBERTY", stability:"ORDER" },
-  intro:"Free Play arrives in M19 S5.",
-  banksNote:"FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
-  drift:{ prosperity:-1, stability:-1 },
-  shockEvery:{ min:7, max:13 },
-  levers:[ { id:"stub", name:"PLACEHOLDER", start:0, positions:[
-    { t:"HOLD", fx:{ prosperity:1 } }, { t:"PUSH", fx:{ prosperity:2, stability:-1 } } ] } ],
-  shocks:[ { id:"calm", fx:{ prosperity:-4 }, line:"The wind died and the prizes with it." } ]
+  chapter: "CHAPTER 5: PIRACY",
+  tickMs: 1600,
+  needleNames: { prosperity:"PLUNDER", equality:"LOYALTY", freedom:"LIBERTY", stability:"ORDER" },
+  intro: "The free company is yours for as long as you can hold it. Every season the sea drifts: the lanes thin, the powder burns, and the crew grows restless while the navy circles. Set the four levers, read the board, and adjust. Keep the company alive forever, or watch the noose or an empty hold take it in a single season. Both are lessons.",
+  banksNote: "FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
+  drift: { prosperity: -1, stability: -1 },
+  shockEvery: { min: 7, max: 13 },
+  levers: [
+    { id:"raid", name:"THE RAIDING", start:1, positions:[
+      { t:"LIE LOW",        fx:{ prosperity:-1, stability:1 } },
+      { t:"STEADY PLUNDER", fx:{ prosperity:1, stability:-1 } },
+      { t:"RAID HARD",      fx:{ prosperity:2, freedom:1, stability:-2 } }
+    ]},
+    { id:"articles", name:"THE ARTICLES", start:1, positions:[
+      { t:"LOOSE CODE",      fx:{ freedom:2, stability:-1 } },
+      { t:"SIGNED ARTICLES", fx:{ stability:1, equality:1, freedom:-1 } },
+      { t:"IRON CODE",       fx:{ stability:2, freedom:-2 } }
+    ]},
+    { id:"shares", name:"THE SHARES", start:1, positions:[
+      { t:"CAPTAIN'S CUT", fx:{ prosperity:1, equality:-2 } },
+      { t:"FIXED SHARES",  fx:{ equality:2, stability:1, prosperity:-1 } },
+      { t:"EQUAL SHARES",  fx:{ equality:1, freedom:1, prosperity:-1 } }
+    ]},
+    { id:"port", name:"THE PORT", start:1, positions:[
+      { t:"CLOSED HAVEN",   fx:{ stability:1, prosperity:-1, freedom:-1 } },
+      { t:"FREE PORT",      fx:{ prosperity:1, freedom:1, equality:-1 } },
+      { t:"OPEN ANCHORAGE", fx:{ prosperity:2, freedom:1, stability:-1 } }
+    ]}
+  ],
+  shocks: [
+    { id:"sweep",   fx:{ prosperity:-8, stability:-6 },           line:"NAVY SWEEP. A squadron swept the lanes and the merchants ran for guarded ports. The hunting is thin and the crew is jumpy." },
+    { id:"dry",     fx:{ prosperity:-10, equality:-2 },           line:"DRY SEASON. The convoys stayed in harbor and the prizes thinned to nothing. An empty hold sets the crew to muttering." },
+    { id:"mutter",  fx:{ equality:-8, stability:-6 },             line:"MUTINOUS MUTTER. A faction swears the shares were rigged and the quartermaster cannot quiet them. The articles are being read aloud, pointedly." },
+    { id:"gale",    fx:{ prosperity:-6, stability:-6 },           line:"GALE SCATTERED THE FLEET. A storm drove the ships apart and two have not been sighted since. Order frays when the line of sail breaks." },
+    { id:"pardon",  fx:{ equality:-6, freedom:-2 },               line:"THE PARDON. A crown agent rowed out with an offer, and some of your best hands are eyeing the shore and a clean name." },
+    { id:"galleon", fx:{ prosperity:8, stability:-4, equality:-2 }, line:"FAT PRIZE. A treasure galleon all but sailed into your guns. The hold is heavy, and the crew is already fighting over the dividing." }
+  ]
 };
 
 /* =====================================================
@@ -11361,7 +11404,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M19.S4",
+  version: "M19.S5",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
