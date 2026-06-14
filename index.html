@@ -49,6 +49,7 @@
   .hud-card .lbl{color:var(--brass);font-size:7px;display:block}
   #hud-stars{letter-spacing:2px}
   #hud-stars .got{color:var(--brass)} #hud-stars .miss{color:#4d445f}
+  #led-rows{display:block;font-size:7px;line-height:1.5;color:#cabf9f;margin-top:3px}
   #hud-status{display:none;background:rgba(21,18,28,.82);border:2px solid var(--panic);border-radius:6px;
     padding:6px 10px;font-family:var(--display);font-size:8px;color:var(--panic)}
 
@@ -269,7 +270,8 @@
     <div id="hud">
       <div class="hud-card"><span class="lbl">INSIGHTS</span><span id="hud-stars"></span></div>
       <div id="hud-status">SLOWED</div>
-      <div class="hud-card" style="text-align:right"><span class="lbl">RUN PTS</span><span id="hud-run">0</span><span class="lbl" style="margin-top:4px">LIFETIME</span><span id="hud-life">0</span></div>
+      <div class="hud-card" id="hud-ledger" style="display:none"><span class="lbl">OBLIGATION LEDGER</span><span id="led-rows"></span></div>
+      <div class="hud-card" style="text-align:right"><span class="lbl" id="lbl-run">RUN PTS</span><span id="hud-run">0</span><span class="lbl" id="lbl-life" style="margin-top:4px">LIFETIME</span><span id="hud-life">0</span></div>
     </div>
 
     <div id="toast"></div>
@@ -440,7 +442,7 @@ function isSolid(tx,ty){
    so a returning player keeps Free Play and cleared chapter state
    across sessions. Short runs, permanent progress. */
 var PROGRESS_KEY = "mf_progress";
-var CHAPTER_ORDER = ["ch0", "ch1", "ch2", "ch3", "ch4"];
+var CHAPTER_ORDER = ["ch0", "chF", "ch1", "ch2", "ch3"];
 function blankChapterProgress(){ return { cleared: false, clears: 0, bestDesk: 0, bestArcade: 0 }; }
 function freshProgress(){
   var p = {};
@@ -495,7 +497,16 @@ var G = {
   nearNPC: null,
   institutePassed: false,
   deskPassed: false,
-  deskScore: null
+  deskScore: null,
+  grain: 0,
+  sheaves: [],
+  lordRendered: false,
+  titheRendered: false,
+  protected: false,
+  plagueArrived: false,
+  handMillRisk: 0,
+  firstSheaf: false,
+  alchemistFed: 0
 
 };
 
@@ -509,6 +520,10 @@ var elRun = document.getElementById("hud-run");
 var elLife = document.getElementById("hud-life");
 var elStatus = document.getElementById("hud-status");
 var elToast = document.getElementById("toast");
+var elLedger = document.getElementById("hud-ledger");
+var elLedRows = document.getElementById("led-rows");
+var lblRun = document.getElementById("lbl-run");
+var lblLife = document.getElementById("lbl-life");
 var elDialogue = document.getElementById("dialogue");
 var elWho = elDialogue.querySelector(".who");
 var elTxt = elDialogue.querySelector(".txt");
@@ -523,6 +538,16 @@ function refreshHUD(){
   elStars.innerHTML = s;
   elRun.textContent = G.runPoints;
   elLife.textContent = G.lifetime;
+  if (CHAPTER_ID === "chF"){
+    if (elLedger) elLedger.style.display = "block";
+    if (lblRun) lblRun.textContent = "FAVOR";
+    if (elLedRows) elLedRows.innerHTML = "GRAIN " + (G.grain || 0)
+      + "<br>LORD " + (G.lordRendered ? "RENDERED" : "OWED")
+      + "<br>ABBEY " + (G.titheRendered ? "TITHED" : "OWED");
+  } else {
+    if (elLedger) elLedger.style.display = "none";
+    if (lblRun) lblRun.textContent = "RUN PTS";
+  }
   var slowed = G.time < G.slowUntil, cared = G.time < G.careUntil;
   elStatus.textContent = slowed ? "SLOWED" : "CARE";
   elStatus.style.borderColor = slowed ? "var(--panic)" : "var(--teal)";
@@ -581,16 +606,28 @@ var SCENES = {
   rego3:        "Images/rego3.jpg",
   luka3:        "Images/luka3.jpg",
   desk3:        "Images/desk3.jpg",
-  centralbank4: "Images/centralbank4.jpg",
-  regulator4:   "Images/regulator4.jpg",
-  welfare4:     "Images/welfare4.jpg",
-  smallbiz4:    "Images/smallbiz4.jpg",
-  permit4:      "Images/permit4.jpg",
-  institute4:   "Images/institute4.jpg",
-  nora4:        "Images/nora4.jpg",
-  tilly4:       "Images/tilly4.jpg",
-  hale4:        "Images/hale4.jpg",
-  desk4:        "Images/desk4.jpg"
+  // Level 0, The First Trade (Stone Age prologue)
+  hearth0:     "Images/hearth0.jpg",
+  giftcircle0: "Images/giftcircle0.jpg",
+  farbank0:    "Images/farbank0.jpg",
+  cache0:      "Images/cache0.jpg",
+  institute0:  "Images/institute0.jpg",
+  miro0:       "Images/miro0.jpg",
+  bran0:       "Images/bran0.jpg",
+  ula0:        "Images/ula0.jpg",
+  desk0:       "Images/desk0.jpg",
+  // Chapter 1, Feudalism
+  castleF:      "Images/castleF.jpg",
+  abbeyF:       "Images/abbeyF.jpg",
+  alchemistF:   "Images/alchemistF.jpg",
+  fieldsF:      "Images/fieldsF.jpg",
+  millF:        "Images/millF.jpg",
+  scriptoriumF: "Images/scriptoriumF.jpg",
+  godwinF:      "Images/godwinF.jpg",
+  edaF:         "Images/edaF.jpg",
+  maudeF:       "Images/maudeF.jpg",
+  rolfF:        "Images/rolfF.jpg",
+  deskF:        "Images/deskF.jpg",
 };
 var fadeEl = document.getElementById("fade");
 var fadeTimer = null;
@@ -680,17 +717,6 @@ var CH_DECOR = {
     { kind: "lamp", tx: 16, ty: 20 }, { kind: "lamp", tx: 19, ty: 20 },
     { kind: "crates", tx: 11, ty: 10 }, { kind: "crates", tx: 24, ty: 10 }
   ],
-  ch4: [
-    { kind: "foodcart", tx: 11, ty: 8 }, { kind: "foodcart", tx: 13, ty: 17 },
-    { kind: "kiosk", tx: 12, ty: 14 },
-    { kind: "billboard", tx: 10, ty: 16 },
-    { kind: "bikes", tx: 8, ty: 7 },
-    { kind: "crates", tx: 11, ty: 20 },
-    { kind: "bench", tx: 24, ty: 8 }, { kind: "bench", tx: 24, ty: 11 },
-    { kind: "planter", tx: 24, ty: 16 }, { kind: "planter", tx: 23, ty: 20 },
-    { kind: "lamp", tx: 16, ty: 8 }, { kind: "lamp", tx: 19, ty: 8 },
-    { kind: "lamp", tx: 16, ty: 18 }, { kind: "lamp", tx: 19, ty: 18 }
-  ]
 };
 var CH_CRITTERS = {
   ch1: [
@@ -709,12 +735,6 @@ var CH_CRITTERS = {
     { kind: "pigeon", x: 12, y: 9 },
     { kind: "cat", x: 24, y: 18 }
   ],
-  ch4: [
-    { kind: "pigeon", x: 17, y: 11 }, { kind: "pigeon", x: 12, y: 14 },
-    { kind: "pigeon", x: 23, y: 14 },
-    { kind: "duck", x: 18, y: 15 },
-    { kind: "cat", x: 20, y: 20 }
-  ]
 };
 var critters = [];
 
@@ -731,7 +751,7 @@ function updateCritters(dt){
     var dx = c.tx - c.x, dy = c.ty - c.y;
     var d = Math.sqrt(dx*dx + dy*dy);
     if (d > 2){
-      var sp = c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : 52;
+      var sp = c.kind === "rabbit" ? 72 : c.kind === "squirrel" ? 82 : c.kind === "fox" ? 56 : c.kind === "deer" ? 40 : c.kind === "fawn" ? 60 : c.kind === "hedgehog" ? 18 : c.kind === "boar" ? 34 : c.kind === "cat" ? 34 : c.kind === "drone" ? 64 : c.kind === "duck" ? 26 : c.kind === "sheep" ? 16 : c.kind === "chicken" ? 24 : c.kind === "goat" ? 20 : c.kind === "goose" ? 26 : c.kind === "dog" ? 70 : c.kind === "crow" ? 40 : 52;
       c.x += dx/d * sp * dt/1000;
       c.y += dy/d * sp * dt/1000;
       c.flip = dx < 0 ? -1 : 1;
@@ -751,6 +771,7 @@ function updateCritters(dt){
 
 function drawDecorItem(d, sx, sy){
   if (CUR.theme === "stoneage") return drawStoneAgeDecor(d, sx, sy);
+  if (CUR.theme === "feudal") return drawFeudalDecor(d, sx, sy);
   if (d.kind === "billboard"){
     // a digital board cycling abstract color bars, no readable text
     ctx.fillStyle = "#26282e"; ctx.fillRect(sx+4, sy-30, 5, 48); ctx.fillRect(sx+52, sy-30, 5, 48);
@@ -941,6 +962,61 @@ function drawCritter(c, sx, sy){
     ctx.fillRect(sx + (c.flip > 0 ? 13 : -3), sy-3, 2, 4); ctx.fillRect(sx + (c.flip > 0 ? 18 : 2), sy-3, 2, 4);
     ctx.fillStyle = "#7fe5b0"; ctx.fillRect(sx + (c.flip > 0 ? 15 : -1), sy+2, 2, 2);
     ctx.fillStyle = "#3a3f48"; ctx.fillRect(sx+3, sy+12, 2, 3); ctx.fillRect(sx+11, sy+12, 2, 3);
+  } else if (c.kind === "sheep"){
+    var nib = Math.floor(G.time/500) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+1, sy+13, 16, 3);
+    ctx.fillStyle = "#e8e4da"; ctx.fillRect(sx, sy+4+nib, 15, 9);
+    ctx.fillStyle = "#d8d2c6"; ctx.fillRect(sx+2, sy+6+nib, 11, 5);
+    ctx.fillStyle = "#3a342e"; ctx.fillRect(sx + (c.flip > 0 ? 12 : -2), sy+5+nib, 5, 5);
+    ctx.fillStyle = "#2a2620"; ctx.fillRect(sx+3, sy+13, 2, 3); ctx.fillRect(sx+10, sy+13, 2, 3);
+  } else if (c.kind === "chicken"){
+    var pk = Math.floor(G.time/300) % 4 === 0 ? 3 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+1, sy+12, 11, 3);
+    ctx.fillStyle = "#d8cdba"; ctx.fillRect(sx+1, sy+5, 10, 7);
+    ctx.fillStyle = "#e8e0d0"; ctx.fillRect(sx+2, sy+6, 6, 4);
+    ctx.fillStyle = "#d8cdba"; ctx.fillRect(sx + (c.flip>0?9:-1), sy+2+pk, 5, 5);
+    ctx.fillStyle = "#b5402f"; ctx.fillRect(sx + (c.flip>0?10:0), sy+pk, 3, 3);
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + (c.flip>0?14:-2), sy+4+pk, 2, 2);
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(sx+3, sy+12, 2, 3); ctx.fillRect(sx+7, sy+12, 2, 3);
+  } else if (c.kind === "goat"){
+    var gch = Math.floor(G.time/450) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+1, sy+13, 15, 3);
+    ctx.fillStyle = "#b9ad97"; ctx.fillRect(sx, sy+5, 14, 8);
+    ctx.fillStyle = "#a89c86"; ctx.fillRect(sx+2, sy+7, 9, 4);
+    ctx.fillStyle = "#cabf9f"; ctx.fillRect(sx + (c.flip>0?11:-2), sy+4+gch, 6, 6);
+    ctx.fillStyle = "#6e5a3e"; ctx.fillRect(sx + (c.flip>0?12:-1), sy+1, 2, 4); ctx.fillRect(sx + (c.flip>0?15:2), sy+1, 2, 4);
+    ctx.fillStyle = "#8a7f66"; ctx.fillRect(sx + (c.flip>0?13:0), sy+10+gch, 2, 3);
+    ctx.fillStyle = "#5a5042"; ctx.fillRect(sx+2, sy+13, 2, 3); ctx.fillRect(sx+10, sy+13, 2, 3);
+  } else if (c.kind === "goose"){
+    var wd = Math.floor(G.time/260) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(sx+1, sy+13, 13, 3);
+    ctx.fillStyle = "#f2efe6"; ctx.fillRect(sx, sy+5+wd, 12, 8);
+    ctx.fillStyle = "#e2ddcf"; ctx.fillRect(sx+2, sy+7+wd, 7, 4);
+    ctx.fillStyle = "#f2efe6"; ctx.fillRect(sx + (c.flip>0?9:-1), sy-2+wd, 5, 9);
+    ctx.fillStyle = "#e8843a"; ctx.fillRect(sx + (c.flip>0?13:-3), sy+wd, 4, 3);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?10:1), sy+wd, 2, 2);
+    ctx.fillStyle = "#e8843a"; ctx.fillRect(sx+3, sy+13, 2, 3); ctx.fillRect(sx+8, sy+13, 2, 3);
+  } else if (c.kind === "dog"){
+    var tg = Math.floor(G.time/220) % 2 === 0 ? 2 : -2;
+    var tr = Math.floor(G.time/180) % 2 === 0 ? 1 : 0;
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx+1, sy+13, 16, 3);
+    ctx.fillStyle = "#7a5a3a"; ctx.fillRect(sx, sy+6, 15, 7);
+    ctx.fillStyle = "#5e4429"; ctx.fillRect(sx+2, sy+8, 10, 4);
+    ctx.fillStyle = "#7a5a3a"; ctx.fillRect(sx + (c.flip>0?12:-3), sy+3, 6, 6);
+    ctx.fillStyle = "#4a3622"; ctx.fillRect(sx + (c.flip>0?12:-3), sy, 3, 4);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?14:-1), sy+5, 2, 2);
+    ctx.fillStyle = "#7a5a3a"; ctx.fillRect(sx + (c.flip>0?-3:15), sy+4+tg, 4, 2);
+    ctx.fillStyle = "#4a3622"; ctx.fillRect(sx+2, sy+12+tr, 2, 3); ctx.fillRect(sx+10, sy+12-tr, 2, 3);
+  } else if (c.kind === "crow"){
+    var hp = Math.floor(G.time/240) % 2 === 0 ? 2 : 0;
+    var crowfl = Math.floor(G.time/160) % 2 === 0;
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+1, sy+11-hp, 10, 3);
+    ctx.fillStyle = "#1f1d24"; ctx.fillRect(sx, sy+3-hp, 11, 7);
+    ctx.fillStyle = "#2c2a33"; ctx.fillRect(sx + (c.flip>0?8:-1), sy-hp, 5, 5);
+    if (crowfl){ ctx.fillStyle = "#3a3742"; ctx.fillRect(sx+2, sy+1-hp, 7, 3); }
+    ctx.fillStyle = "#5a4a2a"; ctx.fillRect(sx + (c.flip>0?12:-3), sy+1-hp, 3, 2);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx + (c.flip>0?9:1), sy+1-hp, 2, 2);
+    ctx.fillStyle = "#3a3742"; ctx.fillRect(sx+3, sy+10-hp, 2, 3); ctx.fillRect(sx+7, sy+10-hp, 2, 3);
   }
 }
 
@@ -1185,67 +1261,12 @@ function drawPlannedGround(c, x, y, sx, sy){
   }
 }
 
-function drawMixedGround(c, x, y, sx, sy){
-  // The mixed city, split down the middle: a warm market quarter to the west,
-  // a cool civic quarter to the east, and a two-way avenue between them. The
-  // divide is the whole lesson, so it is painted into the very pavement.
-  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
-  ctx.fillRect(sx, sy, TILE, TILE);
-  ctx.fillStyle = "rgba(0,0,0,.16)";
-  ctx.fillRect(sx, sy, TILE, 1); ctx.fillRect(sx, sy, 1, TILE);
-  ctx.fillStyle = "rgba(255,255,255,.04)";
-  ctx.fillRect(sx + 1, sy + 1, TILE - 2, 1);
-  var market = (x <= 15), civic = (x >= 20);
-  if (market){
-    ctx.fillStyle = "rgba(180,118,58,.16)"; ctx.fillRect(sx, sy, TILE, TILE);   // warm wash
-    var hm = (x * 113 + y * 37) % 7;
-    if (hm === 0){ ctx.fillStyle = "rgba(232,176,75,.4)"; ctx.fillRect(sx + TILE - 7, sy + TILE - 7, 3, 3); }
-    if ((x + y) % 5 === 0){ ctx.fillStyle = "rgba(176,90,60,.20)"; ctx.fillRect(sx, sy + TILE - 4, TILE, 2); } // awning shadow
-  } else if (civic){
-    ctx.fillStyle = "rgba(58,108,120,.16)"; ctx.fillRect(sx, sy, TILE, TILE);   // cool wash
-    if ((x * 7 + y) % 6 === 0){ ctx.fillStyle = "rgba(232,176,75,.3)"; ctx.fillRect(sx + TILE - 7, sy + TILE - 7, 3, 3); } // brass stud
-  }
-  // the central avenue, cols 16 to 19: asphalt with dashed lane lines, two ways
-  var avenue = (x >= 16 && x <= 19);
-  if (avenue && c === "."){
-    ctx.fillStyle = "#33414a"; ctx.fillRect(sx, sy, TILE, TILE);
-    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.fillRect(sx, sy, TILE, 1);
-    if ((x === 17 || x === 18) && (y % 2 === 0)){ ctx.fillStyle = "rgba(232,200,90,.7)"; ctx.fillRect(sx + (x===17?TILE-2:0), sy + 4, 2, TILE - 8); } // twin center line
-    if ((x === 16 || x === 19) && (y % 2 === 1)){ ctx.fillStyle = "rgba(255,255,255,.38)"; ctx.fillRect(sx + TILE/2 - 1, sy + 6, 2, TILE - 12); }    // lane dashes
-  }
-  if (c === "T"){
-    var border = (x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1);
-    if (border){
-      ctx.fillStyle = "#202830"; ctx.fillRect(sx, sy, TILE, TILE);
-      ctx.fillStyle = "#2f3a44"; ctx.fillRect(sx + 3, sy + 3, TILE - 6, TILE - 6);
-      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(sx, sy + TILE - 4, TILE, 4);
-    } else {
-      // a planter bollard: civic greenery on a stone base
-      ctx.fillStyle = "#3a4650"; ctx.fillRect(sx + 4, sy + 10, TILE - 8, TILE - 14);
-      ctx.fillStyle = "#2f5e41"; ctx.fillRect(sx + 6, sy + 4, TILE - 12, 10);
-      ctx.fillStyle = "#3f7d55"; ctx.fillRect(sx + 9, sy + 2, TILE - 18, 8);
-      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx + 4, sy + TILE - 6, TILE - 8, 2);
-    }
-  } else if (c === "F"){
-    // the civic plinth at the city's heart: the gate beacon stands here
-    ctx.fillStyle = "#34424a"; ctx.fillRect(sx, sy + 4, TILE, TILE - 4);
-    ctx.fillStyle = "#465862"; ctx.fillRect(sx + 3, sy + 2, TILE - 6, TILE - 6);
-    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 7, sy + 8, TILE - 14, 5);
-    ctx.fillStyle = "#3f6e6a"; ctx.fillRect(sx + 7, sy + 15, TILE - 14, 3);
-  } else if (c === "C"){
-    // a low civic marker with a brass cap
-    ctx.fillStyle = "#3a4650"; ctx.fillRect(sx + 5, sy + 7, TILE - 10, TILE - 12);
-    ctx.fillStyle = "#4a5a64"; ctx.fillRect(sx + 7, sy + 4, TILE - 14, 8);
-    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + TILE/2 - 2, sy + 9, 4, 4);
-  }
-}
-
 function drawGroundTile(c, x, y, sx, sy){
   if (CUR.theme === "stoneage") return drawStoneAgeGround(c, x, y, sx, sy);
   if (CUR.theme === "metro") return drawMetroGround(c, x, y, sx, sy);
   if (CUR.theme === "commons") return drawCommonsGround(c, x, y, sx, sy);
   if (CUR.theme === "planned") return drawPlannedGround(c, x, y, sx, sy);
-  if (CUR.theme === "mixed") return drawMixedGround(c, x, y, sx, sy);
+  if (CUR.theme === "feudal") return drawFeudalGround(c, x, y, sx, sy);
   // the old cobble checker, kept as the fallback for future chapters
   ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
   ctx.fillRect(sx, sy, TILE, TILE);
@@ -1515,142 +1536,6 @@ var BUILDING_ART = {
     ctx.fillRect(bx+bw-24, by+24, 11, 14);
     ctx.fillStyle = "rgba(0,0,0,.15)"; ctx.fillRect(bx, by+bh-6, bw, 4);
   },
-  centralbank4: function(b, bx, by, bw, bh){
-    // the monetary authority: a stone temple of credit, pediment and colonnade,
-    // a policy clock, and one stance lamp that leans easy or tight with the cycle
-    ctx.fillStyle = "#cfc8b8"; ctx.fillRect(bx, by+8, bw, bh-8);
-    ctx.fillStyle = "#b3ac9a"; ctx.fillRect(bx-4, by+2, bw+8, 10);
-    // the triangular pediment
-    ctx.fillStyle = "#bdb6a4";
-    ctx.beginPath(); ctx.moveTo(bx+bw/2, by-16); ctx.lineTo(bx+10, by+2); ctx.lineTo(bx+bw-10, by+2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "#8f8979"; ctx.fillRect(bx+bw/2-4, by-8, 8, 6);
-    // the colonnade with shaded flutes
-    ctx.fillStyle = "#efe6d2";
-    for (var cx5 = bx+10; cx5 < bx+bw-12; cx5 += 22){ ctx.fillRect(cx5, by+14, 9, bh-18); }
-    ctx.fillStyle = "rgba(0,0,0,.12)";
-    for (var cf5 = bx+10; cf5 < bx+bw-12; cf5 += 22){ ctx.fillRect(cf5+6, by+14, 3, bh-18); }
-    // the policy clock, hands fixed near the steady hour
-    ctx.fillStyle = "#2f4150"; ctx.beginPath(); ctx.arc(bx+bw/2, by+bh-20, 9, 0, 7); ctx.fill();
-    ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx+bw/2-1, by+bh-26, 2, 7); ctx.fillRect(bx+bw/2-1, by+bh-21, 6, 2);
-    // the stance lamp: leans against the boom, easy teal or tight amber
-    var lean4 = Math.floor(G.time/1100) % 2;
-    ctx.fillStyle = lean4 ? "#e8b04b" : "#3fb8af";
-    ctx.fillRect(bx+bw-16, by+bh-30, 6, 6);
-  },
-  regulator4: function(b, bx, by, bw, bh){
-    // the regulator: a sober civic block, a shield over the door, barred
-    // oversight windows, and a slow lamp that sweeps the street for harms
-    ctx.fillStyle = "#3f6e6a"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#274a47"; ctx.fillRect(bx-3, by+2, bw+6, 12);
-    ctx.fillStyle = "rgba(0,0,0,.1)"; for (var rr4=by+18; rr4<by+bh-6; rr4+=10){ ctx.fillRect(bx, rr4, bw, 2); }
-    // the shield emblem over the door, shapes only
-    ctx.fillStyle = "#efe6d2";
-    ctx.beginPath(); ctx.moveTo(bx+bw/2, by+16); ctx.lineTo(bx+bw/2-11, by+20); ctx.lineTo(bx+bw/2-11, by+30);
-    ctx.lineTo(bx+bw/2, by+38); ctx.lineTo(bx+bw/2+11, by+30); ctx.lineTo(bx+bw/2+11, by+20); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "#3fb8af"; ctx.fillRect(bx+bw/2-2, by+20, 4, 14); ctx.fillRect(bx+bw/2-7, by+26, 14, 3);
-    // barred oversight windows
-    ctx.fillStyle = "rgba(200,225,250,.4)"; ctx.fillRect(bx+10, by+20, 14, 12); ctx.fillRect(bx+bw-24, by+20, 14, 12);
-    ctx.fillStyle = "#274a47";
-    ctx.fillRect(bx+15, by+20, 2, 12); ctx.fillRect(bx+bw-19, by+20, 2, 12);
-    ctx.fillRect(bx+10, by+25, 14, 2); ctx.fillRect(bx+bw-24, by+25, 14, 2);
-    // the scanning lamp on the parapet
-    var sweep4 = (Math.floor(G.time/260) % 5);
-    ctx.fillStyle = "#e25549"; ctx.fillRect(bx+8 + sweep4*Math.floor((bw-20)/5), by+4, 6, 4);
-  },
-  welfare4: function(b, bx, by, bw, bh){
-    // the welfare office: warm postwar render, a painted net stretched under
-    // the eave, warm windows for those waiting, and a wide sheltering canopy
-    ctx.fillStyle = "#9a7a4a"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#6a5230"; ctx.fillRect(bx-3, by, bw+6, 14);
-    ctx.fillStyle = "rgba(0,0,0,.08)"; ctx.fillRect(bx, by+12, bw, 3);
-    // the painted safety net: a diamond mesh under the roofline
-    ctx.strokeStyle = "rgba(239,230,210,.5)";
-    for (var nx4 = bx+6; nx4 < bx+bw-8; nx4 += 10){
-      ctx.beginPath(); ctx.moveTo(nx4, by+16); ctx.lineTo(nx4+8, by+24); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(nx4+8, by+16); ctx.lineTo(nx4, by+24); ctx.stroke();
-    }
-    // warm waiting windows
-    ctx.fillStyle = "rgba(255,225,170,.6)";
-    ctx.fillRect(bx+10, by+28, 14, 12); ctx.fillRect(bx+bw-24, by+28, 14, 12);
-    // the wide door canopy: shelter at the point of use
-    ctx.fillStyle = "#6a5230"; ctx.fillRect(bx+bw/2-20, by+bh-18, 40, 5);
-    ctx.fillStyle = "#8a6a44"; ctx.fillRect(bx+bw/2-16, by+bh-13, 32, 11);
-    ctx.fillStyle = "rgba(255,233,176,.5)"; ctx.fillRect(bx+bw/2-12, by+bh-12, 24, 4);
-  },
-  smallbiz4: function(b, bx, by, bw, bh){
-    // goods and co: a bright shopfront, a striped awning, a window of wares,
-    // a chalk price board, and a string of bulbs. The market still clears here
-    ctx.fillStyle = "#a3593f"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#6e3a27"; ctx.fillRect(bx-3, by+2, bw+6, 12);
-    // the striped awning
-    for (var ax4 = bx+4; ax4 < bx+bw-4; ax4 += 12){
-      ctx.fillStyle = (Math.floor((ax4-bx)/12) % 2 === 0) ? "#e25549" : "#efe6d2";
-      ctx.fillRect(ax4, by+16, 12, 8);
-    }
-    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(bx+4, by+24, bw-8, 2);
-    // the display window of wares, abstract shapes only
-    ctx.fillStyle = "#2a1c16"; ctx.fillRect(bx+8, by+28, bw-16, bh-30);
-    ctx.fillStyle = "rgba(255,233,176,.18)"; ctx.fillRect(bx+8, by+28, bw-16, bh-30);
-    ctx.fillStyle = "#e8b04b"; ctx.beginPath(); ctx.arc(bx+18, by+bh-12, 4, 0, 7); ctx.fill();
-    ctx.fillStyle = "#3fb8af"; ctx.fillRect(bx+28, by+bh-16, 7, 9);
-    ctx.fillStyle = "#e25549"; ctx.fillRect(bx+bw-30, by+bh-15, 8, 8);
-    // the chalk price board, marks only
-    ctx.fillStyle = "#1c2a22"; ctx.fillRect(bx+bw-20, by+30, 12, 14);
-    ctx.fillStyle = "rgba(239,230,210,.7)"; ctx.fillRect(bx+bw-18, by+33, 8, 2); ctx.fillRect(bx+bw-18, by+37, 6, 2);
-    // string bulbs along the eave, a gentle chase
-    var gl4 = Math.floor(G.time/320) % 3;
-    for (var li4 = 0; li4 < Math.floor(bw/14); li4++){
-      ctx.fillStyle = (li4 % 3 === gl4) ? "#ffe9b0" : "#9a7a3e";
-      ctx.fillRect(bx+6+li4*14, by+13, 3, 3);
-    }
-  },
-  permit4: function(b, bx, by, bw, bh){
-    // the permit office: a drab municipal counter, a row of service wickets
-    // with one lit and useful and the rest dim, a now serving number that
-    // climbs forever, and the queue rail itself. The friction is the lesson
-    ctx.fillStyle = "#6e6a4a"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#494630"; ctx.fillRect(bx-3, by+2, bw+6, 12);
-    ctx.fillStyle = "rgba(0,0,0,.12)"; ctx.fillRect(bx, by+24, bw, bh-24);
-    // the row of service wickets, one bright, the rest dim
-    var wi4 = 0;
-    for (var wkx = bx+10; wkx < bx+bw-14; wkx += 20){
-      ctx.fillStyle = (wi4 === 1) ? "rgba(255,233,176,.7)" : "rgba(120,130,110,.5)";
-      ctx.fillRect(wkx, by+26, 13, 12);
-      ctx.fillStyle = "#494630"; ctx.fillRect(wkx, by+31, 13, 2);
-      wi4++;
-    }
-    // the now serving indicator: a block of bars that increments, no text
-    ctx.fillStyle = "#1c1c14"; ctx.fillRect(bx+bw/2-10, by+14, 20, 8);
-    var nn4 = Math.floor(G.time/900) % 5 + 1;
-    ctx.fillStyle = "#e25549";
-    for (var kk4 = 0; kk4 < nn4; kk4++){ ctx.fillRect(bx+bw/2-8 + kk4*4, by+16, 2, 4); }
-    // the queue rail: stanchions and a rope, the line made into level design
-    ctx.fillStyle = "#8a8668";
-    ctx.fillRect(bx+8, by+bh-10, 2, 8); ctx.fillRect(bx+bw/2, by+bh-10, 2, 8); ctx.fillRect(bx+bw-12, by+bh-10, 2, 8);
-    ctx.strokeStyle = "rgba(180,60,60,.55)";
-    ctx.beginPath(); ctx.moveTo(bx+9, by+bh-8); ctx.lineTo(bx+bw/2+1, by+bh-7); ctx.lineTo(bx+bw-11, by+bh-8); ctx.stroke();
-  },
-  institute4: function(b, bx, by, bw, bh){
-    // the institute, in the mixed key: the familiar dome, crowned this time
-    // with a balance beam, the market on one pan and the rule on the other
-    ctx.fillStyle = "#3f6e5a"; ctx.fillRect(bx, by+10, bw, bh-10);
-    ctx.fillStyle = "#2a4a3c"; ctx.fillRect(bx-3, by+2, bw+6, 12);
-    // the dome
-    ctx.fillStyle = "#7fe5b0"; ctx.fillRect(bx+bw/2-18, by-10, 36, 12);
-    ctx.fillStyle = "#2a4a3c"; ctx.fillRect(bx+bw/2-9, by-15, 18, 6);
-    // the balance beam atop, tipping gently to and fro
-    var tip4 = (Math.floor(G.time/900) % 2) ? 2 : -2;
-    ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx+bw/2-1, by-24, 2, 10);
-    ctx.fillRect(bx+bw/2-14, by-23 + tip4, 28, 2);
-    ctx.fillStyle = "#3fb8af";
-    ctx.fillRect(bx+bw/2-16, by-21 + tip4, 6, 4);
-    ctx.fillRect(bx+bw/2+10, by-25 - tip4, 6, 4);
-    // arched windows
-    ctx.fillStyle = "rgba(127,229,176,.7)";
-    for (var wx4 = bx+12; wx4 < bx+bw-16; wx4 += 26){
-      ctx.fillRect(wx4, by+24, 12, 16); ctx.fillRect(wx4+2, by+21, 8, 4);
-    }
-  },
   planbureau3: function(b, bx, by, bw, bh){
     // the planning bureau: a monumental administrative block, ranked pilasters
     // and regular windows, a geared emblem, a plain banner, a blinking beacon
@@ -1890,24 +1775,6 @@ var ROOM_THEMES = {
   institute3:   { back:"#1f3329", floor:"#2a4032", counter:"#3a5444", accent:"#3fb8af",
                 props:["bookshelves","board","beam"],
                 bust:{ skin:"#caa06a", top:"#2a4a3c", collar:"#3fb8af", hair:"short", hairC:"#cfc8b8", acc:"glasses" } },
-  centralbank4: { back:"#23303a", floor:"#2e3c46", counter:"#cfc8b8", accent:"#e8b04b",
-                props:["board","windowrow"],
-                bust:{ skin:"#caa06a", top:"#2f4150", collar:"#e8b04b", hair:"short", hairC:"#3a3026", acc:"glasses" } },
-  regulator4:   { back:"#1f332e", floor:"#2a4038", counter:"#3a5448", accent:"#3fb8af",
-                props:["board","gauges"],
-                bust:{ skin:"#a86a48", top:"#274a47", collar:"#cfe2ef", hair:"short", hairC:"#15121c", acc:"glasses" } },
-  welfare4:     { back:"#312b22", floor:"#3e3528", counter:"#cfc8b8", accent:"#e8b04b",
-                props:["windowrow","benchrow"],
-                bust:{ skin:"#d79a6e", top:"#6a5230", collar:"#efe6d2", hair:"bun", hairC:"#2a1c12", acc:"none" } },
-  smallbiz4:    { back:"#332a22", floor:"#42372a", counter:"#54462e", accent:"#e8b04b",
-                props:["barrels","board"],
-                bust:{ skin:"#8a5a3c", top:"#6e3a27", collar:"#caa06a", hair:"short", hairC:"#1d1610", acc:"apron" } },
-  permit4:      { back:"#2b2a22", floor:"#36352a", counter:"#46452e", accent:"#9a8a5a",
-                props:["board","benchrow"],
-                bust:{ skin:"#caa06a", top:"#494630", collar:"#9a8a5a", hair:"short", hairC:"#2a2218", acc:"none" } },
-  institute4:   { back:"#1f3329", floor:"#2a4032", counter:"#3a5444", accent:"#3fb8af",
-                props:["bookshelves","board","beam"],
-                bust:{ skin:"#caa06a", top:"#2a4a3c", collar:"#3fb8af", hair:"short", hairC:"#cfc8b8", acc:"glasses" } }
 };
 var lastRoomDrawn = null;
 
@@ -2106,6 +1973,106 @@ function propPelts(th){
     ctx.fillStyle = th.accent || "#e8b04b"; ctx.fillRect(px + 16 + sw, 64, 8, 6);
   }
 }
+/* ---------- Custom Feudalism interior props. M15.S2. ---------- */
+function propHearth(th){
+  ctx.fillStyle = "#4a443a"; ctx.fillRect(54, 120, 180, 180);
+  ctx.fillStyle = "#6e5a38"; ctx.fillRect(48, 112, 192, 14);
+  ctx.fillStyle = "#3a352d"; ctx.fillRect(70, 150, 148, 150);
+  ctx.fillStyle = "#2a2620"; ctx.fillRect(86, 176, 116, 124);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(96, 270, 36, 12); ctx.fillRect(150, 272, 40, 10);
+  var fl = Math.floor(G.time / 120) % 3;
+  ctx.fillStyle = "#b5662f"; ctx.fillRect(112, 232 - fl*5, 64, 48 + fl*5);
+  ctx.fillStyle = "#e8922b"; ctx.fillRect(124, 218 - fl*6, 42, 60 + fl*6);
+  ctx.fillStyle = "#f2c84b"; ctx.fillRect(134, 208 - fl*6, 22, 64 + fl*6);
+  ctx.fillStyle = "#fff0c0"; ctx.fillRect(140, 236 - fl*3, 10, 30);
+  ctx.fillStyle = "rgba(232,146,43,.10)"; ctx.fillRect(30, 110, 230, 200);
+}
+function propTapestry(th){
+  var sw = Math.round(Math.sin(G.time / 800) * 2);
+  ctx.fillStyle = "#5c4a2e"; ctx.fillRect(238, 34, 168, 8);
+  ctx.fillStyle = "#7d3527"; ctx.fillRect(244 + sw, 42, 156, 150);
+  ctx.fillStyle = "#a3504f"; ctx.fillRect(252 + sw, 50, 140, 134);
+  ctx.fillStyle = th.accent || "#e8b04b";
+  ctx.fillRect(312 + sw, 70, 16, 96); ctx.fillRect(284 + sw, 108, 72, 16);
+  ctx.fillStyle = "#3f6486"; ctx.fillRect(262 + sw, 60, 20, 20); ctx.fillRect(378 + sw, 60, 20, 20);
+  ctx.fillStyle = "#7a9e5b"; ctx.fillRect(262 + sw, 150, 20, 20); ctx.fillRect(378 + sw, 150, 20, 20);
+  ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(244 + sw, 42, 156, 8);
+  ctx.fillStyle = "#e8d9a8"; for (var i=0;i<10;i++){ ctx.fillRect(248 + sw + i*16, 192, 8, 8); }
+}
+function propArmorStand(th){
+  var gleam = (Math.floor(G.time/500) % 2) ? 0.16 : 0.08;
+  ctx.fillStyle = "#3a352d"; ctx.fillRect(452, 286, 70, 14);
+  ctx.fillStyle = "#8a8e96"; ctx.fillRect(470, 120, 34, 40);
+  ctx.fillStyle = "#6f747c"; ctx.fillRect(474, 132, 26, 8);
+  ctx.fillStyle = "#9aa0a8"; ctx.fillRect(456, 160, 62, 70);
+  ctx.fillStyle = "#7f858d"; ctx.fillRect(456, 160, 62, 10);
+  ctx.fillStyle = "#8a8e96"; ctx.fillRect(448, 164, 12, 56); ctx.fillRect(514, 164, 12, 56);
+  ctx.fillStyle = "#9aa0a8"; ctx.fillRect(462, 230, 22, 56); ctx.fillRect(490, 230, 22, 56);
+  ctx.fillStyle = th.accent || "#e8b04b"; ctx.fillRect(482, 178, 10, 40);
+  ctx.fillStyle = "rgba(255,255,255," + gleam + ")"; ctx.fillRect(460, 164, 8, 60);
+}
+function propAltar(th){
+  ctx.fillStyle = "#5c5238"; ctx.fillRect(250, 250, 140, 50);
+  ctx.fillStyle = "#6e6244"; ctx.fillRect(244, 244, 152, 12);
+  ctx.fillStyle = "#e8d9a8"; ctx.fillRect(312, 150, 16, 80); ctx.fillRect(296, 176, 48, 16);
+  var fk = Math.floor(G.time/160) % 2;
+  [266, 358].forEach(function(cx3){
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(cx3, 222, 8, 24);
+    ctx.fillStyle = "#f2c84b"; ctx.fillRect(cx3+1, 212 - fk*2, 6, 10 + fk*2);
+    ctx.fillStyle = "rgba(242,200,75,.18)"; ctx.fillRect(cx3-10, 204, 28, 44);
+  });
+  ctx.fillStyle = "rgba(232,217,168,.08)"; ctx.fillRect(240, 130, 160, 170);
+}
+function propStainedGlass(th){
+  var sh = (Math.floor(G.time/300) % 2) ? 0.22 : 0.12;
+  [70, 470].forEach(function(wx){
+    ctx.fillStyle = "#1d1a14"; ctx.fillRect(wx, 40, 100, 230);
+    ctx.fillStyle = "#2a2620"; ctx.fillRect(wx+6, 46, 88, 218);
+    var cols = ["#a3504f","#3f6486","#caa23f","#7a9e5b","#7d3527","#b9a0d8"];
+    for (var r=0;r<5;r++) for (var k=0;k<3;k++){
+      ctx.fillStyle = cols[(r*3+k) % cols.length];
+      ctx.fillRect(wx+10 + k*28, 52 + r*42, 24, 38);
+    }
+    ctx.fillStyle = "#1d1a14"; ctx.fillRect(wx+44, 46, 6, 218);
+    for (var rr=1;rr<5;rr++){ ctx.fillRect(wx+6, 46 + rr*42, 88, 4); }
+    ctx.fillStyle = "rgba(242,200,75," + sh + ")"; ctx.fillRect(wx-8, 40, 116, 250);
+  });
+}
+function propGrainSacks(th){
+  var rows = [[60,250],[120,250],[180,250],[90,206],[150,206],[120,164]];
+  rows.forEach(function(p){
+    ctx.fillStyle = "#b9a06a"; ctx.fillRect(p[0], p[1], 56, 50);
+    ctx.fillStyle = "#caa06a"; ctx.fillRect(p[0]+6, p[1]+6, 44, 38);
+    ctx.fillStyle = "#9a8350"; ctx.fillRect(p[0]+20, p[1]-6, 16, 10);
+    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(p[0], p[1]+44, 56, 6);
+    ctx.fillStyle = th.accent || "#caa23f"; ctx.fillRect(p[0]+24, p[1]+20, 8, 8);
+  });
+}
+function propAlembic(th){
+  ctx.fillStyle = "#46395c"; ctx.fillRect(420, 270, 150, 30);
+  ctx.fillStyle = "#2a2018"; ctx.fillRect(470, 256, 40, 16);
+  var fl = Math.floor(G.time/120) % 3;
+  ctx.fillStyle = "#e8922b"; ctx.fillRect(482, 248 - fl*3, 16, 12 + fl*3);
+  ctx.fillStyle = "rgba(200,235,255,.32)"; ctx.fillRect(466, 196, 48, 60);
+  ctx.fillStyle = "rgba(160,210,235,.5)"; ctx.fillRect(470, 220, 40, 34);
+  for (var b=0;b<3;b++){
+    var by = 250 - ((Math.floor(G.time/90) + b*5) % 30);
+    ctx.fillStyle = "rgba(220,245,255,.7)"; ctx.fillRect(478 + b*10, by, 4, 4);
+  }
+  ctx.fillStyle = "rgba(200,235,255,.28)"; ctx.fillRect(484, 168, 12, 30);
+  ctx.fillStyle = th.accent || "#e8843a"; ctx.fillRect(466, 196, 48, 4);
+}
+function propLectern(th){
+  ctx.fillStyle = "#3a2f48"; ctx.fillRect(300, 250, 14, 50);
+  for (var i=0;i<7;i++){ ctx.fillStyle = "#5a4a72"; ctx.fillRect(264 + i*3, 200 + i*6, 80, 8); }
+  ctx.fillStyle = "#efe6d2"; for (var j=0;j<6;j++){ ctx.fillRect(270 + j*3, 196 + j*6, 64, 6); }
+  ctx.fillStyle = "#a3504f"; ctx.fillRect(286, 206, 30, 4);
+  ctx.fillStyle = "#3f6486"; ctx.fillRect(286, 216, 22, 4);
+  var qx = Math.round(Math.sin(G.time/300) * 4);
+  ctx.fillStyle = "#e8e4da"; ctx.fillRect(330 + qx, 188, 4, 26);
+  ctx.fillStyle = th.accent || "#cfc0e6"; ctx.fillRect(330 + qx, 184, 6, 6);
+}
+
 var ROOM_PROPS = {
   windowrow: propWindowRow, machines: propMachines, columns: propColumns,
   vault: propVault, board: propBoard, bulb: propBulb, bench: propBench,
@@ -2113,7 +2080,10 @@ var ROOM_PROPS = {
   lights: propLights, wheel: propWheel, bookshelves: propBookshelves, beam: propBeam,
   banner: propBanner, crowd: propCrowd, benchrow: propBenchRow, handsup: propHandsUp,
   pipes: propPipes, gauges: propGauges, agendaboard: propAgendaBoard, candles: propCandles,
-  firepit: propFirePit, pelts: propPelts
+  firepit: propFirePit, pelts: propPelts,
+  hearth: propHearth, tapestry: propTapestry, armorstand: propArmorStand,
+  altar: propAltar, stainedglass: propStainedGlass, grainsacks: propGrainSacks,
+  alembic: propAlembic, lectern: propLectern
 };
 
 function drawRoomBust(cx2, midY, cfg){
@@ -2367,48 +2337,6 @@ var ARRIVALS = {
       action: "TAKE THE DESK",
       bye: "The plan waits in the tray and the city waits in the cold. Neither waits forever." }
   },
-  ch4: {
-    centralbank: { who: "GOVERNOR FENN",
-      hello: "Mind the marble, it carries every footstep. We set one price in this whole city, the price of money. Curious how that steadies the rest?",
-      action: "READ THE RATE",
-      bye: "Rate is set for the quarter. Whether the quarter behaves is the part nobody controls. Off you go." },
-    regulator: { who: "COMMISSIONER VANCE",
-      hello: "Forms to your left, harms to your right. I spend my day deciding which is which. Want to see where a market needs a hand?",
-      action: "OPEN A CASE",
-      bye: "Case filed, river a little cleaner, somebody a little crosser. That is the job most days." },
-    welfare: { who: "CASEWORKER DELLA",
-      hello: "Take a number, nobody is turned away at this door. The market sent these folks here. Curious how the floor gets built?",
-      action: "SEE THE FLOOR",
-      bye: "Claim approved, dignity intact. The market made the wealth, the desk passed a little of it back. Mind the step." },
-    smallbiz: { who: "OWNER MARCO",
-      hello: "Shop is open, prices are mine, taxes are theirs. Three institutions up the hill and still I post my own numbers. Want to know how that holds?",
-      action: "MIND THE SHOP",
-      bye: "Thanks for stopping. The frame is the city's, the shelf is mine, and the coin in the till still decides everything." },
-    permit: { who: "THE PERMIT OFFICE",
-      hello: "Three windows, three lines, and only some of them protect a soul. The clock is yours to spend. Which line is worth it?",
-      action: "READ THE BOARD",
-      bye: "Paper in hand, an hour weighed. Some of it guarded your customers, some of it guarded the queue. You judged it." },
-    institute: { who: "THE DEAN",
-      hello: "You hold the city's four working parts. Inside, we bolt them into one system and weigh it honestly. Ready?",
-      action: "STEP INSIDE",
-      bye: "Go weigh it for yourself. The city is the real exam." },
-    nora: { who: "ANALYST NORA",
-      hello: "Between meetings, between charts. Sit a second. Got time for the argument the whole city is having with itself?",
-      action: "CHAT WITH NORA",
-      bye: "Back to the dashboard. The dial between shop and rule never does sit still." },
-    tilly: { who: "VENDOR TILLY",
-      hello: "Slow hour at the stall, plenty of time to talk three masters and one till. A word?",
-      action: "CHAT WITH TILLY",
-      bye: "Custom is picking up. Tax man, code man, and the customer, all paid in turn. Such is the trade." },
-    hale: { who: "INSPECTOR HALE",
-      hello: "Clipboard is heavy, route is long. A minute on which rules earn their keep and which just keep me busy?",
-      action: "CHAT WITH HALE",
-      bye: "On to the next premises. Half my stops save someone, half just stamp a form. I rarely know which in advance." },
-    desk: { who: "THE DECISION DESK",
-      hello: "Four needles. Five storms on the city's desk, labels off. Markets and rules both pull the chair. Take it.",
-      action: "TAKE THE DESK",
-      bye: "The agenda holds and the city does not. The chair will be warm when you return." }
-  }
 };
 
 var arrivalEl = document.getElementById("arrival");
@@ -2671,14 +2599,16 @@ function openBuildingInterior(b){
   currentRoom = b.id;
   document.body.classList.add("interior-live");
   interiorInner.innerHTML = "";
-  if (b.kind === "lesson") buildLessonRoom(b);
+  if (b.kind === "lesson" && CUR.theme === "feudal") buildFeudalLessonRoom(b);
+  else if (b.kind === "lesson") buildLessonRoom(b);
+  else if (b.id === "mill") buildMillRoom(b);
+  else if (b.id === "alchemist") buildAlchemistRoom(b);
   else if (b.id === "bar") buildBarRoom(b);
   else if (b.id === "casino") buildCasinoRoom(b);
   else if (b.id === "meeting") buildMeetingRoom(b);
   else if (b.id === "breadqueue") buildBreadQueueRoom(b);
   else if (b.id === "blackmarket") buildBlackMarketRoom(b);
   else if (b.id === "cinema") buildCinemaRoom(b);
-  else if (b.id === "permit") buildPermitRoom(b);
   else if (b.id === "cache") buildCacheRoom(b);
   else if (b.kind === "institute") buildInstituteRoom(b);
   openInterior();
@@ -3343,72 +3273,6 @@ function buildCinemaRoom(b){
    holds you in real time, once per run, like the bar and the long meeting. */
 var PERMIT_HOLD_MS = 25000;
 var permitHeld = false;
-function buildPermitRoom(b){
-  var room = el("div", "room temptation");
-  room.appendChild(el("div", "place", b.name));
-  room.appendChild(el("div", "host", "CLERK OZ"));
-  room.appendChild(el("div", "speech",
-    "Three windows, friend. One keeps your customers safe, one keeps a cabinet full, and one is just a line about a line. The law makes you guess which is which."));
-  var verdict = el("div", "verdict");
-
-  var back = el("button", "btn ghost", "BACK TO THE STREET");
-  back.addEventListener("click", closeInterior);
-
-  var inspect = el("button", "choice", "File the food safety inspection  (+8 pts. This line protects your customers)");
-  inspect.addEventListener("click", function(){
-    if (room._chose) return;
-    room._chose = true;
-    G.runPoints += 8;
-    refreshHUD();
-    inspect.disabled = true; inspect.style.opacity = .5;
-    verdict.style.display = "block";
-    verdict.classList.remove("bad");
-    verdict.innerHTML = "Worth every minute. Some paperwork is a guardrail, and this is the rule that keeps a kitchen honest. The line earned its keep.";
-  });
-
-  var skip = el("button", "choice", "Read the board and skip the line that protects no one  (+5 pts)");
-  skip.addEventListener("click", function(){
-    if (room._chose) return;
-    room._chose = true;
-    G.runPoints += 5;
-    refreshHUD();
-    skip.disabled = true; skip.style.opacity = .5;
-    verdict.style.display = "block";
-    verdict.classList.remove("bad");
-    verdict.innerHTML = "You read which line was worth standing in and walked past the one that was not. Judging that gap is the whole civic skill.";
-  });
-
-  var duplicate = el("button", "choice",
-    "Queue for the duplicate stamp, just to be safe  (the clerk holds you for " + Math.round(PERMIT_HOLD_MS/1000) + " real seconds, +0 pts)");
-  duplicate.addEventListener("click", function(){
-    if (permitHeld || room._chose) return;
-    permitHeld = true;
-    room._chose = true;
-    inspect.disabled = true; inspect.style.opacity = .5;
-    skip.disabled = true; skip.style.opacity = .5;
-    duplicate.disabled = true; duplicate.style.opacity = .5;
-    back.disabled = true; back.style.opacity = .5;
-    verdict.style.display = "block";
-    verdict.classList.add("bad");
-    var left = Math.round(PERMIT_HOLD_MS / 1000);
-    verdict.innerHTML = "Window four certifies the certificate from window three. Pure friction, paid in evenings. The clerk will call you in " + left + "s.";
-    var iv = setInterval(function(){
-      left--;
-      if (left > 0){
-        verdict.innerHTML = "Window four certifies the certificate from window three. Pure friction, paid in evenings. The clerk will call you in " + left + "s.";
-        return;
-      }
-      clearInterval(iv);
-      verdict.classList.remove("bad");
-      verdict.innerHTML = "Stamped, filed, and pointless. An evening spent proving you exist. That is the line worth skipping, and now you know the difference.";
-      back.disabled = false; back.style.opacity = 1;
-    }, 1000);
-  });
-
-  room.appendChild(inspect); room.appendChild(skip); room.appendChild(duplicate);
-  room.appendChild(verdict); room.appendChild(back);
-  interiorInner.appendChild(room);
-}
 
 /* ---------- NPC talk ---------- */
 function talkTo(n){
@@ -3470,7 +3334,14 @@ function hazardHit(h){
 function updateHazards(dt){
   if (!hazardsActive) return;
   var p = G.player;
+  // the Black Death arrives once the realm is two thirds understood
+  if (CHAPTER_ID === "chF" && !G.plagueArrived && insightCount() >= 2){
+    G.plagueArrived = true;
+    HAZARDS.forEach(function(h){ if (h.type === "plague") h.active = true; });
+    toast("THE BLACK DEATH ARRIVES.<br>It does not knock, and it does not care for rank.", 4200);
+  }
   HAZARDS.forEach(function(h){
+    if (h.type === "plague" && !h.active) return;
     if (h.type === "cart"){
       h.x += h.dir * h.speed * dt/1000;
       if (h.x <= h.minX){ h.x = h.minX; h.dir = 1; }
@@ -3479,15 +3350,27 @@ function updateHazards(dt){
       var dx = (p.x+p.w/2) - (h.x+h.w/2);
       var dy = (p.y+p.h/2) - (h.y+h.h/2);
       var d = Math.sqrt(dx*dx+dy*dy);
+      var csp = h.speed * ((CHAPTER_ID === "chF" && G.protected) ? 0.45 : 1);
       if (d < h.radius && d > 2){
-        h.x += dx/d * h.speed * dt/1000;
-        h.y += dy/d * h.speed * dt/1000;
+        h.x += dx/d * csp * dt/1000;
+        h.y += dy/d * csp * dt/1000;
       } else if (d >= h.radius){
         var hx = h.homeX - h.x, hy = h.homeY - h.y;
         var hd = Math.sqrt(hx*hx+hy*hy);
         if (hd > 4){ h.x += hx/hd * h.speed*0.6 * dt/1000; h.y += hy/hd * h.speed*0.6 * dt/1000; }
       }
     } else if (h.type === "bubble"){
+      h.x += h.vx * dt/1000; h.y += h.vy * dt/1000;
+      if (h.x <= h.minX || h.x >= h.maxX) h.vx = -h.vx;
+      if (h.y <= h.minY || h.y >= h.maxY) h.vy = -h.vy;
+      h.x = Math.max(h.minX, Math.min(h.x, h.maxX));
+      h.y = Math.max(h.minY, Math.min(h.y, h.maxY));
+    } else if (h.type === "brigand"){
+      var bsp = h.speed * ((CHAPTER_ID === "chF" && G.protected) ? 0.5 : 1);
+      h.y += h.dirY * bsp * dt/1000;
+      if (h.y <= h.minY){ h.y = h.minY; h.dirY = 1; }
+      if (h.y >= h.maxY){ h.y = h.maxY; h.dirY = -1; }
+    } else if (h.type === "plague"){
       h.x += h.vx * dt/1000; h.y += h.vy * dt/1000;
       if (h.x <= h.minX || h.x >= h.maxX) h.vx = -h.vx;
       if (h.y <= h.minY || h.y >= h.maxY) h.vy = -h.vy;
@@ -4420,141 +4303,155 @@ function StackEngine(cfg){
   return E;
 }
 
-/* CROSS THE AISLE, the Chapter 4 arcade, the fourth distinct engine.
-   A road crosser in the Frogger tradition: the player is a bill moving in
-   four directions across an avenue of alternating lanes, market traffic
-   running one way and red tape the other, climbing from the lobby to the
-   chamber. Reach the top and the bill passes; get clipped and it is knocked
-   back to the start. The verb is BALANCE. Pure state, seedable rng, time
-   stepped, same engine API as the others, so makeArcade and the flow code
-   never learn which engine they hold. The only new wire is input.up/down. */
-function CrosserEngine(cfg){
-  var W = VIEW_W, H = VIEW_H;
-  var topPad = 58;                 // HUD band
-  var botPad = 54;                 // the lobby the bill starts in
-  var laneCount = cfg.lanes || 6;
-  var laneTop = topPad + 24;        // first lane top
-  var laneArea = H - botPad - laneTop;
-  var laneH = Math.floor(laneArea / laneCount);
-  var goalY = topPad + 2;           // the chamber band, just above the lanes
-  var startY = H - botPad + 8;
+/* =====================================================
+   THE JOUST. The Chapter 1 (Feudalism) arcade, and the
+   fifth distinct cabinet: a new timing and charge engine.
+   The player rides the lists against a line of opponents.
+   Each tilt is a single pass. A CHARGE builds as the two
+   knights close, a STRIKE WINDOW opens near the moment of
+   impact, and the lance must be aimed to the opponent's
+   exposed mark. Commit inside the window with the right
+   aim and you unhorse him. Commit early and the blow only
+   glances. Lean in too long, or fail to commit at all, and
+   his lance takes you. The player verb is PROVE.
 
+   Pure state, seedable rng, time stepped, so it runs
+   headless in jsdom exactly like the shooter, the net, the
+   stacker, and the crosser. The engine API mirrors the
+   others so makeArcade and the flow code never learn which
+   cabinet they are holding.
+   ===================================================== */
+function JoustEngine(cfg){
+  var W = VIEW_W, H = VIEW_H;
+  var lanes = cfg.lanes || 3;
   var E = {
-    kind: "crosser",
-    cfg: cfg, W: W, H: H,
-    laneCount: laneCount, laneTop: laneTop, laneH: laneH, goalY: goalY, startY: startY,
-    wave: 0, spawnTimers: [],
-    bill: { x: W/2 - 9, y: startY, w: 18, h: 16, sprintUntil: 0, cooldown: 0, invulnUntil: 800, flash: 0, reached: false },
-    obstacles: [], fx: [],
+    kind: "joust",
+    cfg: cfg, W: W, H: H, lanes: lanes,
+    round: 0,                       // which opponent, 0 based
+    phase: "ready",                 // ready -> approach -> resolve -> next or over
+    phaseT: 0,                      // ms in the current phase
+    passT: 0,                       // ms into the approach
+    charge: 0,                      // 0..1, the gallop charge
+    aimLane: Math.floor(lanes / 2), // the player's lance height
+    targetLane: 0,                  // the opponent's exposed mark this pass
+    shifted: false,                 // has the mark moved this pass
+    fired: false,                   // has the player committed this pass
+    lastOutcome: null,              // clean | solid | early | wrong | late | counter
     input: { left: false, right: false, up: false, down: false },
+    _pu: false, _pd: false,         // previous up and down, for edge detection
     elapsed: 0,
     hits: 0, damagePts: 0,
     combo: 0, bestCombo: 0, comboPts: 0,
-    playerHits: 0, passesThisWave: 0,
-    over: false, banked: false
+    playerHits: 0,
+    fx: [],
+    over: false, banked: false, won: false
   };
 
-  function waveCfg(){ return cfg.waves[E.wave]; }
-  function laneDir(i){ return (i % 2 === 0) ? 1 : -1; }
-  function laneKind(i){ return (i % 2 === 0) ? "market" : "tape"; }
-  function laneY(i){ return E.laneTop + i * E.laneH; }
-  for (var li = 0; li < laneCount; li++){ E.spawnTimers.push(rng() * 700); }
+  function roundCfg(){ return cfg.rounds[E.round]; }
 
-  function addFx(text, x, y, bad){ E.fx.push({ text: text, x: x, y: y, t: 950, bad: !!bad }); }
+  function addFx(text, big, bad){ E.fx.push({ text: text, t: 1100, big: !!big, bad: !!bad }); }
 
-  function spawnObstacle(lane){
-    var wc = waveCfg();
-    var dir = laneDir(lane), kind = laneKind(lane);
-    var w = (kind === "market" ? wc.carW : wc.tapeW) + Math.floor(rng() * 10);
-    var speed = wc.speed * (0.85 + rng() * 0.4);
-    var x = dir > 0 ? -w - 4 : W + 4;
-    E.obstacles.push({ lane: lane, x: x, y: laneY(lane) + 4, w: w, h: E.laneH - 8, dir: dir, kind: kind, speed: speed });
+  function beginPass(){
+    var rc = roundCfg();
+    E.phase = "approach";
+    E.phaseT = 0; E.passT = 0; E.charge = 0;
+    E.fired = false; E.shifted = false; E.lastOutcome = null;
+    E.targetLane = Math.floor(rng() * lanes);
+    addFx(rc.name, true, false);
   }
 
-  function resetBill(knocked){
-    E.bill.x = W/2 - E.bill.w/2;
-    E.bill.y = E.startY;
-    E.bill.reached = false;
-    if (knocked){ E.bill.invulnUntil = E.elapsed + 800; E.bill.flash = 800; }
+  function resolvePass(outcome, pts){
+    E.lastOutcome = outcome;
+    E.phase = "resolve"; E.phaseT = 0;
+    if (outcome === "clean" || outcome === "solid"){
+      E.hits++; E.damagePts += pts; E.combo++;
+      if (E.combo > E.bestCombo) E.bestCombo = E.combo;
+      var line = (outcome === "clean" ? "UNHORSED  +" : "STRUCK  +") + pts;
+      if (E.combo % cfg.comboEvery === 0){ E.comboPts += cfg.comboBonus; line = "TILT STREAK x" + E.combo + "  +" + cfg.comboBonus; }
+      addFx(line, outcome === "clean", false);
+    } else if (outcome === "early"){
+      E.combo = 0; addFx("TOO EARLY, THE LANCE GLANCED", false, true);
+    } else if (outcome === "wrong"){
+      E.combo = 0; addFx("WRONG MARK, OFF THE ARMOR", false, true);
+    } else if (outcome === "late"){
+      E.combo = 0; E.playerHits++; addFx("HE CAUGHT YOU LEANING", false, true);
+    } else { // counter, no commit in time
+      E.combo = 0; E.playerHits++; addFx("TOO CAUTIOUS, HE STRUCK FIRST", false, true);
+    }
   }
 
-  // FIRE is the sprint: a short forward burst on a cooldown
   E.fire = function(){
     if (E.over) return false;
-    if (E.bill.cooldown > 0) return false;
-    E.bill.cooldown = cfg.sprint.cooldown;
-    E.bill.sprintUntil = E.elapsed + cfg.sprint.duration;
-    addFx("SPRINT", E.bill.x + E.bill.w/2, E.bill.y - 16, false);
+    if (E.phase !== "approach" || E.fired) return false;
+    E.fired = true;
+    var rc = roundCfg();
+    var f = E.passT / rc.approachMs;          // fraction through the approach
+    var aimOk = (E.aimLane === E.targetLane);
+    if (f < rc.winStart){ resolvePass("early", 0); return true; }
+    if (f > rc.winEnd){ resolvePass("late", 0); return true; }
+    if (!aimOk){ resolvePass("wrong", 0); return true; }
+    // striking deeper in the window carries more of the charge
+    var chargeMult = 0.7 + 0.3 * Math.min(1, f / rc.winEnd);
+    var center = (rc.winStart + rc.winEnd) / 2;
+    if (Math.abs(f - center) <= rc.cleanBand) resolvePass("clean", Math.round(cfg.cleanPts * chargeMult));
+    else resolvePass("solid", Math.round(cfg.solidPts * chargeMult));
     return true;
   };
 
   E.update = function(dt){
     if (E.over) return;
     E.elapsed += dt;
-    var s = dt / 1000;
-    var wc = waveCfg();
-    var B = E.bill;
+    E.phaseT += dt;
 
-    // the bill moves in four directions, faster on a sprint
-    var sp = cfg.speed * (E.elapsed < B.sprintUntil ? cfg.sprint.mult : 1);
-    if (E.input.left)  B.x -= sp * s;
-    if (E.input.right) B.x += sp * s;
-    if (E.input.up)    B.y -= sp * s;
-    if (E.input.down)  B.y += sp * s;
-    B.x = Math.max(6, Math.min(B.x, W - 6 - B.w));
-    B.y = Math.max(E.goalY - 2, Math.min(B.y, E.startY));
-    if (B.cooldown > 0) B.cooldown -= dt;
-    if (B.flash > 0) B.flash -= dt;
+    // lance aim: discrete steps on the rising edge of up and down
+    if (E.input.up && !E._pu) E.aimLane = Math.max(0, E.aimLane - 1);
+    if (E.input.down && !E._pd) E.aimLane = Math.min(lanes - 1, E.aimLane + 1);
+    E._pu = E.input.up; E._pd = E.input.down;
 
-    // each lane keeps sending traffic
-    for (var l = 0; l < E.laneCount; l++){
-      E.spawnTimers[l] -= dt;
-      if (E.spawnTimers[l] <= 0){ spawnObstacle(l); E.spawnTimers[l] = wc.spawnGap * (0.7 + rng() * 0.6); }
+    // floating feedback decays
+    for (var i = E.fx.length - 1; i >= 0; i--){ E.fx[i].t -= dt; if (E.fx[i].t <= 0) E.fx.splice(i, 1); }
+
+    if (E.phase === "ready"){
+      if (E.phaseT >= (cfg.readyMs || 600)) beginPass();
+      return;
     }
 
-    // traffic flows, wraps off, and judges the bill
-    for (var i = E.obstacles.length - 1; i >= 0; i--){
-      var o = E.obstacles[i];
-      o.x += o.dir * o.speed * s;
-      if ((o.dir > 0 && o.x > W + 8) || (o.dir < 0 && o.x + o.w < -8)){ E.obstacles.splice(i, 1); continue; }
-      if (E.elapsed >= B.invulnUntil && rectsOverlap(B.x, B.y, B.w, B.h, o.x, o.y, o.w, o.h)){
-        E.playerHits++;
-        E.combo = 0;
-        addFx(o.kind === "market" ? (cfg.lines.market || "RUN DOWN BY THE MARKET")
-                                   : (cfg.lines.tape || "TANGLED IN RED TAPE"),
-              B.x + B.w/2, B.y - 14, true);
-        resetBill(true);
+    if (E.phase === "approach"){
+      var rc = roundCfg();
+      E.passT += dt;
+      E.charge = Math.min(1, E.passT / rc.approachMs);
+      // on the harder rounds the exposed mark shifts once, partway through
+      if (rc.shift && !E.shifted && E.passT >= rc.approachMs * 0.5){
+        E.shifted = true;
+        var nl = Math.floor(rng() * lanes);
+        if (nl === E.targetLane) nl = (nl + 1) % lanes;
+        E.targetLane = nl;
       }
+      // the moment of impact: failed to commit in time
+      if (!E.fired && E.passT >= rc.approachMs) resolvePass("counter", 0);
+      return;
     }
 
-    // reaching the chamber passes the bill
-    if (B.y <= E.goalY && !B.reached){
-      B.reached = true;
-      E.hits++; E.passesThisWave++;
-      E.damagePts += cfg.hitPts;
-      E.combo++;
-      if (E.combo > E.bestCombo) E.bestCombo = E.combo;
-      var line = "+" + cfg.hitPts;
-      if (E.combo % cfg.comboEvery === 0){ E.comboPts += cfg.comboBonus; line = "STREAK x" + E.combo + " +" + cfg.comboBonus; }
-      addFx(line, B.x + B.w/2, E.goalY + 16, false);
-      if (E.passesThisWave >= wc.count){
-        if (E.wave < cfg.waves.length - 1){
-          E.wave++; E.passesThisWave = 0;
-          addFx("SESSION " + (E.wave + 1), W/2, H/2 - 30, false);
-          resetBill(false);
-        } else { E.over = true; }
-      } else { resetBill(false); }
+    if (E.phase === "resolve"){
+      if (E.phaseT < (cfg.resolveMs || 850)) return;
+      if (E.playerHits >= cfg.unhorseAt){ E.over = true; E.won = false; return; }
+      if (E.round >= cfg.rounds.length - 1){ E.over = true; E.won = true; return; }
+      E.round++; E.phase = "ready"; E.phaseT = 0;
+      return;
     }
-
-    for (var f = E.fx.length - 1; f >= 0; f--){ E.fx[f].t -= dt; E.fx[f].y -= 18 * s; if (E.fx[f].t <= 0) E.fx.splice(f, 1); }
   };
 
   E.score = function(){
-    var noHit = (E.playerHits === 0) ? cfg.noHitBonus : 0;
-    var speed = E.over ? Math.max(0, Math.min(cfg.speedCap, Math.round(cfg.par - E.elapsed / 1000))) : 0;
+    var noHit = (E.playerHits === 0 && E.won) ? cfg.noHitBonus : 0;
+    var speed = (E.over && E.won)
+      ? Math.max(0, Math.min(cfg.speedCap, Math.round(cfg.par - E.elapsed / 1000)))
+      : 0;
     return {
-      damage: E.damagePts, comboPts: E.comboPts, bestCombo: E.bestCombo,
-      noHit: noHit, speed: speed,
+      damage: E.damagePts,
+      comboPts: E.comboPts,
+      bestCombo: E.bestCombo,
+      noHit: noHit,
+      speed: speed,
       total: E.damagePts + E.comboPts + noHit + speed
     };
   };
@@ -4562,10 +4459,152 @@ function CrosserEngine(cfg){
   return E;
 }
 
+/* ---------- THE JOUST renderer: the tourney field ---------- */
+var JOUST_LANE_NAMES = ["THE HELM", "THE SHIELD", "THE SADDLE"];
+function renderJoust(){
+  var E = arcade;
+  var rc = E.cfg.rounds[E.round];
+
+  // the field: turf below a dusk sky, heraldic and earthy
+  var sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+  sky.addColorStop(0, "#23303f"); sky.addColorStop(0.55, "#2f2336"); sky.addColorStop(1, "#3a2a1c");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  var turfY = VIEW_H - 150;
+  ctx.fillStyle = "#3f5a31"; ctx.fillRect(0, turfY, VIEW_W, VIEW_H - turfY);
+  ctx.fillStyle = "#395229";
+  for (var tg = 0; tg < VIEW_W; tg += 26) ctx.fillRect(tg, turfY, 13, VIEW_H - turfY);
+
+  // banners along the top
+  for (var bn = 20; bn < VIEW_W - 20; bn += 70){
+    var hue = (Math.floor(bn / 70) % 2 === 0) ? "#9a2f2a" : "#c9a23a";
+    ctx.fillStyle = "#2a2018"; ctx.fillRect(bn, 8, 3, 30);
+    ctx.fillStyle = hue; ctx.beginPath();
+    ctx.moveTo(bn + 3, 12); ctx.lineTo(bn + 24, 12); ctx.lineTo(bn + 24, 30); ctx.lineTo(bn + 13, 24); ctx.lineTo(bn + 3, 30);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // the tilt barrier down the centre of the lists
+  var railY = turfY + 44;
+  ctx.fillStyle = "#6e5430"; ctx.fillRect(0, railY, VIEW_W, 12);
+  ctx.fillStyle = "#4f3c22";
+  for (var rp = 16; rp < VIEW_W; rp += 80) ctx.fillRect(rp, railY - 18, 8, 30);
+
+  // the two riders close as the charge builds
+  var prog = (E.phase === "approach") ? E.charge : (E.phase === "resolve" ? 1 : 0);
+  var px = 60 + prog * (VIEW_W / 2 - 120);
+  var ox = VIEW_W - 60 - prog * (VIEW_W / 2 - 120);
+  var riderY = railY - 16;
+
+  // opponent (right), facing left, the exposed mark lit
+  drawJoustRider(ox, riderY, -1, "#3a2f3a", "#6a5a6a", E.targetLane);
+  // player (left), facing right, the mounted knight in red and gold
+  drawJoustRider(px, riderY, 1, "#9a2f2a", "#c9a23a", -1);
+  // the player's couched lance points at the chosen lane
+  drawAimLance(px, riderY, E.aimLane, E.lanes);
+
+  // the timing strip along the bottom: the window band and the closing marker
+  var stripX = 70, stripW = VIEW_W - 140, stripY = VIEW_H - 30;
+  ctx.fillStyle = "#1c1410"; ctx.fillRect(stripX, stripY, stripW, 12);
+  ctx.fillStyle = "rgba(201,162,58,.35)";
+  ctx.fillRect(stripX + rc.winStart * stripW, stripY, (rc.winEnd - rc.winStart) * stripW, 12);
+  var cF = (rc.winStart + rc.winEnd) / 2;
+  ctx.fillStyle = "rgba(232,176,75,.85)";
+  ctx.fillRect(stripX + (cF - rc.cleanBand) * stripW, stripY, rc.cleanBand * 2 * stripW, 12);
+  if (E.phase === "approach"){
+    var mF = Math.min(1, E.passT / rc.approachMs);
+    ctx.fillStyle = "#f2e8d5"; ctx.fillRect(stripX + mF * stripW - 1, stripY - 4, 3, 20);
+  }
+  ctx.font = "7px 'Press Start 2P', monospace"; ctx.textAlign = "center"; ctx.fillStyle = "#a89a86";
+  ctx.fillText("TIME THE STRIKE", VIEW_W / 2, stripY - 8);
+
+  // the aim ladder on the right: opponent mark lit, player caret
+  var ladderX = VIEW_W - 30, top = 70, gap = 30;
+  for (var L = 0; L < E.lanes; L++){
+    var ly = top + L * gap;
+    ctx.fillStyle = (L === E.targetLane && E.phase === "approach") ? "#e2554d" : "#4a3f37";
+    ctx.fillRect(ladderX - 8, ly, 16, 16);
+    if (L === E.aimLane){ ctx.fillStyle = "#c9a23a"; ctx.fillText("<", ladderX - 16, ly + 12); }
+  }
+  ctx.textAlign = "right"; ctx.font = "6px 'Press Start 2P', monospace"; ctx.fillStyle = "#9a8f78";
+  if (E.lanes === 3) for (var Ln = 0; Ln < 3; Ln++) ctx.fillText(JOUST_LANE_NAMES[Ln], ladderX - 22, top + Ln * gap + 11);
+
+  // live HUD: score, streak, the opponent, lances left
+  var live = E.damagePts + E.comboPts;
+  ctx.textAlign = "left"; ctx.font = "8px 'Press Start 2P', monospace";
+  ctx.fillStyle = "#e6d8b8"; ctx.fillText("SCORE " + live, 12, 18);
+  ctx.fillStyle = (E.combo >= E.cfg.comboEvery) ? "#e8b04b" : "#c9a23a";
+  ctx.fillText("STREAK x" + E.combo, 12, 34);
+  ctx.textAlign = "center"; ctx.fillStyle = "#e6d8b8";
+  ctx.fillText("TILT " + (E.round + 1) + " OF " + E.cfg.rounds.length, VIEW_W / 2, 18);
+  ctx.fillStyle = "#cdbfa6"; ctx.fillText(rc.name, VIEW_W / 2, 34);
+  // lances remaining before you are unhorsed
+  var left = Math.max(0, E.cfg.unhorseAt - E.playerHits);
+  ctx.textAlign = "right";
+  for (var hl = 0; hl < E.cfg.unhorseAt; hl++){
+    ctx.fillStyle = hl < left ? "#e2554d" : "#3a2f2a";
+    ctx.fillRect(VIEW_W - 14 - hl * 12, 12, 8, 8);
+  }
+
+  // the charge meter
+  ctx.fillStyle = "#1c1410"; ctx.fillRect(12, VIEW_H - 30, 44, 12);
+  ctx.fillStyle = "#c9a23a"; ctx.fillRect(12, VIEW_H - 30, 44 * E.charge, 12);
+  ctx.fillStyle = "#a89a86"; ctx.font = "6px 'Press Start 2P', monospace"; ctx.textAlign = "left";
+  ctx.fillText("CHARGE", 12, VIEW_H - 34);
+
+  // floating feedback
+  ctx.textAlign = "center";
+  for (var f = 0; f < E.fx.length; f++){
+    var fx = E.fx[f];
+    ctx.globalAlpha = Math.max(0, Math.min(1, fx.t / 1100));
+    ctx.font = (fx.big ? "12px" : "9px") + " 'Press Start 2P', monospace";
+    ctx.fillStyle = fx.bad ? "#e2554d" : (fx.big ? "#e8b04b" : "#e6d8b8");
+    ctx.fillText(fx.text, VIEW_W / 2, VIEW_H / 2 - 30);
+  }
+  ctx.globalAlpha = 1;
+
+  // the closing word when the tourney ends
+  if (E.over){
+    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, VIEW_H / 2 - 24, VIEW_W, 48);
+    ctx.textAlign = "center"; ctx.font = "12px 'Press Start 2P', monospace";
+    ctx.fillStyle = E.won ? "#e8b04b" : "#e2554d";
+    ctx.fillText(E.won ? "CHAMPION OF THE LISTS" : "UNHORSED", VIEW_W / 2, VIEW_H / 2 + 4);
+  }
+}
+
+function drawJoustRider(x, y, dir, body, trim, mark){
+  // horse
+  ctx.fillStyle = "#3a2a1c"; ctx.fillRect(x - 18, y + 6, 36, 16);
+  ctx.fillRect(x + dir * 16, y + 2, 8, 10);            // head
+  ctx.fillStyle = "#2a1d12";
+  ctx.fillRect(x - 14, y + 20, 4, 12); ctx.fillRect(x + 8, y + 20, 4, 12); // legs
+  // caparison in the rider's colors
+  ctx.fillStyle = body; ctx.fillRect(x - 16, y + 10, 32, 10);
+  // rider
+  ctx.fillStyle = body; ctx.fillRect(x - 6, y - 12, 12, 16);
+  ctx.fillStyle = trim; ctx.fillRect(x - 6, y - 4, 12, 3);
+  ctx.fillStyle = "#cabf9f"; ctx.fillRect(x - 4, y - 18, 8, 8);  // helm
+  ctx.fillStyle = trim; ctx.fillRect(x - 4, y - 20, 8, 2);       // crest
+  if (mark >= 0){
+    // a faint glow on the exposed mark height
+    ctx.fillStyle = "rgba(226,85,73,.5)";
+    var my = (mark === 0) ? y - 16 : (mark === 1 ? y - 4 : y + 12);
+    ctx.fillRect(x - 9, my, 18, 4);
+  }
+}
+
+function drawAimLance(x, y, lane, lanes){
+  var ly = (lane === 0) ? y - 16 : (lane === 1 ? y - 4 : y + 10);
+  ctx.strokeStyle = "#d9c7a8"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x + 6, y - 2); ctx.lineTo(x + 54, ly); ctx.stroke();
+  ctx.fillStyle = "#9a2f2a"; ctx.fillRect(x + 50, ly - 2, 6, 4);
+  ctx.lineWidth = 1;
+}
+
+
 function makeArcade(cfg){
   if (cfg.engine === "catch") return CatchEngine(cfg);
   if (cfg.engine === "stack") return StackEngine(cfg);
-  if (cfg.engine === "crosser") return CrosserEngine(cfg);
+  if (cfg.engine === "joust") return JoustEngine(cfg);
   return ArcadeEngine(cfg);
 }
 
@@ -5117,6 +5156,7 @@ function resetRun(){
   permitHeld = false;
   breadQueued = false;
   cinemaWatched = false;
+  if (CHAPTER_ID === "chF") resetFeudal();
   NPCS.forEach(function(n){ n.met = false; });
   HAZARDS.forEach(function(h, i){
     var s = HAZARD_SNAPSHOT[i];
@@ -5231,6 +5271,7 @@ function update(dt){
 
   updateHazards(dt);
   updateCritters(dt);
+  if (CUR.theme === "feudal") updateSheaves();
 
   // door proximity: standing on the tile directly below a doorway
   G.nearDoor = null;
@@ -5465,6 +5506,9 @@ function render(){
     drawCritter(c, sx, sy);
   });
 
+  // grain sheaves on the fields, feudal only
+  if (CUR.theme === "feudal") drawSheaves(cam);
+
   // NPCs
   NPCS.forEach(function(n){
     var nx = n.tx*TILE-cam.x, ny = n.ty*TILE-cam.y;
@@ -5534,12 +5578,16 @@ function render(){
   }
   ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(px+2, py+p.h-4, p.w-4, 5);
   if (!flashing){
+  if (CUR.theme === "feudal"){
+    drawFeudalPlayer(px, py, bobp);
+  } else {
   ctx.fillStyle = "#2c4f7c"; ctx.fillRect(px, py+8+bobp, p.w, p.h-8);     // coat
   ctx.fillStyle = "#e8c39e"; ctx.fillRect(px+4, py+bobp, p.w-8, 12);      // face
   ctx.fillStyle = "#5a3a23"; ctx.fillRect(px+3, py-3+bobp, p.w-6, 6);     // hair
   ctx.fillStyle = "#15121c";
   if (p.dir!=="up"){ ctx.fillRect(px+7, py+4+bobp, 2,2); ctx.fillRect(px+p.w-9, py+4+bobp, 2,2); }
   ctx.fillStyle = "#e8b04b"; ctx.fillRect(px+p.w/2-2, py+12+bobp, 4, 4);  // brass button
+  }
   }
 }
 
@@ -6027,104 +6075,10 @@ function renderStack(){
   ctx.fillText(Math.floor(A.elapsed / 1000) + "s", W - 14, 40);
 }
 
-function renderCrosser(){
-  if (!ctx || !arcade) return;
-  var A = arcade, W = A.W, H = A.H, B = A.bill;
-  // the civic avenue at dusk
-  ctx.fillStyle = "#11161d"; ctx.fillRect(0, 0, W, H);
-
-  // the chamber band at the top: a pale marble portico the bill climbs toward,
-  // its columns glowing a touch brighter when the bill is near
-  var nearGoal = B.y < A.laneTop + A.laneH;
-  ctx.fillStyle = "#2a3344"; ctx.fillRect(0, 0, W, A.goalY + 18);
-  ctx.fillStyle = "#cfc8b8"; ctx.fillRect(0, A.goalY + 2, W, 16);
-  ctx.fillStyle = "#b3ac9a";
-  ctx.beginPath(); ctx.moveTo(W/2, A.goalY - 14); ctx.lineTo(W/2 - 70, A.goalY + 2); ctx.lineTo(W/2 + 70, A.goalY + 2); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = nearGoal ? "rgba(232,176,75,.85)" : "#efe6d2";
-  for (var col = 40; col < W - 30; col += 48){ ctx.fillRect(col, A.goalY + 4, 8, 12); }
-  ctx.fillStyle = "#3fb8af"; ctx.fillRect(0, A.goalY + 18, W, 2);
-
-  // the lanes: market asphalt one way, red tape corridor the other
-  for (var l = 0; l < A.laneCount; l++){
-    var ly = A.laneTop + l * A.laneH;
-    var market = (l % 2 === 0);
-    ctx.fillStyle = market ? "#1c2026" : "#2a2533";
-    ctx.fillRect(0, ly, W, A.laneH);
-    if (market){
-      // center dashes scrolling with the lane direction
-      ctx.fillStyle = "rgba(232,216,140,.4)";
-      var off = (Math.floor(A.elapsed / 24) % 36);
-      for (var dx = -off; dx < W; dx += 36){ ctx.fillRect(dx, ly + A.laneH/2 - 1, 18, 2); }
-    } else {
-      // a faint filing grid on the tape corridor
-      ctx.strokeStyle = "rgba(255,255,255,.04)";
-      for (var gx = 0; gx < W; gx += 22){ ctx.beginPath(); ctx.moveTo(gx, ly); ctx.lineTo(gx, ly + A.laneH); ctx.stroke(); }
-    }
-    ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(0, ly, W, 2);
-  }
-  // the lobby steps the bill starts from
-  ctx.fillStyle = "#24303a"; ctx.fillRect(0, A.startY - 6, W, H - A.startY + 6);
-  ctx.fillStyle = "rgba(255,255,255,.05)";
-  for (var syb = A.startY + 2; syb < H; syb += 8){ ctx.fillRect(0, syb, W, 1); }
-
-  // the traffic
-  for (var i = 0; i < A.obstacles.length; i++){
-    var o = A.obstacles[i];
-    if (o.kind === "market"){
-      // a market vehicle: body, cab window, two wheels, facing its direction
-      ctx.fillStyle = "#3f6e6a"; ctx.fillRect(o.x, o.y + 2, o.w, o.h - 6);
-      ctx.fillStyle = "#2a4a47"; ctx.fillRect(o.x, o.y + 2, o.w, 3);
-      ctx.fillStyle = "rgba(200,225,250,.6)";
-      var cab = o.dir > 0 ? o.x + o.w - 12 : o.x + 4;
-      ctx.fillRect(cab, o.y + 5, 8, o.h - 12);
-      ctx.fillStyle = "#15121c";
-      ctx.fillRect(o.x + 5, o.y + o.h - 6, 6, 4); ctx.fillRect(o.x + o.w - 11, o.y + o.h - 6, 6, 4);
-      ctx.fillStyle = (o.dir > 0) ? "#e8b04b" : "#e25549";
-      ctx.fillRect(o.dir > 0 ? o.x + o.w - 3 : o.x, o.y + o.h/2 - 2, 3, 4);
-    } else {
-      // red tape: a clipboard or form with a clip and ruled lines
-      ctx.fillStyle = "#e2dccb"; ctx.fillRect(o.x, o.y + 2, o.w, o.h - 6);
-      ctx.fillStyle = "#a3504f"; ctx.fillRect(o.x, o.y + 2, o.w, 3);
-      ctx.fillStyle = "#8a8472"; ctx.fillRect(o.x + o.w/2 - 4, o.y, 8, 4);
-      ctx.fillStyle = "rgba(80,80,90,.5)";
-      for (var rl = o.y + 8; rl < o.y + o.h - 8; rl += 4){ ctx.fillRect(o.x + 4, rl, o.w - 8, 1); }
-      ctx.fillStyle = "#3fb8af"; ctx.fillRect(o.x + o.w - 9, o.y + o.h - 9, 5, 4);
-    }
-  }
-
-  // the bill: a cream scroll with a wax seal ribbon, flashing when knocked
-  var flash = B.flash > 0 && Math.floor(B.flash / 90) % 2 === 0;
-  ctx.fillStyle = flash ? "#e25549" : "#f2e8d5";
-  ctx.fillRect(B.x, B.y, B.w, B.h);
-  ctx.fillStyle = "rgba(120,100,70,.5)";
-  ctx.fillRect(B.x + 3, B.y + 4, B.w - 6, 1); ctx.fillRect(B.x + 3, B.y + 7, B.w - 6, 1); ctx.fillRect(B.x + 3, B.y + 10, B.w - 8, 1);
-  ctx.fillStyle = "#a3504f"; ctx.fillRect(B.x + B.w/2 - 3, B.y + B.h - 4, 6, 5);
-  // sprint readiness pip
-  ctx.fillStyle = B.cooldown <= 0 ? "#3fb8af" : "rgba(63,184,175,.25)";
-  ctx.fillRect(B.x + B.w/2 - 2, B.y - 6, 4, 4);
-
-  // floating feedback
-  ctx.textAlign = "center"; ctx.font = "8px 'Press Start 2P', monospace";
-  for (var f = 0; f < A.fx.length; f++){
-    var fxi = A.fx[f];
-    ctx.fillStyle = fxi.bad ? "#e25549" : "#7fe5b0";
-    ctx.globalAlpha = Math.min(1, fxi.t / 500);
-    ctx.fillText(fxi.text, fxi.x, fxi.y);
-    ctx.globalAlpha = 1;
-  }
-  // HUD
-  ctx.textAlign = "left"; ctx.fillStyle = "#e8d8bc";
-  ctx.fillText("BILLS " + A.hits, 14, 20);
-  ctx.fillText("STREAK x" + A.combo, 14, 36);
-  ctx.textAlign = "right";
-  ctx.fillText("SESSION " + (A.wave + 1) + "/" + A.cfg.waves.length, W - 14, 20);
-  ctx.fillText(Math.floor(A.elapsed / 1000) + "s", W - 14, 36);
-}
-
 function renderArcade(){
   if (arcade && arcade.kind === "stack"){ renderStack(); return; }
+  if (arcade && arcade.kind === "joust"){ renderJoust(); return; }
   if (arcade && arcade.kind === "catch"){ if (arcade.cfg.skin === "gather") renderCatchGather(); else renderCatchNet(); return; }
-  if (arcade && arcade.kind === "crosser"){ renderCrosser(); return; }
   if (arcade && arcade.cfg.skin === "dispatch") renderArcadeDispatch();
   else renderArcadeTerminal();
 }
@@ -6850,370 +6804,6 @@ CH3_FREEPLAY.collapseTitle = CH3_DESK.collapseTitle;
 CH3_FREEPLAY.collapseLines = CH3_DESK.collapseLines;
 
 
-/* =====================================================
-   CHAPTER 4: THE MIXED ECONOMY. The walk content. Milestone 13.
-   A modern city that runs on markets and frames them with
-   public institutions. Built from the Section 4 template on
-   the established data patterns. Four lesson buildings, one
-   temptation, the Institute. Desk labels stay off.
-   ===================================================== */
-
-var CH4_MAP = [
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T...........C..........C...........T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T................FF................T",
-  "T................FF................T",
-  "T..................................T",
-  "T...........C..........C...........T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "T..................................T",
-  "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT"
-];
-
-var CH4_BUILDINGS = [
-  { id:"institute",   name:"THE INSTITUTE",       kind:"institute",  x:14, y:2,  w:8, h:4, door:{x:17, y:5},  hue:"#3f6e5a", roof:"#2a4a3c", sign:"INSTITUTE" },
-  { id:"smallbiz",    name:"GOODS AND CO",        kind:"lesson",     x:3,  y:9,  w:7, h:4, door:{x:6,  y:12}, hue:"#a3593f", roof:"#6e3a27", sign:"GOODS AND CO" },
-  { id:"permit",      name:"THE PERMIT OFFICE",   kind:"temptation", x:3,  y:18, w:7, h:4, door:{x:6,  y:21}, hue:"#6e6a4a", roof:"#494630", sign:"PERMITS" },
-  { id:"centralbank", name:"THE CENTRAL BANK",    kind:"lesson",     x:25, y:3,  w:9, h:4, door:{x:29, y:6},  hue:"#4a6276", roof:"#2f4150", sign:"CENTRAL BANK" },
-  { id:"regulator",   name:"THE REGULATOR",       kind:"lesson",     x:26, y:11, w:8, h:4, door:{x:29, y:14}, hue:"#3f6e6a", roof:"#274a47", sign:"REGULATOR" },
-  { id:"welfare",     name:"THE WELFARE OFFICE",  kind:"lesson",     x:25, y:18, w:9, h:4, door:{x:29, y:21}, hue:"#9a7a4a", roof:"#6a5230", sign:"WELFARE" }
-];
-
-var CH4_LESSONS = {
-  centralbank: {
-    host: "GOVERNOR FENN",
-    speech: "We do not set the price of bread here. We set the price of money. Move that one number and the whole economy leans, toward a boom or away from one. The trick is leaning the right way at the right time.",
-    question: "The economy is running hot, credit is cheap, and prices are climbing across the board. What is the mixed move from this chair?",
-    choices: [
-      { t: "Raise the interest rate to cool borrowing and lean against the boom", ok: true,
-        why: "Countercyclical policy. The bank moves the price of credit to smooth the cycle, easing in slumps and tightening in booms. Keynes argued the state should steady demand, and the lender of last resort tradition handed the bank the tools." },
-      { t: "Freeze every price in the city by decree until the climbing stops", ok: false,
-        why: "That is a different chapter's instrument. The mixed economy steers the cycle through money and credit, it does not freeze the market's prices. Try again." },
-      { t: "Do nothing and trust the boom to cool itself", ok: false,
-        why: "The pure hands off answer, and the one the mixed economy was built to question after the busts of the last century. Leaning against the cycle is the reason the chair exists. Try again." }
-    ],
-    insight: { title: "INSIGHT: COUNTERCYCLICAL POLICY",
-      body: "The mixed economy keeps the market and steadies its cycle. The central bank eases credit in slumps and tightens it in booms, and stands as lender of last resort when panic hits." }
-  },
-  regulator: {
-    host: "COMMISSIONER VANCE",
-    speech: "I do not run the businesses. I price the harms they forget to count. A market gets most prices right on its own, and a few badly wrong. My whole job lives in that gap.",
-    question: "A tannery's runoff costs the tannery nothing on its own books, and costs the families downstream plenty. What is the mixed move?",
-    choices: [
-      { t: "Charge the tannery for the damage so the cost lands on whoever makes it", ok: true,
-        why: "Pricing the externality, the idea Pigou is known for. The market keeps running, now with the true cost built into the price, so the tannery cleans up exactly as far as cleaning is cheaper than the charge." },
-      { t: "Ban the tannery outright", ok: false,
-        why: "Sometimes warranted, usually blunt. The mixed move corrects the failure and keeps the useful trade, rather than ending it. The ban is for harms that cannot be priced at all. Try again." },
-      { t: "Leave it be, the market knows best", ok: false,
-        why: "The market priced everything except the river, which is the failure. Where a cost falls on a third party with no say in the deal, the unaided market gets the price wrong. Try again." }
-    ],
-    insight: { title: "INSIGHT: CORRECTING MARKET FAILURE",
-      body: "Markets misprice some things: pollution that falls on others, monopoly that throttles supply, hidden information. The mixed economy adds a rule or a price so the market keeps working with the real cost included." }
-  },
-  welfare: {
-    host: "CASEWORKER DELLA",
-    speech: "The market made this city rich and it drops people without ceremony. We do not stop the dropping. We put a floor under it, paid for by taxing a slice of all that wealth in the years it flows.",
-    question: "A laid off worker and her family hit a hard year through no fault of their own. What is the mixed move?",
-    choices: [
-      { t: "Pay out from the insurance and transfer system that taxes funded in the good years", ok: true,
-        why: "The safety net. The market still generates the wealth, and the state taxes a share to fund a floor of pensions, insurance, and transfers. Beveridge built a whole system on that division of labor." },
-      { t: "Abolish the market that laid her off and assign her a state post", ok: false,
-        why: "That replaces the market rather than catching the people it drops, which is a different chapter entirely. The mixed economy keeps the engine and softens the landing. Try again." },
-      { t: "Nothing, private charity will sort it out", ok: false,
-        why: "The answer from before the welfare state, the one the mixed economy was built to improve on. Charity is real and uneven, and the net exists so the floor does not depend on luck. Try again." }
-    ],
-    insight: { title: "INSIGHT: THE SAFETY NET",
-      body: "The mixed economy keeps the market and taxes part of its yield to fund a floor: pensions, unemployment insurance, transfers. The market generates, the state catches. Every transfer needs a tax, so the edges are always argued." }
-  },
-  smallbiz: {
-    host: "OWNER MARCO",
-    speech: "Bank up the hill, regulator across the square, welfare office two streets over. And still, every morning, I set my own prices and the customers vote with their coins. The frame is theirs. The shop is mine.",
-    question: "In this mixed city, where does the price on your shelf actually come from?",
-    choices: [
-      { t: "From supply and demand in a competitive market, inside the rules the state sets", ok: true,
-        why: "Just so. The market still sets most prices and allocates most goods. The state supplies the frame: sound money, a safety net, rules against fraud and harm. The mix is market plus correction, not one replacing the other." },
-      { t: "A planning bureau sets it from the capital", ok: false,
-        why: "That is the command chapter. Here the shopkeeper still posts the price and the customer still answers with a coin. Try again." },
-      { t: "The welfare office sets it to keep things fair", ok: false,
-        why: "The welfare office funds a floor, it does not price the bread. Redistributing a slice of the yield is not the same act as setting the price. Try again." }
-    ],
-    insight: { title: "INSIGHT: THE MARKET STILL CLEARS",
-      body: "In a mixed economy the market still does the daily work, with prices, profit, and competition allocating most goods. The public layer is the frame around the market, not a substitute for it." }
-  }
-};
-
-var CH4_NPCS = [
-  { id:"nora", name:"ANALYST NORA", tx:12, ty:11, hue:"#4a6276",
-    lines:["Pure market or pure plan? This city quietly chose neither, then argued about the dial ever since.","Every line on my chart is a tug of war between the shop and the rule. The shelf inside argues both ends, fairly."] },
-  { id:"tilly", name:"VENDOR TILLY", tx:6, ty:16, hue:"#a3593f",
-    lines:["My stall pays a tax, follows a code, and still sets its own prices. Three masters, and somehow it works.","Some of the rules saved my customers, some just cost me a morning. Knowing which is which is the whole trick."] },
-  { id:"hale", name:"INSPECTOR HALE", tx:23, ty:15, hue:"#3f6e6a",
-    lines:["Half my forms protect somebody. The other half protect the form. I will let you guess which line is longer.","People love the rule that saved them and curse the rule that delayed them. Usually it is the same rule."] }
-];
-
-var CH4_HAZARDS = [
-  { id:"bus", type:"cart", skin:"truck", x:12*TILE, y:7*TILE, w:38, h:22, dir:1, speed:130,
-    minX:2*TILE, maxX:33*TILE, cost:3,
-    line:"Clipped by the city bus running its public route. It keeps a timetable, not an eye out for you. Minus 3." },
-  { id:"van", type:"cart", skin:"truck", x:22*TILE, y:16*TILE, w:34, h:22, dir:-1, speed:150,
-    minX:2*TILE, maxX:33*TILE, cost:3,
-    line:"Clipped by a delivery van chasing a private deadline the other way. The market does not slow for jaywalkers. Minus 3." },
-  { id:"auditor", type:"collector", skin:"warden", x:17*TILE, y:18*TILE, w:22, h:26, speed:80,
-    homeX:17*TILE, homeY:18*TILE, radius:TILE*5, cost:5,
-    line:"A compliance auditor stopped you to check three forms you did not know you needed. Minus 5." },
-  { id:"notice", type:"bubble", skin:"directive", x:16*TILE, y:12*TILE, w:26, h:24, vx:58, vy:46,
-    minX:11*TILE, maxX:24*TILE, minY:7*TILE, maxY:21*TILE, cost:4,
-    line:"A public notice drifted into you, amending a rule you had only just learned. Minus 4. Read both versions." }
-];
-
-/* ---------- Chapter 4 Institute: lesson cards, practice, gate ---------- */
-var CH4_LESSON_CARDS = [
-  { t: "WHAT THE MIX MIXES",
-    b: "The mixed economy is not a halfway house between two systems so much as two layers running at once. Underneath, the market does the daily work: prices, profit, and competition allocate most goods, exactly as in the first chapter. Over the top sits a public frame of money, rules, and transfers. You met both in the town, the shop setting its own price beneath a bank, a regulator, and a welfare office that none of them replaces." },
-  { t: "WHERE THE STATE STEPS IN",
-    b: "The frame is not general control but a short list of specific jobs the unaided market does badly. It corrects market failures, pricing the harms and curbing the monopolies the market misses. It steadies the cycle, leaning against booms and busts through money and the budget. And it funds a floor, taxing a share of the yield to insure people against the risks the market hands out. Each is a named task, not a takeover." },
-  { t: "BOTH EDGES",
-    b: "Strengths first: the mix is the arrangement most rich democracies actually run, pairing the market's drive with a buffer against its worst swings and a floor under its losers. Now the failure modes, argued at full strength: the corrections can be captured by the firms they target, the rules and taxes can pile into dead weight that never retreats, and the macro levers, overused, can tip into deficits and inflation. The deepest argument is not whether to mix but where the line sits, and that line is never finally settled." }
-];
-
-var CH4_PRACTICE = {
-  q: "PRACTICE REP. A new loom throws a quarter of the town's weavers out of work in a single year. Under the mixed economy, what is the move?",
-  choices: [
-    { t: "Let the market reallocate the work, and fund insurance and retraining to carry the weavers across", ok: true,
-      why: "Right. The mix keeps the engine that raises output and softens the landing for the people it throws. The market adjusts, the floor catches, and the adjustment is helped along rather than blocked." },
-    { t: "Ban the new loom to protect the jobs as they are", ok: false,
-      why: "That freezes the market to spare the disruption, which is a different system's instinct. The mix lets the change happen and cushions it, rather than forbidding the change. Run it again." },
-    { t: "Do nothing, the market will reabsorb them in time", ok: false,
-      why: "The pure answer, and the one the mixed economy was built to improve on after the hard decades of the last century. In time can be a very long time for the family out of work this month. Run it again." }
-  ]
-};
-
-var CH4_GATE_QS = [
-  { q: "GATE 1 OF 2. Two mixed economies, both prosperous, draw the line between market and state in very different places. By this system's own logic, what does that tell you?",
-    choices: [
-      { t: "That the mix is a dial, not a recipe, and the right setting is a standing argument rather than a solved equation", ok: true,
-        why: "The chapter's thesis. The mixed economy spans a wide band, and where to sit on it turns on values as much as on data, which is why capable democracies land in different places and keep debating it." },
-      { t: "That one of the two has simply got the economics wrong", ok: false,
-        why: "Too quick. Both arrangements clear the market and fund a frame, and both can prosper. Treating a genuine disagreement over the dial as a plain error is the easy answer the chapter resists. The gate resets." },
-      { t: "That neither one is really a mixed economy at all", ok: false,
-        why: "Both keep markets and a public frame, so both sit squarely in the band. The mix is broad by nature, not a single point. Read the claim before judging it. The gate resets." }
-    ]},
-  { q: "GATE 2 OF 2. A regulator created to check a powerful industry spends a decade mostly shielding that industry from competition. In the critics' strongest form, what does this illustrate?",
-    choices: [
-      { t: "Regulatory capture: the watched can come to steer the watchdog, so a correction curdles into the protection it was meant to prevent", ok: true,
-        why: "The sharpest critique the shelf holds, from Stigler and the public choice tradition. The state's tools are not neutral once concentrated interests learn to work them, and designing against capture is half the job." },
-      { t: "That regulation is always useless and should never be attempted", ok: false,
-        why: "Overstated, and false. Many corrections do their job; capture is a risk to design against, not a law that voids the whole enterprise. No straw men here. The gate resets." },
-      { t: "That the regulators in question were simply dishonest people", ok: false,
-        why: "The serious version assumes able, honest officials and still finds the pull of concentrated interests. Making it about bad character is the straw man this game refuses. The gate resets." }
-    ]}
-];
-
-var CH4_BOOKS = [
-  { id:"keynes4", side:"for", title:"The General Theory of Employment, Interest and Money", author:"John Maynard Keynes, 1936",
-    link:"https://en.wikipedia.org/wiki/The_General_Theory_of_Employment,_Interest_and_Money",
-    summary:"Keynes wrote in the wreckage of the Great Depression to answer a question the older economics could not: why an economy can sit stuck with idle factories and willing workers for years rather than righting itself. His answer is that total demand can fall short and stay short, so output settles at a low level with no automatic force to lift it. The remedy is for the state to make up the missing demand, through cheaper money and public spending, until private spending recovers. It is the founding case for the active management half of the mixed economy, and the book that gave the postwar consensus its tools." },
-  { id:"galbraith4", side:"for", title:"The Affluent Society", author:"John Kenneth Galbraith, 1958",
-    link:"https://en.wikipedia.org/wiki/The_Affluent_Society",
-    summary:"Galbraith argues that a rich society keeps measuring itself by the old yardstick of private production while starving the shared goods that wealth makes both possible and necessary. Advertising manufactures wants for private things, he claims, while schools, parks, clean air, and public services go underfunded, a contrast he called private opulence beside public squalor. His prescription is a deliberate rebalancing toward the public side, funded by taxing the surplus the market throws off. It is an elegant case for why an affluent market economy still needs a generous public hand, and a favorite target of the shelf's other half." },
-  { id:"friedman4", side:"against", title:"Free to Choose", author:"Milton Friedman and Rose Friedman, 1980",
-    link:"https://en.wikipedia.org/wiki/Free_to_Choose",
-    summary:"The Friedmans make the case that the market, left free, coordinates the wants of millions better than any official can, and that most state corrections do more harm than the failures they target. Each intervention, they argue, breeds the next, builds a constituency that defends it, and quietly trades the citizen's freedom for a promise of security that often goes undelivered. They would shrink the frame to a few clear functions and let voluntary exchange do the rest, replacing many programs with simple cash and choice. It is the most readable modern argument that the mix leans too far toward the state, and that the cost lands on liberty." },
-  { id:"higgs4", side:"against", title:"Crisis and Leviathan", author:"Robert Higgs, 1987",
-    link:"https://en.wikipedia.org/wiki/Crisis_and_Leviathan",
-    summary:"Higgs studies how government actually grows and finds a pattern: each war, depression, or panic brings emergency powers that expand the state, and when the crisis passes the state shrinks back only partway, leaving a permanent ratchet upward. The mix, in his account, does not settle at a chosen balance but drifts toward more control one emergency at a time, with each step defended by the interests it created. He marshals a century of American history to make the case. It is the strongest argument that the line between market and state will not hold where it is drawn, but creeps, and that the creep is the system's real tendency." }
-];
-
-var CH4_DESK = {
-  chapter: "CHAPTER 4: THE MIXED ECONOMY",
-  labelsOn: false,
-  intro: "The city hands you the chair. Five decisions are waiting, and the desk names no principles. Weigh each option on its merits, run the city by the mixed economy's own logic, keeping the market working and the frame around it sound. Keep all four needles off the floor. Any needle at zero and the balance breaks.",
-  collapseTitle: "THE BALANCE BREAKS",
-  collapseLines: {
-    prosperity: "The engine stalled. Taxed and ruled past the point of drive, or starved of the steadying it needed, the market stopped producing the surplus that paid for everything else. The mix lived on that surplus, and the surplus is gone.",
-    equality:   "The floor gave way. The gap widened until the city split into two publics that no longer shared an interest, and a social contract with half its signatories gone is no contract at all.",
-    freedom:    "Correction piled on correction until the permit office swallowed the market it was meant to guide. Every exchange now waits on a stamp, and the ratchet only ever turned one way.",
-    stability:  "The levers were pulled too hard too often. Prices climbed while growth stalled, the deficit outran the plan to pay it, and confidence broke all at once. The steadying hand became the shock."
-  },
-  beats: [
-    { id:"slump",
-      prompt: "BEAT 1. Orders dry up across the city, layoffs spread, and spending falls as fast as confidence. The council wants the mixed economy's answer to a slump.",
-      options: [
-        { t:"Cut interest rates and run a temporary deficit to hold demand up until hiring returns", fit:2,
-          fx:{ prosperity:6, stability:6, equality:2, freedom:-2 },
-          why:"The Keynesian core of the mix. The state steadies demand in the slump so the downturn does not feed on itself, and the deficit is the deliberate cost, meant to be repaid when the boom returns." },
-        { t:"Hold rates and let the automatic stabilizers, jobless pay and a lighter tax take, do the work", fit:1,
-          fx:{ stability:4, equality:2, prosperity:-2 },
-          why:"The lighter touch built into the budget itself, cushioning the fall with no fresh decision. Slower than active stimulus, and far less likely to overshoot." },
-        { t:"Balance the budget at once to keep the state's credit sound, slump or not", fit:1,
-          fx:{ prosperity:-6, stability:-4, freedom:2 },
-          why:"The instinct from before Keynes, austerity into a downturn. It guards the public balance sheet and can deepen the very slump it meets, which is the hard lesson the mix took from the 1930s." },
-        { t:"Freeze wages and prices by decree until confidence comes back", fit:0,
-          fx:{ freedom:-8, prosperity:-10, stability:-12 },
-          why:"Controls jam the signal the market runs on and treat only the symptom. This is a command instrument borrowed into the wrong chapter, and the shortages and distortions arrive on schedule." }
-      ]},
-    { id:"monopoly",
-      prompt: "BEAT 2. One firm now owns every water main in the city and has begun pricing like it. No rival can lay a second network, so the market has nothing to discipline it with. The regulator awaits your ruling.",
-      options: [
-        { t:"License it as a regulated utility: it keeps running while an agency holds the price near cost", fit:2,
-          fx:{ prosperity:4, equality:4, freedom:-2 },
-          why:"The mixed answer to a natural monopoly. Where competition cannot exist, a public rule stands in for the missing rival, holding the price near the cost a market would have found." },
-        { t:"Take the waterworks into public ownership and run it at cost", fit:1,
-          fx:{ equality:4, stability:2, prosperity:-4, freedom:-2 },
-          why:"A standard tool for water and rail, common across mixed economies. It removes the motive to gouge, and takes on the weaker spur a public body has to run lean." },
-        { t:"Break the network into competing suppliers and let them fight for customers", fit:1,
-          fx:{ prosperity:4, freedom:4, stability:-4 },
-          why:"Competition is the first best fix wherever it can be built. For a single pipe network the duplication is sheer waste, so this suits some monopolies and not a grid that is cheapest run once." },
-        { t:"Leave it be, since any seller that overcharges will draw a competitor in time", fit:0,
-          fx:{ prosperity:-10, equality:-6, freedom:2, stability:-6 },
-          why:"The reply that works for ordinary markets and fails for this one. A pipe network is a barrier no rival can vault quickly, and the wait for discipline is paid by every household in the meantime." }
-      ]},
-    { id:"floor",
-      prompt: "BEAT 3. The downturn has left a tenth of the city out of work through no fault of their own. The welfare office asks how high to set the floor, and who is to pay for it.",
-      options: [
-        { t:"Fund insurance and retraining from a broad tax, aimed at carrying people back to work", fit:2,
-          fx:{ equality:6, stability:4, prosperity:-2, freedom:-2 },
-          why:"The Beveridge design: insurance against the risks the market hands out, paid for in the good years and pointed at a return to work. The floor is real, and so is the tax that holds it up." },
-        { t:"Pay a flat benefit to everyone, simple and universal, and tax it back from the well off", fit:1,
-          fx:{ equality:4, freedom:2, prosperity:-4 },
-          why:"The universal grant: easy to run and free of the means test trap, at the cost of paying many who do not need it. Economists across the spectrum argue both its appeal and its price." },
-        { t:"Keep the floor low and lean on charity and family to fill the gap", fit:1,
-          fx:{ prosperity:2, freedom:2, equality:-6 },
-          why:"The minimal net, lighter on the budget and the taxpayer. It also leaves the catch uneven and dependent on luck, which is the gap the welfare state was built to close." },
-        { t:"Pay a generous benefit with no limit and no path back, funded by borrowing alone", fit:0,
-          fx:{ equality:4, prosperity:-10, stability:-12 },
-          why:"A floor with no funding and no exit is a kindness that eats itself. The bill moves to the deficit, and the help meant to be a bridge hardens into a trap." }
-      ]},
-    { id:"rules",
-      prompt: "BEAT 4. The permit code has grown for thirty years and never once shrunk. Some rules guard the public, some guard the firms already inside, and the same office writes them all. Two factions want your verdict.",
-      options: [
-        { t:"Audit the rules one by one, keep the ones that price a real harm, clear the rest", fit:2,
-          fx:{ prosperity:4, freedom:4, stability:-2 },
-          why:"The unglamorous discipline the mix needs. A rule earns its place by correcting a failure, not by seniority, and the audit is the only guard against the code becoming its own purpose." },
-        { t:"Add an independent watchdog to check the regulators against capture", fit:1,
-          fx:{ stability:4, equality:2, freedom:-2 },
-          why:"Stigler warned that the watched can capture the watchdog. A check on the checkers helps, and it raises the same question one level up: who is to guard that guard?" },
-        { t:"Freeze all new rules and let the old ones expire automatically after a set term", fit:1,
-          fx:{ freedom:4, prosperity:2, stability:-4 },
-          why:"A blunt brake on the ratchet Higgs described, where rules only ever accumulate. It clears dead weight and also clears live protections that simply lacked a champion at renewal." },
-        { t:"Trust the agency to police itself and keep writing rules as it sees fit", fit:0,
-          fx:{ freedom:-6, prosperity:-10, equality:-2 },
-          why:"The path that grew the overgrown code in the first place. An office asked to judge its own work tends to find more work, and the firms inside learn to love the wall around them." }
-      ]},
-    { id:"limit",
-      prompt: "BEAT 5. Years of leaning on the levers have left prices climbing and the debt high. The market wants discipline, the public wants the floor kept, and both are standing at your desk at once.",
-      options: [
-        { t:"Tighten money to break the inflation, and protect the floor with targeted aid through the squeeze", fit:2,
-          fx:{ stability:6, equality:2, prosperity:-2, freedom:-2 },
-          why:"The hard mixed answer of the early 1980s: a central bank willing to cause a recession to stop inflation, paired with a net to carry those it hurts. Costly, credible, and the reason the spiral broke." },
-        { t:"Raise taxes and trim spending together to close the gap slowly, without a shock", fit:1,
-          fx:{ stability:4, prosperity:-2, equality:-2 },
-          why:"The gradual consolidation, sharing the bill across the budget to avoid a sharp downturn. It works if confidence holds long enough for slow to count as fast enough." },
-        { t:"Hold rates and try to grow out of the debt with investment in new capacity", fit:1,
-          fx:{ prosperity:4, equality:2, stability:-4 },
-          why:"The optimistic route, betting growth outruns the debt. Sometimes it does. With inflation already loose, the bet can feed the very fire it hopes to outrun." },
-        { t:"Print to cover the deficit and keep every program whole", fit:0,
-          fx:{ prosperity:-12, stability:-16, equality:-2 },
-          why:"The exit that looks painless and ends in the steepest bill of all. Financing the state from the printing press is how a stable mix tips into the spiral this desk exists to avoid." }
-      ]}
-  ]
-};
-
-var CH4_ARCADE = {
-  engine: "crosser",
-  title: "CROSS THE AISLE",
-  skin: "avenue",
-  startLabel: "INTRODUCE THE BILL",
-  endTitle: "THE SESSION RISES",
-  hitVerb: "PASS A BILL",
-  sumLabel: "Bills passed",
-  sumUnit: "passed",
-  spoilUnit: "knocks",
-  intro: "You are a bill, and the chamber is at the top of the avenue. Between you and law run the lanes: market traffic one way, red tape the other, each at its own pace and neither watching for you. Steer in any direction, time the gaps, and climb from the lobby to the portico. Reach it and the bill passes. Get clipped and you are knocked back to the steps. Three sessions, busier every one. Balance the crossing.",
-  cleanLine: "Not once run down by the market, not once tangled in the tape. Every bill walked clean from the lobby to the chamber. That is balance.",
-  hitLine: "A few bills got flattened in traffic and a few more strangled in forms, and the session still rose. That is how the aisle gets crossed.",
-  lines: { market: "RUN DOWN BY MARKET TRAFFIC", tape: "TANGLED IN THE RED TAPE" },
-  rulesHtml: "<b>PASS A BILL</b> +10 for every bill you walk into the chamber<br>"
-    + "<b>STREAK OF 3</b> +14 each time, keep passing without a knockback<br>"
-    + "<b>CLEAN SHEET</b> +30 if traffic and tape never touch you<br>"
-    + "<b>THE CLOCK</b> up to +30 for finishing the sessions fast<br>"
-    + "MOVE: ARROWS or WASD, any direction \u2022 SPRINT: SPACE or A for a forward burst",
-  par: 80,
-  speedCap: 30,
-  noHitBonus: 30,
-  hitPts: 10,
-  comboEvery: 3,
-  comboBonus: 14,
-  speed: 124,
-  lanes: 6,
-  sprint: { cooldown: 1500, duration: 380, mult: 1.9 },
-  waves: [
-    { count: 4, speed: 82,  spawnGap: 1150, carW: 40, tapeW: 26 },
-    { count: 5, speed: 112, spawnGap: 920,  carW: 44, tapeW: 28 },
-    { count: 6, speed: 146, spawnGap: 730,  carW: 48, tapeW: 30 }
-  ]
-};
-
-var CH4_FREEPLAY = {
-  chapter: "CHAPTER 4: THE MIXED ECONOMY",
-  tickMs: 1600,
-  intro: "The dial is yours for as long as you can hold it. The market runs on its own, every quarter moves the needles, and shocks arrive without warning. Set the four levers, read the board, and lean against the drift. There is no win condition. Hold the balance forever, or watch it break in a single quarter. Both are lessons.",
-  banksNote: "FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
-  drift: { prosperity: 1, equality: -1, stability: -1 },
-  shockEvery: { min: 7, max: 13 },
-  levers: [
-    { id: "money", name: "MONETARY STANCE", start: 1, positions: [
-      { t: "EASY CREDIT",  fx: { prosperity: 2, stability: -2, equality: -1 } },
-      { t: "NEUTRAL",      fx: {} },
-      { t: "TIGHT MONEY",  fx: { prosperity: -2, stability: 2 } }
-    ]},
-    { id: "fiscal", name: "FISCAL STANCE", start: 1, positions: [
-      { t: "STIMULUS",     fx: { prosperity: 2, equality: 1, stability: -2 } },
-      { t: "BALANCED",     fx: {} },
-      { t: "AUSTERITY",    fx: { prosperity: -2, stability: 1, equality: -1 } }
-    ]},
-    { id: "rules", name: "REGULATION", start: 1, positions: [
-      { t: "LIGHT TOUCH",  fx: { prosperity: 2, freedom: 1, stability: -2 } },
-      { t: "BALANCED",     fx: { stability: 1 } },
-      { t: "HEAVY HAND",   fx: { stability: 1, freedom: -2, prosperity: -1 } }
-    ]},
-    { id: "floor", name: "THE FLOOR", start: 1, positions: [
-      { t: "MINIMAL NET",  fx: { prosperity: 1, freedom: 1, equality: -2 } },
-      { t: "INSURANCE",    fx: { equality: 1, stability: 1, prosperity: -1 } },
-      { t: "UNIVERSAL",    fx: { equality: 2, prosperity: -2, freedom: -1 } }
-    ]}
-  ],
-  shocks: [
-    { id: "recession", fx: { prosperity: -8, stability: -6 }, line: "RECESSION. Orders fall and the layoffs spread. The automatic stabilizers kick in, and so does the deficit." },
-    { id: "panic",     fx: { stability: -10, prosperity: -4 }, line: "BANK PANIC. A run jumps from one lender to the next. The chair eyes the lender of last resort." },
-    { id: "inflation", fx: { stability: -8, equality: -4 }, line: "INFLATION SPIKE. Prices climb faster than wages, and the saver and the fixed income lose first." },
-    { id: "supply",    fx: { prosperity: -6, stability: -4 }, line: "SUPPLY SHOCK. A key import doubles overnight. Costs ripple through every shelf in the city." },
-    { id: "capture",   fx: { equality: -6, freedom: -4 }, line: "CAPTURE SCANDAL. A watchdog was found writing rules to suit the firms it watched. The frame itself is in question." },
-    { id: "boom",      fx: { prosperity: 8, stability: -4, equality: -2 }, line: "INVESTMENT BOOM. Capital floods in and growth surges, and the froth is already building under it." }
-  ]
-};
-
-/* the mixed chapter's free play borrows the desk's balance-breaks framing */
-CH4_FREEPLAY.collapseTitle = CH4_DESK.collapseTitle;
-CH4_FREEPLAY.collapseLines = CH4_DESK.collapseLines;
-
 
 /* =====================================================
    THE CHAPTER REGISTRY. Milestone 6.
@@ -7221,13 +6811,1009 @@ CH4_FREEPLAY.collapseLines = CH4_DESK.collapseLines;
    and selectChapter swaps the live data the engines run on.
    ===================================================== */
 
+/* =====================================================
+   CHAPTER FEUDALISM. A new Chapter 1, internal id chF.
+   Share the invisible engine, never the visible bones:
+   the four needle desk math, the save system, the test
+   harness, and the single file all carry over. The map,
+   the layout, the art, and the mechanics are fresh.
+   A vertical rural realm: the keep on the high ground,
+   the abbey on a terrace, the village and the open fields
+   in the valley. The player is a mounted knight. No coin.
+   An obligation ledger of grain stands in for the purse.
+   ===================================================== */
+
+/* ---------- The realm map: 26 wide, 42 tall ---------- */
+/* ---------- Feudal roaming hazards ---------- */
+var CHF_HAZARDS = [
+  { id:"bailiff", type:"collector", skin:"bailiff", x:14*TILE, y:31*TILE, w:24, h:28, speed:64,
+    homeX:14*TILE, homeY:31*TILE, radius:TILE*5, cost:5,
+    line:"The bailiff caught you on the road and tallied what you owe. Minus 5." },
+  { id:"brigand1", type:"brigand", skin:"brigand", x:3*TILE, y:35*TILE, w:22, h:26, speed:78,
+    dirY:1, minY:32*TILE, maxY:39*TILE, cost:4,
+    line:"Brigands sprang from the treeline and took their cut. Minus 4." },
+  { id:"brigand2", type:"brigand", skin:"brigand", x:22*TILE, y:6*TILE, w:22, h:26, speed:84,
+    dirY:1, minY:3*TILE, maxY:21*TILE, cost:4,
+    line:"Brigands sprang from the treeline and took their cut. Minus 4." },
+  { id:"plague", type:"plague", skin:"plague", active:false, x:13*TILE, y:24*TILE, w:44, h:44,
+    vx:40, vy:30, minX:7*TILE, maxX:19*TILE, minY:22*TILE, maxY:36*TILE, cost:6,
+    line:"The pestilence passed through the valley. The realm reels. Minus 6." }
+];
+
+var CHF_MAP = [
+  "TTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TT......................TT",
+  "TT......................TT",
+  "TT......................TT",
+  "TT.T....................TT",
+  "TT....................T.TT",
+  "TT.....FFFF.p.FFFF......TT",
+  "TT..........pp..........TT",
+  "TT..........pp..........TT",
+  "TT..T.......pp..........TT",
+  "TT..........pp.......T..TT",
+  "TT..........pp..........TT",
+  "TT=========.pp..........TT",
+  "TTC.......C.pp..........TT",
+  "TTC.......C.pp..........TT",
+  "TT..........pp..........TT",
+  "TT..........pp..........TT",
+  "TT=========.pp..........TT",
+  "TT.....ppppppp..........TT",
+  "TT..........pp..........TT",
+  "TT.T........pp..........TT",
+  "TT..........pp........T.TT",
+  "TT.ffffff...pp.ffffffff.TT",
+  "TT.ffffff...pp.ffffffff.TT",
+  "TT..........pp.ffffffff.TT",
+  "TT..........pp.ffffffff.TT",
+  "TT..........pp.ffffffff.TT",
+  "TT..........pppppppp....TT",
+  "TTF......,,,pp..........TT",
+  "TTFF.pppp,,.pp..........TT",
+  "TTF......,,.pp..........TT",
+  "TT.......,,.....fffffff.TT",
+  "TT..........pp..fffffff.TT",
+  "TT.T........pp..fffffff.TT",
+  "TT..........pp..........TT",
+  "TT..........pp..........TT",
+  "TT..........pp..........TT",
+  "TT..T.........,,,,...T..TT",
+  "TT......................TT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTT",
+  "TTTTTTTTTTTTTTTTTTTTTTTTTT"
+];
+
+/* ---------- The manor sites ----------
+   door.y is the bottom row of the building. The trigger
+   tile sits one row below it and is kept walkable. */
+var CHF_BUILDINGS = [
+  { id:"castle",      name:"THE CASTLE KEEP",   kind:"lesson",     x:9,  y:2,  w:8, h:5, door:{x:12, y:6},  hue:"#8f8a82", roof:"#5b5650", sign:"KEEP" },
+  { id:"abbey",       name:"THE ABBEY",         kind:"lesson",     x:3,  y:14, w:7, h:4, door:{x:6,  y:17}, hue:"#cabf9f", roof:"#8a7f5e", sign:"ABBEY" },
+  { id:"alchemist",   name:"THE ALCHEMIST TOWER", kind:"temptation", x:19, y:13, w:4, h:5, door:{x:20, y:17}, hue:"#5b4a6e", roof:"#3a2f4a", sign:"TOWER" },
+  { id:"fields",      name:"THE MANOR FIELDS",  kind:"lesson",     x:16, y:25, w:6, h:3, door:{x:18, y:27}, hue:"#9a7b3c", roof:"#6e5424", sign:"FIELDS" },
+  { id:"mill",        name:"THE LORD'S MILL",   kind:"temptation", x:3,  y:26, w:5, h:4, door:{x:5,  y:29}, hue:"#7a6448", roof:"#4f4030", sign:"MILL" },
+  { id:"scriptorium", name:"THE SCRIPTORIUM",   kind:"institute",  x:9,  y:33, w:7, h:4, door:{x:12, y:36}, hue:"#6e5a8e", roof:"#46395c", sign:"SCRIPT" }
+];
+
+/* ---------- Grain sheaves: the manor's coin, gathered in kind ----------
+   Ride over a sheaf on the field to collect it. Render a share up
+   to the lord and a tithe to the abbey. Favor banks underneath. */
+var CHF_SHEAVES = [
+  { tx:4, ty:23 }, { tx:6, ty:23 }, { tx:4, ty:24 }, { tx:7, ty:24 },
+  { tx:16, ty:23 }, { tx:19, ty:23 }, { tx:21, ty:24 }, { tx:15, ty:26 },
+  { tx:17, ty:33 }, { tx:19, ty:34 }
+];
+var GRAIN_PTS = 2;        // favor for each sheaf gathered
+var RENDER_PTS = 12;      // favor for rendering the lord his share
+var TITHE_PTS = 8;        // favor for the abbey tithe
+
+/* ---------- The manor folk, neutral medieval names ---------- */
+var CHF_NPCS = [
+  { id:"godwin", name:"REEVE GODWIN", tx:10, ty:30, hue:"#7a6448",
+    lines:["I keep the manor roll, friend. Who owes what work, who owes what grain, and who fell behind.",
+           "The lord holds the land. We hold it from him, and we hold it by the labor we owe. That is the whole arrangement."] },
+  { id:"eda", name:"PLOWMAN EDA", tx:16, ty:24, hue:"#9a7b3c",
+    lines:["These strips are mine to work, not mine to sell. I was born to this land and I will likely die on it.",
+           "The meadow yonder is common ground. We all graze it, we all mind it. Nobody fences the common."] },
+  { id:"maude", name:"SISTER MAUDE", tx:8, ty:18, hue:"#cabf9f",
+    lines:["A tenth of all that grows is owed to the abbey. The tithe, we call it.",
+           "And when the harvest fails, it is our door the hungry come to. The Church is landlord and almshouse both."] },
+  { id:"rolf", name:"HERALD ROLF", tx:14, ty:8, hue:"#b5402f",
+    lines:["You ride up to render fealty and down to collect what is owed you. The hill itself is the order of things.",
+           "Service climbs, protection descends. Break either half and the bond comes apart."] }
+];
+
+/* ---------- The three lessons of the manor ----------
+   Original summaries, neutral framing. The system's own
+   logic is attributed to its defenders, never quoted. */
+var CHF_LESSONS = {
+  castle: {
+    host: "THE LORD'S STEWARD",
+    speech: "Kneel and the lord grants you land to hold. Rise and you owe him service and arms when he calls. This is the feudal bond, sworn both ways, and the whole realm is built of it stacked from peasant to king.",
+    question: "You hold land from the lord. By the bond, what do you owe in return?",
+    choices: [
+      { t: "Service and loyalty up, in exchange for protection and land down", ok: true,
+        why: "That is the bond exactly. Obligations run both directions, sworn and personal, with no wage and no market in between." },
+      { t: "A fixed rent in coin, paid each quarter", ok: false,
+        why: "Coin rent belongs to a later age. Here the dues are labor, grain, and loyalty, not money. Try again." },
+      { t: "Nothing, the land is now yours to sell", ok: false,
+        why: "You hold the land, you do not own it free and clear. It cannot be sold out from under the bond. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE FEUDAL BOND",
+      body: "Land is granted in exchange for service and loyalty, with protection owed in return. Obligation, not wages or markets, binds the realm together from top to bottom." }
+  },
+  abbey: {
+    host: "THE ABBOT",
+    speech: "A tenth of every harvest is owed to the abbey, the tithe. With it we keep the church, the school, and the alms door. We are among the greatest landholders in the realm, and we are the relief of last resort when the winter is hard.",
+    question: "The harvest is gathered. What does the abbey claim, and what does it give back?",
+    choices: [
+      { t: "A tenth in tithe, and in return the relief of the poor and the sick", ok: true,
+        why: "The tithe funds the Church as a great landlord and, in lean years, as an early safety net. Duty flows up, charity flows down." },
+      { t: "An income tax set by the crown", ok: false,
+        why: "There is no such office here. The tithe is owed to the Church by custom and faith, not levied by a treasury. Try again." },
+      { t: "A market fee for selling grain in town", ok: false,
+        why: "Little is sold and there is barely a market. The tithe is a share of what grows, taken in kind. Try again." }
+    ],
+    insight: { title: "INSIGHT: THE TITHE AND THE CHURCH",
+      body: "The Church takes a tenth of the harvest and holds vast land, and in return it shelters the poor and the sick. It is both a major landlord and the era's safety net." }
+  },
+  fields: {
+    host: "THE BAILIFF",
+    speech: "Look at the strips. Each family works its own scattered rows and the wide meadow is held in common. Wealth here is land and the bound labor that works it. There is little coin, little trade, and the serf is tied to the soil he tills.",
+    question: "In this manor, where does wealth come from?",
+    choices: [
+      { t: "From land and the labor bound to work it", ok: true,
+        why: "Land plus tied labor is the engine. Status, food, and power all flow from who holds the land and commands the work on it." },
+      { t: "From buying low and selling high in the market", ok: false,
+        why: "That is the merchant's world, and it has barely begun here. The manor feeds itself and trades little. Try again." },
+      { t: "From wages paid for a day of free labor", ok: false,
+        why: "The serf is bound to the manor, not free to sell a day's work to the highest bidder. The wage comes later. Try again." }
+    ],
+    insight: { title: "INSIGHT: LAND, LABOR, AND THE COMMONS",
+      body: "Wealth is land and the bound labor that works it. Serfs are tied to the manor, the open fields are farmed in strips, and the meadow is shared as common ground." }
+  }
+};
+
+/* ---------- The Scriptorium: the lesson, practice, gate, and shelf ----------
+   The three card lesson teaches the bond, then land over money, then both
+   edges at full strength. The practice rep and two gate questions follow the
+   shared institute machinery. The bookshelf is two sympathetic accounts and
+   two critical ones, each with an original summary and a verified link. */
+var CHF_LESSON_CARDS = [
+  { t: "THE PYRAMID OF OBLIGATION",
+    b: "Feudalism is a chain of personal bonds. The peasant holds land and owes labor and loyalty to the lord. The lord owes protection down, and owes his own service to a greater lord above, and so the chain runs up to the king. You felt it at the keep: kneel and you are granted a place, rise and you owe. No wage and no contract, only a tie sworn person to person." },
+  { t: "LAND, NOT MONEY",
+    b: "Wealth here is land and the bound labor that works it, not coin in a purse. The manor mostly feeds itself, the market is thin, and dues are paid in grain, in work, and in a tenth to the Church. The abbey you visited is at once a great landlord and the relief of last resort. You gathered grain in the fields and rendered it up the chain, which is the whole economy in a single motion." },
+  { t: "BOTH EDGES",
+    b: "Strengths first: in a dangerous and broken age the bond gave order, defense, and a place for nearly everyone when no distant state could reach. Now the failure modes: the serf is tied to the soil and cannot simply leave, the dues can grow heavier than custom should allow, and when the harvest fails or the plague arrives the whole pyramid can crack into revolt. The shelf argues both edges at full strength." }
+];
+var CHF_PRACTICE = {
+  q: "PRACTICE REP. A serf wishes to leave the manor for the town. By the manor's own custom, what stands in the way?",
+  choices: [
+    { t: "The serf is bound to the land and owes labor to the lord", ok: true,
+      why: "Right. Custom and obligation tie the worker to the manor. Leaving is not a free choice the way a wage worker's is." },
+    { t: "A train ticket is too expensive", ok: false,
+      why: "Wrong era entirely. The barrier is the bond, not the fare. Run it again." },
+    { t: "Nothing, labor moves freely to the best wage", ok: false,
+      why: "That is the market for labor, which has scarcely begun. Run it again." }
+  ]
+};
+var CHF_GATE_QS = [
+  { q: "GATE 1 OF 2. By the realm's own custom, what does a lord owe the peasants who hold land from him?",
+    choices: [
+      { t: "Protection, justice, and the right to work the land", ok: true,
+        why: "The bond runs both ways. In return for service the lord owes defense and a place on the land." },
+      { t: "A monthly cash wage", ok: false,
+        why: "No wage exists in the bond. The gate resets." },
+      { t: "Nothing at all", ok: false,
+        why: "A bond that ran one way would not hold the realm together. The gate resets." }
+    ]},
+  { q: "GATE 2 OF 2. Why is there so little buying and selling on the manor, by its own logic?",
+    choices: [
+      { t: "The manor feeds itself and pays dues in kind, not coin", ok: true,
+        why: "Self sufficiency and dues in grain and labor leave little need for money or markets." },
+      { t: "Because trade is forbidden by law everywhere", ok: false,
+        why: "Trade exists, it is simply thin and distant. The reason is self sufficiency, not a ban. The gate resets." },
+      { t: "Because nobody has invented money yet", ok: false,
+        why: "Coin exists, it just plays a small role on the manor. The gate resets." }
+    ]}
+];
+var CHF_BOOKS = [
+  { id:"bloch", side:"for", title:"Feudal Society", author:"Marc Bloch, 1939",
+    link:"https://en.wikipedia.org/wiki/Marc_Bloch",
+    summary:"Bloch treats feudalism not as a backward muddle but as a coherent social order with its own deep logic. After the old empires fell and raiders roamed, people who could not look to a distant state for safety looked instead to whoever was near and strong. Out of that grew a web of personal bonds: protection and land granted from above, service and loyalty owed from below, sworn face to face. Bloch shows how this reciprocal tie, not money and not markets, organized law, war, land, and daily life across centuries of Europe. It is the classic case that the feudal world hung together by obligation, and held." },
+  { id:"pernoud", side:"for", title:"Those Terrible Middle Ages", author:"Régine Pernoud, 1977",
+    link:"https://en.wikipedia.org/wiki/R%C3%A9gine_Pernoud",
+    summary:"Pernoud, a French archivist and medievalist, sets out to correct the picture of the Middle Ages as a thousand years of squalor and superstition. Working from the records themselves, she argues the period was more inventive, more lawful, and in some ways freer than its reputation allows. She points to its cathedrals and its universities, the place it gave women in property and craft, and the customs that bound a lord to his people as much as the reverse. Her claim is not that the age was without cruelty, but that the caricature of it is a later invention. It is a spirited defense of the medieval world on its own evidence." },
+  { id:"hilton", side:"against", title:"Bond Men Made Free", author:"Rodney Hilton, 1973",
+    link:"https://en.wikipedia.org/wiki/Rodney_Hilton",
+    summary:"Hilton looks at the same world from the bottom of the pyramid, from the serf and the villein whose labor kept it standing. His subject is the medieval peasant movements, above all the English rising of 1381, which he reads not as random violence but as the predictable answer to an order built on wringing dues from people bound to the land. The reciprocal bond, seen from below, often meant plain coercion: rents, services, and a status one was not free to leave. It is the strongest case that feudalism rested on exploitation, and that the people who carried it understood that, and pushed back." },
+  { id:"brenner", side:"against", title:"The Brenner Debate", author:"Aston and Philpin, eds., 1985",
+    link:"https://en.wikipedia.org/wiki/Brenner_debate",
+    summary:"This collection grew out of an argument over why Europe's feudal economy eventually gave way. Robert Brenner's challenge was that population swings and the growth of trade cannot explain it on their own. What mattered most, he argued, was the structure of power in the countryside, the grip landlords held over peasants and the conflicts that grip produced. On that reading, feudal social relations were not a neutral backdrop but a brake, locking in customary dues and weak incentives until struggle finally broke the pattern. The book gathers the leading historians who fought it out. It is the case that feudalism's own class structure shaped, and limited, what its economy could ever become." }
+];
+
+/* ---------- The Decision Desk: the full Chapter 1 session ----------
+   Five beats run the manor by the realm's own custom. The bond runs both
+   ways and upward, and the fit 2 option honors it. Strengths and failure
+   modes are both honest, grounded in the record (scutage, market charters,
+   the Statute of Labourers and the rising of 1381), named, never graphic.
+   Any needle at zero ends in revolt and ruin. */
+var CHF_DESK = {
+  chapter: "CHAPTER 1: FEUDALISM",
+  labelsOn: true,
+  intro: "The lord rides off to war and leaves you the running of the manor. Five decisions wait, from the planting to the plague. Run the realm by its own custom, honor the bond up and down, and keep all four needles off the floor. Any needle at zero and the manor comes apart.",
+  collapseTitle: "REVOLT AND RUIN",
+  collapseLines: {
+    prosperity: "The harvest fails, the granary stands empty, and the manor cannot feed itself. The realm starves and scatters.",
+    equality:   "The dues grew heavier than the bond could bear. The peasants threw down their tools and the revolt overran the keep.",
+    freedom:    "Every soul was bound tighter until none would stay. They fled the manor in the night, and the fields went to weeds.",
+    stability:  "Bond turned against bond, neighbor against lord, and the realm fractured into feud. No center held."
+  },
+  beats: [
+    { id:"dues",
+      prompt: "BEAT 1. The planting season opens and the reeve waits on your word. How heavy are the labor dues you set on the manor this year?",
+      options: [
+        { label:"CUSTOM", t:"Hold the dues at the customary share", fit:2,
+          fx:{ prosperity:-2, equality:4, freedom:3, stability:6 },
+          why:"Custom is the manor's law. Hold to it and the bond stays willing, though you leave extra surplus ungathered. The realm runs because both sides trust the old terms." },
+        { label:"HARSH", t:"Demand far more labor than custom allows", fit:0,
+          fx:{ prosperity:6, equality:-8, freedom:-7, stability:-10 },
+          why:"More work wrung from the same hands. Output rises and the bond stretches toward breaking. Resentment is the harvest you did not plant." },
+        { label:"LENIENT", t:"Forgive part of the dues this season", fit:1,
+          fx:{ prosperity:-5, equality:6, freedom:5, stability:2 },
+          why:"A lighter year buys goodwill. The peasants bless your name, and the granary feels the gap if winter runs long." }
+      ]},
+    { id:"famine",
+      prompt: "BEAT 2. A poor harvest. The granary is thin and the winter is coming on hard. What do you do with the stores?",
+      options: [
+        { label:"RATION", t:"Ration the granary evenly across the manor", fit:2,
+          fx:{ prosperity:-2, equality:8, freedom:-2, stability:6 },
+          why:"Share the lean year and the manor weathers it together. Nobody eats well, nobody is abandoned, and the bond holds through the hunger." },
+        { label:"HOARD", t:"Keep the stores for the lord's household", fit:0,
+          fx:{ prosperity:2, equality:-10, freedom:-2, stability:-12 },
+          why:"A full table above a hungry village. The bond owed protection downward, and here protection was withheld. They will remember." },
+        { label:"ALMS", t:"Open the abbey stores to the poorest first", fit:1,
+          fx:{ prosperity:-4, equality:6, freedom:1, stability:5 },
+          why:"The abbey plays its part as the relief of last resort. The stores empty faster, but the sharpest suffering is held off the poorest." }
+      ]},
+    { id:"levy",
+      prompt: "BEAT 3. A rider comes from the king. War is called, and by the bond the manor owes its service to the crown. How do you answer the levy?",
+      options: [
+        { label:"SERVICE", t:"Muster the manor's men and answer the call", fit:2,
+          fx:{ prosperity:-6, equality:-2, freedom:-4, stability:8 },
+          why:"The bond runs upward too. The lord owes the king service, so the men muster and the fields thin. Honoring the chain is what keeps the realm one realm." },
+        { label:"SCUTAGE", t:"Pay coin to the crown in place of service", fit:1,
+          fx:{ prosperity:-4, equality:2, freedom:4, stability:2 },
+          why:"Pay the shield money the age allowed and keep your men at home. The manor's thin coin drains, and the bond edges one step toward money." },
+        { label:"DEFIANCE", t:"Refuse the summons and keep your men", fit:0,
+          fx:{ prosperity:2, equality:-2, freedom:6, stability:-14 },
+          why:"Keep your men and defy the king. It feels like freedom and it breaks the chain that holds the realm. Defiance of the crown is how feuds begin." },
+        { label:"OVER MUSTER", t:"Strip the manor bare to court the king's favor", fit:0,
+          fx:{ prosperity:-12, equality:-4, freedom:-8, stability:2 },
+          why:"Empty the fields to impress the crown. Ambition over custom leaves the harvest unworked, and the hunger you planted arrives in winter." }
+      ]},
+    { id:"charter",
+      prompt: "BEAT 4. A guild of merchants petitions to hold a weekly market on the manor. Trade and coin would follow, and so would change. What do you grant?",
+      options: [
+        { label:"CHARTER", t:"Grant the market under your seal and take a toll", fit:2,
+          fx:{ prosperity:8, equality:2, freedom:6, stability:-4 },
+          why:"Grant the market by your own leave and take the toll. Trade grows, the lord profits, and it all stays within the manor's authority. The bond loosens a notch." },
+        { label:"CLOSED MANOR", t:"Bar the market and keep the manor self sufficient", fit:1,
+          fx:{ prosperity:-6, equality:-2, freedom:-6, stability:4 },
+          why:"Keep the manor closed and fed by its own fields. The bond stays tight and the realm stays calm, but the town's coin and bustle pass you by." },
+        { label:"FREE TRADE", t:"Open the gates to all trade, no toll and no leave asked", fit:0,
+          fx:{ prosperity:10, equality:4, freedom:10, stability:-16 },
+          why:"Throw the gates wide. The money economy floods in, serfs earn coin and buy their freedom, and the manor dissolves. This is how feudalism ends." },
+        { label:"SEIZURE", t:"Let them come, then seize their goods", fit:0,
+          fx:{ prosperity:2, equality:-8, freedom:-10, stability:-8 },
+          why:"Take the traders' wares by force. A purse filled today, and every merchant warned to route around you tomorrow. Trust, once spent, does not return." }
+      ]},
+    { id:"plague",
+      prompt: "BEAT 5. The pestilence has passed through and the dead are buried. The hands that remain are few, and they know it. They want lighter dues, and there is anger in the air. Last call.",
+      options: [
+        { label:"BEND THE BOND", t:"Loosen the dues for the hands that are left", fit:2,
+          fx:{ prosperity:-2, equality:8, freedom:6, stability:6 },
+          why:"With so few laborers left, loosen the dues and let the survivors hold more. The bond bends to the new scarcity, and bending is what keeps it from breaking." },
+        { label:"FREEZE DUES", t:"Order the old dues and wages back by decree", fit:0,
+          fx:{ prosperity:4, equality:-10, freedom:-10, stability:-16 },
+          why:"Command the old dues back, the way the Statute of Labourers once tried. A decree does not conjure laborers from a plague. It conjures rebels, and the rising of 1381 was the answer." },
+        { label:"ARMED LEVY", t:"Meet the unrest with armed men", fit:0,
+          fx:{ prosperity:2, equality:-8, freedom:-10, stability:-8 },
+          why:"Answer the grumbling with force. Dues flow a while longer from cowed hands, the bond becomes pure coercion, and a bond held only by force is the shortest road to open revolt." },
+        { label:"HALF MEASURE", t:"Ease the harshest dues and hold the rest", fit:1,
+          fx:{ prosperity:-2, equality:4, freedom:3, stability:2 },
+          why:"Ease the worst of it and keep the rest. A half measure that buys a quiet season and settles nothing for good." }
+      ]}
+  ]
+};
+
+/* ---------- THE JOUST: the Chapter 1 arcade config ----------
+   The first cabinet, so it is approachable. Five opponents down the
+   lists, each closing faster with a tighter window, and the exposed
+   mark starts shifting from the third tilt on. The verb is PROVE. */
+var CHF_ARCADE = {
+  engine: "joust",
+  title: "THE JOUST",
+  startLabel: "ENTER THE LISTS",
+  endTitle: "THE TOURNEY ENDS",
+  hitVerb: "PROVE",
+  sumLabel: "Tilts proven",
+  sumUnit: "strikes",
+  spoilUnit: "unhorsings",
+  intro: "Five challengers ride the lists, and the crowd wants a champion. Build the charge as you close, aim the lance to the mark the foe leaves open, and commit the strike inside the window. Too early and it glances. Too late and his lance finds you first.",
+  cleanLine: "Every saddle emptied and never once unhorsed. The heralds will know your name.",
+  hitLine: "Spills and glory both. The crowd had its day, and so did you.",
+  rulesHtml: "<b>PROVE THE STRIKE</b> commit inside the window with the right aim to unhorse the foe<br>"
+    + "<b>AIM</b> UP and DOWN move the lance to the helm, the shield, or the saddle, matching the lit mark<br>"
+    + "<b>CHARGE</b> the longer you close the harder the blow, but the window will not wait<br>"
+    + "<b>TILT STREAK</b> +30 for every third clean pass in a row<br>"
+    + "<b>UNBROKEN</b> +40 if you finish the tourney without once being unhorsed<br>"
+    + "<b>THE CLOCK</b> up to +30 for a swift tourney<br>"
+    + "STRIKE: SPACE or A \u2022 AIM: UP and DOWN",
+  comboEvery: 3,
+  comboBonus: 30,
+  noHitBonus: 40,
+  speedCap: 30,
+  par: 24,
+  hitPts: 80,
+  lanes: 3,
+  unhorseAt: 3,
+  cleanPts: 80,
+  solidPts: 40,
+  readyMs: 600,
+  resolveMs: 850,
+  rounds: [
+    { name: "THE SQUIRE",          approachMs: 2200, winStart: 0.66, winEnd: 0.92, cleanBand: 0.10, shift: false },
+    { name: "THE HEDGE KNIGHT",    approachMs: 2000, winStart: 0.68, winEnd: 0.90, cleanBand: 0.09, shift: false },
+    { name: "THE HOUSEHOLD KNIGHT",approachMs: 1800, winStart: 0.70, winEnd: 0.89, cleanBand: 0.08, shift: true  },
+    { name: "THE KING'S CHAMPION", approachMs: 1600, winStart: 0.72, winEnd: 0.88, cleanBand: 0.07, shift: true  },
+    { name: "THE BLACK KNIGHT",    approachMs: 1450, winStart: 0.73, winEnd: 0.87, cleanBand: 0.06, shift: true  }
+  ]
+};
+
+/* ---------- The Free Play stub: levers over the manor ---------- */
+var CHF_FREEPLAY = {
+  chapter: "CHAPTER 1: FEUDALISM",
+  tickMs: 1600,
+  intro: "The manor is yours for as long as you can hold it. Every season it drifts: the lord's stores grow, the gap between hall and hovel widens, and the bond frays if no one tends it. Set the four levers, read the board, and lean against the drift. Hold the realm together forever, or watch it fall to revolt in a single season. Both are lessons.",
+  banksNote: "FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
+  collapseTitle: "REVOLT AND RUIN",
+  collapseLines: {
+    prosperity: "The manor cannot feed itself, and it scatters.",
+    equality:   "The dues broke the bond, and the revolt overran the keep.",
+    freedom:    "Bound too tight, the people fled and the fields went to weeds.",
+    stability:  "The realm fractured into feud with no center to hold it."
+  },
+  drift: { prosperity: 1, equality: -1, stability: -1 },
+  shockEvery: { min: 7, max: 13 },
+  levers: [
+    { id: "dues", name: "LABOR DUES", start: 1, positions: [
+      { t: "LIGHT",   fx: { equality: 1, freedom: 1, prosperity: -2 } },
+      { t: "CUSTOM",  fx: { stability: 1 } },
+      { t: "HEAVY",   fx: { prosperity: 2, equality: -2, stability: -1 } }
+    ]},
+    { id: "granary", name: "THE GRANARY", start: 1, positions: [
+      { t: "OPEN",    fx: { equality: 2, prosperity: -2 } },
+      { t: "STEADY",  fx: {} },
+      { t: "HOARD",   fx: { prosperity: 2, equality: -2, stability: -1 } }
+    ]},
+    { id: "mill", name: "THE MILL", start: 1, positions: [
+      { t: "FREE USE",fx: { freedom: 2, prosperity: -1 } },
+      { t: "CUSTOM",  fx: { stability: 1 } },
+      { t: "STRICT",  fx: { prosperity: 2, freedom: -2 } }
+    ]},
+    { id: "levy", name: "THE KING'S LEVY", start: 1, positions: [
+      { t: "REFUSE",  fx: { freedom: 1, stability: -2 } },
+      { t: "PARTIAL", fx: {} },
+      { t: "FULL",    fx: { stability: 2, prosperity: -2, equality: -1 } }
+    ]}
+  ],
+  shocks: [
+    { id: "plague",  fx: { prosperity: -8, stability: -6 }, line: "PLAGUE. The Black Death thins the village, and the surviving hands find their labor suddenly scarce and dear." },
+    { id: "famine",  fx: { prosperity: -10, equality: -4 }, line: "FAMINE. A failed harvest empties the granary. The hungry come to the abbey door." },
+    { id: "raid",    fx: { stability: -10, freedom: -4 }, line: "RAID. Brigands and a rival lord's men cross the forest edge. The manor calls for arms." },
+    { id: "revolt",  fx: { equality: -6, stability: -8 }, line: "UNREST. The dues bit too deep and the village mutters of revolt. The keep watches the road." },
+    { id: "charter", fx: { freedom: 6, equality: 2, stability: -4 }, line: "CHARTER. A market charter is offered. Coin and trade arrive, and the old bonds begin to loosen." },
+    { id: "goodyear",fx: { prosperity: 8, stability: 2 }, line: "GOOD HARVEST. A full year. The granary fills and the manor breathes easier, for now." }
+  ]
+};
+
+/* ---------- Feudal ground tiles ---------- */
+function drawFeudalGround(c, x, y, sx, sy){
+  var h = tileHash(x, y);
+  ctx.fillStyle = ((x + y) % 2 === 0) ? CUR.palette.g1 : CUR.palette.g2;
+  ctx.fillRect(sx, sy, TILE, TILE);
+  if (c === "T"){
+    ctx.fillStyle = "#1c2e1a"; ctx.fillRect(sx + 3, sy + 7, TILE - 6, TILE - 9);
+    ctx.fillStyle = "#2f4a26"; ctx.fillRect(sx + 6, sy + 2, TILE - 12, TILE - 12);
+    ctx.fillStyle = "#3f6130"; ctx.fillRect(sx + 9, sy + 5, TILE - 18, TILE - 18);
+    ctx.fillStyle = "#3a2a18"; ctx.fillRect(sx + TILE / 2 - 2, sy + TILE - 8, 4, 8);
+  } else if (c === "F"){
+    ctx.fillStyle = "#2f4a63"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#3f6486"; ctx.fillRect(sx + 2, sy + (h % 2 ? 4 : 8), TILE - 4, 4);
+    ctx.fillStyle = "#5a86a8"; ctx.fillRect(sx + 4, sy + (h % 3 ? 14 : 18), TILE - 10, 3);
+  } else if (c === "C"){
+    ctx.fillStyle = "#5b5048"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#6e6258"; ctx.fillRect(sx + 2, sy + 2, TILE - 4, 12);
+    ctx.fillStyle = "#4a423a"; ctx.fillRect(sx + 2, sy + 15, TILE - 4, 13);
+    ctx.fillStyle = "#3a342e"; ctx.fillRect(sx, sy + 13, TILE, 2);
+  } else if (c === "="){
+    ctx.fillStyle = "#736253"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#85735f"; ctx.fillRect(sx + 1, sy + 1, TILE - 2, 13);
+    ctx.fillStyle = "#5e5044"; ctx.fillRect(sx + 1, sy + 16, TILE - 2, 13);
+  } else if (c === "f"){
+    ctx.fillStyle = "#5a4326"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#6e5430";
+    for (var fr = 2; fr < TILE; fr += 6){ ctx.fillRect(sx + 2, sy + fr, TILE - 4, 3); }
+    if (h % 4 === 0){ ctx.fillStyle = "#caa23f"; ctx.fillRect(sx + TILE / 2 - 1, sy + 6, 2, TILE - 10); }
+  } else if (c === ","){
+    ctx.fillStyle = "#3f5a2c"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#4d6b34"; ctx.fillRect(sx + (h % 3) * 4, sy + 4, 3, 5); ctx.fillRect(sx + 12 + (h % 2) * 5, sy + 14, 3, 5);
+    ctx.fillStyle = "#5f8040"; ctx.fillRect(sx + 20, sy + 8, 3, 5);
+  } else if (c === "p"){
+    ctx.fillStyle = "#6a5a40"; ctx.fillRect(sx, sy, TILE, TILE);
+    ctx.fillStyle = "#7d6c4e";
+    if (h % 2) ctx.fillRect(sx + 4, sy + 6, 6, 4);
+    if (h % 3) ctx.fillRect(sx + 16, sy + 18, 7, 4);
+    ctx.fillStyle = "#574a36"; ctx.fillRect(sx + 10, sy + 12, 4, 3);
+  } else {
+    ctx.fillStyle = "#384a2a"; ctx.fillRect(sx, sy, TILE, TILE);
+    if (h % 2){ ctx.fillStyle = "#42562f"; ctx.fillRect(sx + 6, sy + 8, 5, 4); }
+    if (h % 3 === 0){ ctx.fillStyle = "#33432a"; ctx.fillRect(sx + 18, sy + 16, 5, 4); }
+  }
+}
+
+/* ---------- Feudal building facades ---------- */
+BUILDING_ART.castleF = function(b, bx, by, bw, bh){
+  ctx.fillStyle = "#8f8a82"; ctx.fillRect(bx, by + 12, bw, bh - 12);
+  ctx.fillStyle = "#7c776f"; ctx.fillRect(bx, by + 12, bw, 4);
+  // crenellations
+  ctx.fillStyle = "#6f6a62";
+  for (var cx = bx; cx < bx + bw; cx += 14){ ctx.fillRect(cx, by + 4, 8, 9); }
+  // two flanking towers
+  ctx.fillStyle = "#7c776f"; ctx.fillRect(bx - 4, by, 14, bh); ctx.fillRect(bx + bw - 10, by, 14, bh);
+  ctx.fillStyle = "#6f6a62";
+  ctx.fillRect(bx - 4, by - 4, 6, 6); ctx.fillRect(bx + 4, by - 4, 6, 6);
+  ctx.fillRect(bx + bw - 10, by - 4, 6, 6); ctx.fillRect(bx + bw - 2, by - 4, 6, 6);
+  // banners, heraldic red
+  ctx.fillStyle = "#9a2f2a"; ctx.fillRect(bx + 6, by + 18, 6, 16); ctx.fillRect(bx + bw - 12, by + 18, 6, 16);
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx + 8, by + 22, 2, 8); ctx.fillRect(bx + bw - 10, by + 22, 2, 8);
+  // arrow slits
+  ctx.fillStyle = "#2a2620";
+  for (var wx = bx + 16; wx < bx + bw - 16; wx += 20){ ctx.fillRect(wx, by + 26, 4, 12); }
+};
+BUILDING_ART.abbeyF = function(b, bx, by, bw, bh){
+  ctx.fillStyle = "#cabf9f"; ctx.fillRect(bx, by + 12, bw, bh - 12);
+  ctx.fillStyle = "#8a7f5e"; ctx.fillRect(bx - 2, by + 6, bw + 4, 10);
+  // a steep gable and a cross
+  ctx.fillStyle = "#8a7f5e";
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2, by - 10); ctx.lineTo(bx + bw / 2 - 14, by + 8); ctx.lineTo(bx + bw / 2 + 14, by + 8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#e8d9a8"; ctx.fillRect(bx + bw / 2 - 1, by - 18, 2, 9); ctx.fillRect(bx + bw / 2 - 4, by - 15, 8, 2);
+  // tall arched windows
+  ctx.fillStyle = "#5b6a8e";
+  for (var wx = bx + 12; wx < bx + bw - 12; wx += 18){ ctx.fillRect(wx, by + 22, 9, 16); }
+  ctx.fillStyle = "#cabf9f";
+  for (var w2 = bx + 12; w2 < bx + bw - 12; w2 += 18){ ctx.fillRect(w2 + 4, by + 22, 1, 16); }
+};
+BUILDING_ART.fieldsF = function(b, bx, by, bw, bh){
+  // a timber tithe barn over the strips
+  ctx.fillStyle = "#9a7b3c"; ctx.fillRect(bx, by + 12, bw, bh - 12);
+  ctx.fillStyle = "#6e5424"; ctx.fillRect(bx - 3, by + 4, bw + 6, 12);
+  ctx.fillStyle = "#4f3c1a";
+  ctx.beginPath(); ctx.moveTo(bx - 3, by + 6); ctx.lineTo(bx + bw / 2, by - 8); ctx.lineTo(bx + bw + 3, by + 6); ctx.closePath(); ctx.fill();
+  // timber cross bracing
+  ctx.strokeStyle = "#5b4524"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(bx + 6, by + bh - 2); ctx.lineTo(bx + 18, by + 16);
+  ctx.moveTo(bx + bw - 6, by + bh - 2); ctx.lineTo(bx + bw - 18, by + 16);
+  ctx.stroke(); ctx.lineWidth = 1;
+  // a big barn door
+  ctx.fillStyle = "#3a2c14"; ctx.fillRect(bx + bw / 2 - 8, by + bh - 16, 16, 16);
+};
+BUILDING_ART.millF = function(b, bx, by, bw, bh){
+  ctx.fillStyle = "#7a6448"; ctx.fillRect(bx, by + 12, bw, bh - 12);
+  ctx.fillStyle = "#4f4030"; ctx.fillRect(bx - 2, by + 6, bw + 4, 10);
+  // a turning water wheel on the stream side
+  var spin = G.time / 600;
+  var cxw = bx - 2, cyw = by + bh - 12, r = 11;
+  ctx.fillStyle = "#5b4a32"; ctx.beginPath(); ctx.arc(cxw, cyw, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#3a2f20"; ctx.lineWidth = 2;
+  for (var k = 0; k < 6; k++){
+    var a = spin + k * 1.047;
+    ctx.beginPath(); ctx.moveTo(cxw, cyw);
+    ctx.lineTo(cxw + Math.cos(a) * r, cyw + Math.sin(a) * r); ctx.stroke();
+  }
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#2a2018"; ctx.fillRect(bx + bw / 2 - 4, by + 22, 8, bh - 24);
+};
+BUILDING_ART.alchemistF = function(b, bx, by, bw, bh){
+  // a narrow stone tower with a conical roof and a furnace glow
+  ctx.fillStyle = "#5b4a6e"; ctx.fillRect(bx + 2, by + 8, bw - 4, bh - 8);
+  ctx.fillStyle = "#3a2f4a";
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2, by - 14); ctx.lineTo(bx + 2, by + 10); ctx.lineTo(bx + bw - 2, by + 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx + bw / 2 - 1, by - 18, 2, 5);
+  // a glowing furnace window that flickers
+  var glow = Math.floor(G.time / 350) % 2 === 0;
+  ctx.fillStyle = glow ? "#e8843a" : "#a8521e"; ctx.fillRect(bx + bw / 2 - 4, by + bh - 14, 8, 8);
+  ctx.fillStyle = "#2a2030";
+  ctx.fillRect(bx + 6, by + 16, 5, 6); ctx.fillRect(bx + bw - 11, by + 16, 5, 6);
+};
+BUILDING_ART.scriptoriumF = function(b, bx, by, bw, bh){
+  ctx.fillStyle = "#6e5a8e"; ctx.fillRect(bx, by + 12, bw, bh - 12);
+  ctx.fillStyle = "#46395c"; ctx.fillRect(bx - 2, by + 6, bw + 4, 10);
+  // a cloister arcade of arches
+  ctx.fillStyle = "#2a2438";
+  for (var wx = bx + 8; wx < bx + bw - 8; wx += 16){ ctx.fillRect(wx, by + 22, 10, 16); }
+  ctx.fillStyle = "#9a86bf";
+  for (var a2 = bx + 8; a2 < bx + bw - 8; a2 += 16){ ctx.fillRect(a2, by + 20, 10, 3); }
+  // a quill weather vane
+  ctx.fillStyle = "#e8d9a8"; ctx.fillRect(bx + bw / 2 - 1, by - 8, 2, 8);
+  ctx.fillStyle = "#cfc0e6"; ctx.fillRect(bx + bw / 2 + 1, by - 10, 7, 3);
+};
+
+/* ---------- Feudal interior room themes ---------- */
+ROOM_THEMES.castleF      = { back:"#2a2620", floor:"#3c372e", counter:"#4a4034", accent:"#e8b04b",
+  props:["hearth","tapestry","armorstand"],
+  bust:{ skin:"#e0a06a", top:"#7c828c", collar:"#9a2f2a", hair:"short", hairC:"#3a2a1a", acc:"none" } };
+ROOM_THEMES.abbeyF       = { back:"#2c2a22", floor:"#3f3a2c", counter:"#5c5238", accent:"#e8d9a8",
+  props:["stainedglass","altar","columns"],
+  bust:{ skin:"#caa07a", top:"#cabf9f", collar:"#8a7f5e", hair:"cap", hairC:"#15121c", acc:"none" } };
+ROOM_THEMES.fieldsF      = { back:"#2e2818", floor:"#43381f", counter:"#5b4524", accent:"#caa23f",
+  props:["grainsacks","barrels"],
+  bust:{ skin:"#c08f5a", top:"#9a7b3c", collar:"#6e5424", hair:"cap", hairC:"#3a2a1a", acc:"none" } };
+ROOM_THEMES.millF        = { back:"#2a2418", floor:"#3c3322", counter:"#4f4030", accent:"#caa23f",
+  props:["grainsacks","wheel"],
+  bust:{ skin:"#d0a070", top:"#7a6448", collar:"#4f4030", hair:"cap", hairC:"#2a1f12", acc:"apron" } };
+ROOM_THEMES.alchemistF   = { back:"#241d30", floor:"#332a44", counter:"#46395c", accent:"#e8843a",
+  props:["alembic","bookshelves"],
+  bust:{ skin:"#cabf9f", top:"#5b4a6e", collar:"#e8b04b", hair:"long", hairC:"#bdb2cf", acc:"none" } };
+ROOM_THEMES.scriptoriumF = { back:"#241f30", floor:"#332c44", counter:"#46395c", accent:"#cfc0e6",
+  props:["lectern","bookshelves"],
+  bust:{ skin:"#caa07a", top:"#6e5a8e", collar:"#cfc0e6", hair:"cap", hairC:"#15121c", acc:"none" } };
+
+/* ---------- Feudal street decor ---------- */
+CH_DECOR.chF = [
+  { kind: "marketcross", tx: 12, ty: 30 },
+  { kind: "well", tx: 9, ty: 31 },
+  { kind: "haystack", tx: 8, ty: 24 }, { kind: "haystack", tx: 20, ty: 26 },
+  { kind: "cross", tx: 8, ty: 19 },
+  { kind: "torch", tx: 9, ty: 7 }, { kind: "torch", tx: 16, ty: 7 },
+  { kind: "furrow", tx: 5, ty: 23 }, { kind: "furrow", tx: 17, ty: 32 },
+  { kind: "cart", tx: 10, ty: 28 }, { kind: "cart", tx: 21, ty: 35 },
+  { kind: "woodpile", tx: 4, ty: 35 }, { kind: "woodpile", tx: 3, ty: 33 },
+  { kind: "fence", tx: 7, ty: 38 }, { kind: "fence", tx: 9, ty: 39 }, { kind: "fence", tx: 3, ty: 22 },
+  { kind: "beehive", tx: 6, ty: 34 },
+  { kind: "trough", tx: 8, ty: 30 },
+  { kind: "scarecrow", tx: 4, ty: 25 }, { kind: "scarecrow", tx: 18, ty: 24 },
+  { kind: "plow", tx: 6, ty: 26 }, { kind: "plow", tx: 21, ty: 32 },
+  { kind: "barrelpair", tx: 22, ty: 35 }
+];
+
+/* ---------- Feudal critters ---------- */
+CH_CRITTERS.chF = [
+  { kind: "sheep", x: 10, y: 31 }, { kind: "sheep", x: 9, y: 29 }, { kind: "sheep", x: 16, y: 33 },
+  { kind: "chicken", x: 6, y: 23 }, { kind: "chicken", x: 5, y: 24 },
+  { kind: "goat", x: 9, y: 30 }, { kind: "goat", x: 15, y: 38 },
+  { kind: "goose", x: 4, y: 30 }, { kind: "goose", x: 5, y: 31 },
+  { kind: "dog", x: 15, y: 28 },
+  { kind: "crow", x: 20, y: 33 }, { kind: "crow", x: 6, y: 38 },
+  { kind: "pigeon", x: 12, y: 16 }, { kind: "duck", x: 4, y: 31 }
+];
+
+/* ---------- Feudal arrivals ---------- */
+ARRIVALS.chF = {
+  castle: { who: "THE LORD'S STEWARD",
+    hello: "Dismount and approach the dais. The lord will hear your homage. Ready to kneel?",
+    action: "RENDER FEALTY",
+    bye: "Rise, vassal. The bond is sworn. Mind the road down to the valley." },
+  abbey: { who: "THE ABBOT",
+    hello: "Peace, rider. The abbey door is never barred to the faithful or the hungry. Will you hear of the tithe?",
+    action: "ENTER THE ABBEY",
+    bye: "Go in grace. A tenth of the harvest, and the door stays open in the lean months." },
+  fields: { who: "THE BAILIFF",
+    hello: "Mind the furrows. Every strip is spoken for and the work never ends. Want the lay of the land?",
+    action: "WALK THE STRIPS",
+    bye: "Back to it. The land does not wait, and neither does the bailiff." },
+  mill: { who: "MILLER COB",
+    hello: "Bring your grain to the lord's stone, rider. Everyone does, by custom. Care to grind?",
+    action: "STEP INSIDE",
+    bye: "Off you go. The wheel turns for the lord whether you like the cut or not." },
+  alchemist: { who: "THE ALCHEMIST",
+    hello: "Ah, a knight! Come, come, the furnace is hot and gold is so very close. Will you feed it?",
+    action: "ENTER THE TOWER",
+    bye: "Next batch, next batch. The secret is always one batch away. Farewell for now." },
+  scriptorium: { who: "THE LIBRARIAN",
+    hello: "You hold the manor's working parts. Within, we set them in order on the page. Ready?",
+    action: "STEP INSIDE",
+    bye: "Go test it on the realm. The manor is the true examination." },
+  godwin: { who: "REEVE GODWIN",
+    hello: "A moment, rider? The roll is long and the day is short.",
+    action: "CHAT WITH GODWIN",
+    bye: "Ride on. The accounts will keep, the lord less so." },
+  eda: { who: "PLOWMAN EDA",
+    hello: "Resting my back a breath. Got a word for one who works the strips?",
+    action: "CHAT WITH EDA",
+    bye: "Back to the furrow. The strips do not turn themselves." },
+  maude: { who: "SISTER MAUDE",
+    hello: "Bless you, rider. Have you a moment for the work of the abbey?",
+    action: "CHAT WITH MAUDE",
+    bye: "Go gently. The door stays open, in plenty and in want." },
+  rolf: { who: "HERALD ROLF",
+    hello: "Hail. Curious how the realm is stacked, top to bottom?",
+    action: "CHAT WITH ROLF",
+    bye: "Ride well. Up to render, down to collect. Do not forget the way of it." },
+  desk: { who: "THE MANOR CHAIR",
+    hello: "Four needles, and the manor in your hands. The full session is still being drafted. Take the chair?",
+    action: "TAKE THE CHAIR",
+    bye: "The chair will wait. The seasons will not." }
+};
+
+/* ---------- Feudal player: a mounted knight ---------- */
+function drawFeudalPlayer(px, py, bobp){
+  var p = G.player;
+  var face = (p.dir === "left") ? -1 : 1;
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(px - 2, py + p.h - 3, p.w + 4, 5);
+  // horse body and legs
+  ctx.fillStyle = "#6b4a2e"; ctx.fillRect(px - 4, py + 12 + bobp, p.w + 8, 9);
+  ctx.fillStyle = "#5a3d25";
+  ctx.fillRect(px - 2, py + 19 + bobp, 4, 5); ctx.fillRect(px + 3, py + 19 + bobp, 4, 5);
+  ctx.fillRect(px + p.w - 6, py + 19 + bobp, 4, 5); ctx.fillRect(px + p.w - 1, py + 19 + bobp, 4, 5);
+  // horse head
+  ctx.fillStyle = "#6b4a2e"; ctx.fillRect(px + (face > 0 ? p.w - 2 : -6), py + 9 + bobp, 8, 7);
+  // caparison in heraldic red
+  ctx.fillStyle = "#9a2f2a"; ctx.fillRect(px - 2, py + 13 + bobp, p.w + 4, 4);
+  // rider torso in mail and a red tabard
+  ctx.fillStyle = "#7c828c"; ctx.fillRect(px + 4, py + 2 + bobp, p.w - 8, 11);
+  ctx.fillStyle = "#b5402f"; ctx.fillRect(px + 7, py + 3 + bobp, p.w - 14, 9);
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(px + p.w / 2 - 1, py + 5 + bobp, 2, 5);
+  // helm
+  ctx.fillStyle = "#c9ccd2"; ctx.fillRect(px + 6, py - 4 + bobp, p.w - 12, 8);
+  ctx.fillStyle = "#15121c"; ctx.fillRect(px + 7, py - 1 + bobp, p.w - 14, 2);
+  // lance
+  ctx.fillStyle = "#caa06a";
+  if (face > 0) ctx.fillRect(px + p.w - 2, py - 6 + bobp, 2, 22); else ctx.fillRect(px, py - 6 + bobp, 2, 22);
+  ctx.fillStyle = "#9a2f2a";
+  if (face > 0) ctx.fillRect(px + p.w - 3, py - 9 + bobp, 4, 4); else ctx.fillRect(px - 1, py - 9 + bobp, 4, 4);
+}
+
+/* ---------- Sheaves: gather grain in kind ---------- */
+function drawSheaves(cam){
+  if (!G.sheaves) return;
+  for (var i = 0; i < G.sheaves.length; i++){
+    var s = G.sheaves[i];
+    if (s.taken) continue;
+    var sx = s.tx * TILE - cam.x, sy = s.ty * TILE - cam.y;
+    if (sx < -TILE || sy < -TILE || sx > VIEW_W || sy > VIEW_H) continue;
+    var bob = Math.sin((G.time + s.tx * 90) / 360) * 1.5;
+    ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.fillRect(sx + 8, sy + 24, 16, 4);
+    ctx.fillStyle = "#d9a93f"; ctx.fillRect(sx + 10, sy + 8 + bob, 12, 16);
+    ctx.fillStyle = "#c08f2e"; ctx.fillRect(sx + 10, sy + 15 + bob, 12, 3);
+    ctx.fillStyle = "#e8c66a";
+    ctx.fillRect(sx + 11, sy + 4 + bob, 3, 6); ctx.fillRect(sx + 15, sy + 2 + bob, 3, 8); ctx.fillRect(sx + 19, sy + 4 + bob, 3, 6);
+  }
+}
+function updateSheaves(){
+  if (!G.sheaves) return;
+  var p = G.player;
+  var cx = Math.floor((p.x + p.w / 2) / TILE), cy = Math.floor((p.y + p.h / 2) / TILE);
+  for (var i = 0; i < G.sheaves.length; i++){
+    var s = G.sheaves[i];
+    if (!s.taken && cx === s.tx && cy === s.ty){
+      s.taken = true;
+      G.grain = (G.grain || 0) + 1;
+      G.runPoints += GRAIN_PTS;
+      if (!G.firstSheaf){
+        G.firstSheaf = true;
+        toast("You gather a sheaf in kind. GRAIN is the manor's coin.<br>Render a share up to the lord and a tithe to the abbey.", 4200);
+      } else {
+        toast("A sheaf gathered. GRAIN " + G.grain + ".");
+      }
+      refreshHUD();
+    }
+  }
+}
+function resetFeudal(){
+  G.grain = 0;
+  G.lordRendered = false;
+  G.titheRendered = false;
+  G.protected = false;
+  G.plagueArrived = false;
+  G.handMillRisk = 0;
+  G.firstSheaf = false;
+  G.alchemistFed = 0;
+  G.sheaves = CHF_SHEAVES.map(function(s){ return { tx: s.tx, ty: s.ty, taken: false }; });
+}
+
+/* ---------- The feudal lesson room ----------
+   The castle and the abbey fold a rendering of dues into the
+   visit. The fields gather grain out on the map, so they have
+   no render step. The question and insight reuse pickLesson. */
+function buildFeudalLessonRoom(b){
+  var L = LESSONS[b.id];
+  var room = el("div", "room");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", L.host));
+  room.appendChild(el("div", "speech", L.speech));
+
+  // the render step at the keep and the abbey
+  if (b.id === "castle" || b.id === "abbey"){
+    var rendered = (b.id === "castle") ? G.lordRendered : G.titheRendered;
+    var need = (b.id === "castle") ? 3 : 1;
+    var rv = el("div", "verdict");
+    if (rendered){
+      rv.style.display = "block";
+      rv.innerHTML = (b.id === "castle")
+        ? "The lord's share is rendered. His protection covers the manor, and the bailiff and the forest grow quiet."
+        : "The tithe is rendered to the abbey. A tenth given, and the alms door stays open.";
+    }
+    var rbtn = el("button", "choice", (b.id === "castle")
+      ? "Render the lord's share  (give " + need + " grain, +" + RENDER_PTS + " favor, and gain his protection)"
+      : "Render the tithe  (give " + need + " grain, +" + TITHE_PTS + " favor)");
+    if (rendered){ rbtn.disabled = true; rbtn.style.opacity = .4; }
+    rbtn.addEventListener("click", function(){
+      if ((b.id === "castle" && G.lordRendered) || (b.id === "abbey" && G.titheRendered)) return;
+      if ((G.grain || 0) < need){
+        rv.style.display = "block"; rv.classList.add("bad");
+        rv.innerHTML = "You owe the render, but you hold only " + (G.grain || 0) + " grain. Ride down to the fields and gather " + need + " sheaves first.";
+        return;
+      }
+      G.grain -= need;
+      rv.style.display = "block"; rv.classList.remove("bad");
+      if (b.id === "castle"){
+        G.lordRendered = true; G.protected = true; G.runPoints += RENDER_PTS;
+        rv.innerHTML = "Rendered. Service up, protection down. The bailiff eases and the brigands keep their distance. +" + RENDER_PTS + " favor.";
+      } else {
+        G.titheRendered = true; G.runPoints += TITHE_PTS;
+        rv.innerHTML = "A tenth given to the abbey, in kind. The alms door stays open through the winter. +" + TITHE_PTS + " favor.";
+      }
+      rbtn.disabled = true; rbtn.style.opacity = .4;
+      refreshHUD();
+    });
+    room.appendChild(rbtn);
+    room.appendChild(rv);
+  }
+
+  // the insight question, identical machinery to buildLessonRoom
+  if (G.insights[b.id]){
+    var card0 = el("div", "insight-card");
+    card0.style.display = "block";
+    card0.appendChild(el("div", "ic-title", L.insight.title));
+    card0.appendChild(el("div", "ic-body", L.insight.body));
+    room.appendChild(card0);
+    var back0 = el("button", "btn ghost", "BACK TO THE REALM");
+    back0.addEventListener("click", closeInterior);
+    room.appendChild(back0);
+    interiorInner.appendChild(room);
+    return;
+  }
+
+  room.appendChild(el("div", "question", L.question));
+  var verdict = el("div", "verdict");
+  var card = el("div", "insight-card");
+  card.appendChild(el("div", "ic-title", L.insight.title));
+  card.appendChild(el("div", "ic-body", L.insight.body));
+  var back = el("button", "btn ghost", "BACK TO THE REALM");
+  back.addEventListener("click", closeInterior);
+  back.style.display = "none";
+
+  var btns = [];
+  L.choices.forEach(function(c, i){
+    var btn = el("button", "choice", String.fromCharCode(65 + i) + ".  " + c.t);
+    btn.addEventListener("click", function(){ pickLesson(b.id, i); });
+    btns.push(btn);
+    room.appendChild(btn);
+  });
+  room.appendChild(verdict);
+  room.appendChild(card);
+  room.appendChild(back);
+  interiorInner.appendChild(room);
+
+  room._verdict = verdict; room._card = card; room._back = back; room._btns = btns;
+  panelInterior._room = room;
+}
+
+/* ---------- The Lord's Mill: a recurring cut on every harvest ----------
+   By custom the lord owns the mill, and milling there costs a share
+   of the grain, the multure. A hidden hand mill keeps the grain, but
+   the bailiff smashes any quern he finds. Evasion has a rising cost. */
+function buildMillRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "MILLER COB"));
+  room.appendChild(el("div", "speech",
+    "By the lord's right, all grain is ground here, and the stone takes its share. The multure, we call the cut. You can grind at home on a hand quern, but the bailiff breaks every one he finds."));
+  var verdict = el("div", "verdict");
+
+  var lawful = el("button", "choice", "Grind at the lord's mill  (give 1 grain as multure, +6 favor, lawful)");
+  lawful.addEventListener("click", function(){
+    if ((G.grain || 0) < 1){
+      verdict.style.display = "block"; verdict.classList.add("bad");
+      verdict.innerHTML = "No grain to grind. Ride down to the fields and gather a sheaf first.";
+      return;
+    }
+    G.grain -= 1; G.runPoints += 6;
+    verdict.style.display = "block"; verdict.classList.remove("bad");
+    verdict.innerHTML = "Ground at the lord's stone. The multure is the price of his monopoly on the mill. +6 favor, and 1 grain to the cut.";
+    refreshHUD();
+  });
+
+  var dodge = el("button", "choice", "Use the hidden hand mill  (keep your grain, +10 favor, but risk the bailiff)");
+  dodge.addEventListener("click", function(){
+    G.handMillRisk = (G.handMillRisk || 0) + 1;
+    verdict.style.display = "block";
+    if (G.handMillRisk >= 3){
+      G.handMillRisk = 0;
+      G.runPoints = Math.max(0, G.runPoints - 15);
+      G.protected = false;
+      verdict.classList.add("bad");
+      verdict.innerHTML = "The bailiff found the quern and smashed it on the doorstep. Minus 15 favor, and the lord's protection is withdrawn. The lord's milling right is not a suggestion.";
+    } else {
+      G.runPoints += 10;
+      verdict.classList.remove("bad");
+      verdict.innerHTML = "Ground in secret, the cut kept for yourself. +10 favor. But word travels, and the bailiff is counting. Push your luck and the quern gets broken.";
+    }
+    refreshHUD();
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE REALM");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(lawful); room.appendChild(dodge); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- The Alchemist Tower: a loss chasing sink ----------
+   Feed grain to the furnace chasing gold that almost never comes.
+   The eccentric host always promises the next batch is the one. */
+var ALCHEMIST_LINES = [
+  "Nothing yet, but the proportions were so close. The next batch, surely.",
+  "Bah! The mercury was impure. Feed it again, the gold is nearly born.",
+  "So near! I saw a glimmer in the crucible. One more and we are rich.",
+  "The stars were wrong this hour. Again, again, fortune favors the persistent."
+];
+function buildAlchemistRoom(b){
+  var room = el("div", "room temptation");
+  room.appendChild(el("div", "place", b.name));
+  room.appendChild(el("div", "host", "THE ALCHEMIST"));
+  room.appendChild(el("div", "speech",
+    "Gold from grain, knight! The great work is almost done. Each feeding of the furnace costs but a little, and the reward, oh, the reward is beyond counting. Will you feed it?"));
+  var verdict = el("div", "verdict");
+
+  var feed = el("button", "choice", "Feed the furnace  (10 favor in, chasing the gold)");
+  feed.addEventListener("click", function(){
+    if (G.runPoints < 10){
+      verdict.style.display = "block"; verdict.classList.add("bad");
+      verdict.innerHTML = "You have not the favor to feed it. The furnace eats before it ever gives.";
+      return;
+    }
+    G.runPoints -= 10;
+    G.alchemistFed = (G.alchemistFed || 0) + 1;
+    verdict.style.display = "block";
+    if (rng() < 0.12){
+      G.runPoints += 25;
+      verdict.classList.remove("bad");
+      verdict.innerHTML = "A glint of true gold in the crucible! +25 favor. The alchemist weeps with joy and reaches for more grain. This is how the sink keeps you feeding it.";
+    } else {
+      verdict.classList.add("bad");
+      var line = ALCHEMIST_LINES[(G.alchemistFed - 1) % ALCHEMIST_LINES.length];
+      verdict.innerHTML = "Minus 10 favor, and only ash. " + line;
+    }
+    refreshHUD();
+  });
+
+  var back = el("button", "btn ghost", "BACK TO THE REALM");
+  back.addEventListener("click", closeInterior);
+  room.appendChild(feed); room.appendChild(verdict); room.appendChild(back);
+  interiorInner.appendChild(room);
+}
+
+/* ---------- Feudal street decor renderer ---------- */
+function drawFeudalDecor(d, sx, sy){
+  if (d.kind === "marketcross"){
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx + 6, sy + 24, 20, 5);
+    ctx.fillStyle = "#8a7f6a"; ctx.fillRect(sx + 12, sy - 18, 8, 44);
+    ctx.fillStyle = "#9a8f78"; ctx.fillRect(sx + 4, sy - 22, 24, 7);
+    ctx.fillStyle = "#73685a"; ctx.fillRect(sx + 4, sy + 22, 24, 6);
+    ctx.fillStyle = "#e8d9a8"; ctx.fillRect(sx + 15, sy - 30, 2, 9); ctx.fillRect(sx + 11, sy - 27, 10, 2);
+  } else if (d.kind === "well"){
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx + 4, sy + 18, 22, 5);
+    ctx.fillStyle = "#5b5048"; ctx.fillRect(sx + 4, sy + 6, 22, 14);
+    ctx.fillStyle = "#3a342e"; ctx.fillRect(sx + 8, sy + 9, 14, 8);
+    ctx.fillStyle = "#6e5424"; ctx.fillRect(sx + 6, sy - 8, 3, 16); ctx.fillRect(sx + 21, sy - 8, 3, 16);
+    ctx.fillStyle = "#4f4030"; ctx.fillRect(sx + 4, sy - 10, 22, 4);
+  } else if (d.kind === "haystack"){
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx + 2, sy + 20, 24, 5);
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(sx + 4, sy + 8, 20, 14);
+    ctx.fillStyle = "#b3892c";
+    ctx.beginPath(); ctx.moveTo(sx + 2, sy + 9); ctx.lineTo(sx + 14, sy - 4); ctx.lineTo(sx + 26, sy + 9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#9a7320"; ctx.fillRect(sx + 4, sy + 14, 20, 2);
+  } else if (d.kind === "cross"){
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx + 8, sy + 20, 14, 4);
+    ctx.fillStyle = "#cabf9f"; ctx.fillRect(sx + 13, sy - 12, 4, 34);
+    ctx.fillStyle = "#cabf9f"; ctx.fillRect(sx + 7, sy - 4, 16, 4);
+  } else if (d.kind === "torch"){
+    ctx.fillStyle = "#3a2f20"; ctx.fillRect(sx + 13, sy - 6, 3, 20);
+    var fl = Math.floor(G.time / 220) % 2 === 0;
+    ctx.fillStyle = fl ? "#e8843a" : "#e8b04b";
+    ctx.fillRect(sx + 11, sy - 12, 7, 7);
+    ctx.fillStyle = "#f2d28a"; ctx.fillRect(sx + 13, sy - 10, 3, 3);
+  } else if (d.kind === "furrow"){
+    ctx.fillStyle = "#5a4326"; ctx.fillRect(sx, sy + 6, TILE, 16);
+    ctx.fillStyle = "#6e5430";
+    ctx.fillRect(sx + 2, sy + 8, TILE - 4, 2); ctx.fillRect(sx + 2, sy + 13, TILE - 4, 2); ctx.fillRect(sx + 2, sy + 18, TILE - 4, 2);
+  } else if (d.kind === "cart"){
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(sx+2, sy+22, 26, 4);
+    ctx.fillStyle = "#6e5430"; ctx.fillRect(sx+2, sy+8, 24, 10);
+    ctx.fillStyle = "#5a4326"; ctx.fillRect(sx+2, sy+8, 24, 3);
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(sx+5, sy+4, 16, 5);
+    ctx.fillStyle = "#4f3c22"; ctx.fillRect(sx+22, sy+12, 8, 3);
+    ctx.fillStyle = "#3a2f20"; ctx.beginPath(); ctx.arc(sx+8, sy+20, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#5b4a32"; ctx.beginPath(); ctx.arc(sx+8, sy+20, 2, 0, 7); ctx.fill();
+  } else if (d.kind === "woodpile"){
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx+2, sy+20, 24, 4);
+    for (var wl = 0; wl < 3; wl++){
+      var wy = sy + 16 - wl*6;
+      ctx.fillStyle = wl % 2 ? "#6e5430" : "#7a6038"; ctx.fillRect(sx+3, wy, 22, 6);
+      ctx.fillStyle = "#caa06a"; ctx.fillRect(sx+4, wy+1, 3, 4); ctx.fillRect(sx+12, wy+1, 3, 4); ctx.fillRect(sx+20, wy+1, 3, 4);
+    }
+  } else if (d.kind === "fence"){
+    ctx.fillStyle = "#5a4326";
+    for (var fp = 0; fp < 4; fp++){ ctx.fillRect(sx + 2 + fp*8, sy+6, 3, 16); }
+    ctx.fillStyle = "#6e5430"; ctx.fillRect(sx+2, sy+10, TILE-4, 3); ctx.fillRect(sx+2, sy+16, TILE-4, 3);
+  } else if (d.kind === "beehive"){
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+6, sy+22, 16, 3);
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(sx+7, sy+14, 14, 8);
+    ctx.fillStyle = "#b3892c"; ctx.fillRect(sx+9, sy+9, 10, 6);
+    ctx.fillStyle = "#9a7320"; ctx.fillRect(sx+12, sy+5, 4, 5);
+    ctx.fillStyle = "#2a2018"; ctx.fillRect(sx+12, sy+19, 4, 3);
+    var bz = Math.floor(G.time/120) % 4;
+    ctx.fillStyle = "#e8b04b"; ctx.fillRect(sx + 14 + Math.round(Math.cos(bz*1.6)*8), sy + 8 + Math.round(Math.sin(bz*1.6)*5), 2, 2);
+  } else if (d.kind === "trough"){
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+2, sy+20, 24, 4);
+    ctx.fillStyle = "#5a4326"; ctx.fillRect(sx+2, sy+12, 24, 10);
+    ctx.fillStyle = "#3f6486"; ctx.fillRect(sx+4, sy+14, 20, 4);
+    var rp = Math.floor(G.time/400) % 2;
+    ctx.fillStyle = "rgba(200,225,250,.6)"; ctx.fillRect(sx+6+rp*3, sy+15, 4, 2);
+    ctx.fillStyle = "#4f3c22"; ctx.fillRect(sx+2, sy+12, 3, 10); ctx.fillRect(sx+23, sy+12, 3, 10);
+  } else if (d.kind === "scarecrow"){
+    var sw = Math.round(Math.sin(G.time/600) * 2);
+    ctx.fillStyle = "#4f3c22"; ctx.fillRect(sx+13, sy-6, 3, 28);
+    ctx.fillStyle = "#6e5430"; ctx.fillRect(sx+3+sw, sy+2, 22, 3);
+    ctx.fillStyle = "#7a6f8e"; ctx.fillRect(sx+9+sw, sy+2, 10, 12);
+    ctx.fillStyle = "#caa23f"; ctx.fillRect(sx+11+sw, sy-6, 6, 7);
+    ctx.fillStyle = "#9a7320"; ctx.fillRect(sx+9+sw, sy-8, 10, 3);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sx+12+sw, sy-3, 2, 2); ctx.fillRect(sx+15+sw, sy-3, 2, 2);
+  } else if (d.kind === "plow"){
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(sx+2, sy+20, 22, 4);
+    ctx.fillStyle = "#5a4326"; ctx.fillRect(sx+4, sy+6, 4, 16);
+    ctx.fillStyle = "#6e5430"; ctx.fillRect(sx+4, sy+18, 18, 4);
+    ctx.fillStyle = "#8a8e96"; ctx.beginPath(); ctx.moveTo(sx+20, sy+18); ctx.lineTo(sx+28, sy+22); ctx.lineTo(sx+20, sy+24); ctx.closePath(); ctx.fill();
+  } else if (d.kind === "barrelpair"){
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(sx+2, sy+22, 24, 4);
+    for (var bp = 0; bp < 2; bp++){
+      var bxo = sx + 3 + bp*13;
+      ctx.fillStyle = "#6e5430"; ctx.fillRect(bxo, sy+8, 11, 16);
+      ctx.fillStyle = "#4f3c22"; ctx.fillRect(bxo, sy+11, 11, 2); ctx.fillRect(bxo, sy+19, 11, 2);
+      ctx.fillStyle = "#7a6038"; ctx.fillRect(bxo+2, sy+8, 7, 16);
+    }
+  }
+}
+
+/* the feudal free play borrows the desk collapse framing */
+CHF_FREEPLAY.collapseTitle = CHF_DESK.collapseTitle;
+CHF_FREEPLAY.collapseLines = CHF_DESK.collapseLines;
+
+
 var CHAPTERS = {
   ch1: {
     id: "ch1",
-    name: "CHAPTER 1: CAPITALISM",
+    name: "CHAPTER 2: CAPITALISM",
     titleSub: "Walk the market town. Gather four insights. Mind the traffic.",
     walkToast: "THE WALK. Four starred buildings hold the town's insights.<br>Step to a door and press A or SPACE.",
-    unlock: "ch0",
+    unlock: "chF",
     map: CH1_MAP,
     buildings: CH1_BUILDINGS,
     npcs: CH1_NPCS,
@@ -7252,9 +7838,38 @@ var CHAPTERS = {
   }
 };
 
+CHAPTERS.chF = {
+  id: "chF",
+  name: "CHAPTER 1: FEUDALISM",
+  titleSub: "Ride the manor. Render upward, gather below, and read the bond that holds it together.",
+  walkToast: "THE WALK. Three starred sites hold the manor's insights.<br>Ride to a door and press A or SPACE.",
+  unlock: "ch0",
+  map: CHF_MAP,
+  buildings: CHF_BUILDINGS,
+  npcs: CHF_NPCS,
+  hazards: CHF_HAZARDS,
+  lessons: CHF_LESSONS,
+  lessonCards: CHF_LESSON_CARDS,
+  practice: CHF_PRACTICE,
+  gateQs: CHF_GATE_QS,
+  books: CHF_BOOKS,
+  desk: CHF_DESK,
+  arcade: CHF_ARCADE,
+  freeplay: CHF_FREEPLAY,
+  gate: { tx: 12.5, ty: 30.5 },
+  spawn: { x: 12, y: 31 },
+  gatePlace: "the market cross",
+  charterName: "THE MANOR ROLL",
+  charterShort: "The Manor Roll",
+  logicName: "the realm's own custom",
+  theme: "feudal",
+  streets: {},
+  palette: { bg: "#171210", g1: "#2c2114", g2: "#261d12" }
+};
+
 CHAPTERS.ch2 = {
   id: "ch2",
-  name: "CHAPTER 2: SOCIALISM",
+  name: "CHAPTER 3: SOCIALISM",
   titleSub: "Walk the town of cooperatives. Gather four insights. Watch for the tram.",
   walkToast: "THE WALK. Four starred buildings hold the town's insights.<br>Step to a door and press A or SPACE.",
   unlock: "ch1",
@@ -7283,7 +7898,7 @@ CHAPTERS.ch2 = {
 
 CHAPTERS.ch3 = {
   id: "ch3",
-  name: "CHAPTER 3: THE COMMAND ECONOMY",
+  name: "CHAPTER 4: THE COMMAND ECONOMY",
   titleSub: "Walk the planned city. Gather three insights. Mind the delivery trucks.",
   walkToast: "THE WALK. Three starred halls hold the plan's insights.<br>Step to a door and press A or SPACE.",
   unlock: "ch2",
@@ -7310,34 +7925,6 @@ CHAPTERS.ch3 = {
   palette: { bg: "#1b1f23", g1: "#2b3036", g2: "#262b30" }
 };
 
-CHAPTERS.ch4 = {
-  id: "ch4",
-  name: "CHAPTER 4: THE MIXED ECONOMY",
-  titleSub: "Walk the mixed city. Gather four insights. Mind the traffic, both ways.",
-  walkToast: "THE WALK. Four starred buildings hold the city's insights.<br>Step to a door and press A or SPACE.",
-  unlock: "ch3",
-  map: CH4_MAP,
-  buildings: CH4_BUILDINGS,
-  npcs: CH4_NPCS,
-  hazards: CH4_HAZARDS,
-  lessons: CH4_LESSONS,
-  lessonCards: CH4_LESSON_CARDS,
-  practice: CH4_PRACTICE,
-  gateQs: CH4_GATE_QS,
-  books: CH4_BOOKS,
-  desk: CH4_DESK,
-  arcade: CH4_ARCADE,
-  freeplay: CH4_FREEPLAY,
-  gate: { tx: 17.5, ty: 13.5 },
-  spawn: { x: 17, y: 23 },
-  gatePlace: "the city hall",
-  charterName: "THE CIVIC CHARTER",
-  charterShort: "The Civic Charter",
-  logicName: "the mixed economy's own logic",
-  theme: "mixed",
-  streets: { plazaRows: [13, 14] },
-  palette: { bg: "#181d1b", g1: "#2c322e", g2: "#272d29" }
-};
 
 /* ===== LEVEL 0 PROLOGUE INJECTION (ch0) ===== */
 /* =====================================================
@@ -8226,13 +8813,19 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M13.S5",
+  version: "M15.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
   chapterId: function(){ return CHAPTER_ID; },
   chapter: function(){ return CUR; },
   selectChapter: selectChapter,
+  scenes: SCENES,
+  grain: function(){ return G.grain; },
+  sheaves: function(){ return G.sheaves; },
+  feudalState: function(){ return { grain:G.grain, lord:G.lordRendered, tithe:G.titheRendered, protected:G.protected, plague:G.plagueArrived, handMillRisk:G.handMillRisk, alchemistFed:G.alchemistFed }; },
+  JoustEngine: JoustEngine,
+  drawFeudalGround: function(){ return typeof drawFeudalGround === "function"; },
   startChapter: startChapter,
   chapterUnlocked: chapterUnlocked,
   progress: function(){ return Progress; },
@@ -8361,18 +8954,6 @@ window.MF = {
     freeplay: CH3_FREEPLAY,
     arcade: CH3_ARCADE
   },
-  ch4raw: {
-    map: CH4_MAP,
-    buildings: CH4_BUILDINGS,
-    lessons: CH4_LESSONS,
-    npcs: CH4_NPCS,
-    hazards: CH4_HAZARDS,
-    lessonCards: CH4_LESSON_CARDS,
-    practice: CH4_PRACTICE,
-    gateQs: CH4_GATE_QS,
-    books: CH4_BOOKS,
-    desk: CH4_DESK
-  }
 };
 })();
 </script>
