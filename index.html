@@ -5717,6 +5717,7 @@ function makeArcade(cfg){
   if (cfg.engine === "catch") return CatchEngine(cfg);
   if (cfg.engine === "stack") return StackEngine(cfg);
   if (cfg.engine === "joust") return JoustEngine(cfg);
+  if (cfg.engine === "sea") return SeaEngine(cfg);
   return ArcadeEngine(cfg);
 }
 
@@ -7227,6 +7228,7 @@ function renderStack(){
 function renderArcade(){
   if (arcade && arcade.kind === "stack"){ renderStack(); return; }
   if (arcade && arcade.kind === "joust"){ renderJoust(); return; }
+  if (arcade && arcade.kind === "sea"){ renderSea(); return; }
   if (arcade && arcade.kind === "catch"){ if (arcade.cfg.skin === "gather") renderCatchGather(); else renderCatchNet(); return; }
   if (arcade && arcade.cfg.skin === "dispatch") renderArcadeDispatch();
   else renderArcadeTerminal();
@@ -10908,15 +10910,367 @@ var CHP_FREEPLAY = {
     { t:"HOLD", fx:{ prosperity:1 } }, { t:"PUSH", fx:{ prosperity:2, stability:-1 } } ] } ],
   shocks:[ { id:"calm", fx:{ prosperity:-4 }, line:"The wind died and the prizes with it." } ]
 };
+
+/* =====================================================
+   BLACK FLAG RUN. The Chapter 5 cabinet. M19 S4.
+   A sea scroller in the River Raid tradition, and a brand
+   new engine since no chapter cabinet repeats. Sail up a
+   winding lane between reef banks, fire on merchant prizes
+   to board them, dodge the navy and the storms, and top up
+   powder and provisions at a friendly port before the hold
+   runs dry. The player verb is plunder. Public API mirrors
+   ArcadeEngine: input, fire, update(dt), score, over, banked,
+   hits, playerHits, elapsed. Pure state, no DOM, seeded rng.
+   ===================================================== */
+function SeaEngine(cfg){
+  var W = VIEW_W, H = VIEW_H;
+  var E = {
+    cfg: cfg, W: W, H: H, kind: "sea",
+    wave: 0, spawned: 0, spawnTimer: 500, prizeSeq: 0,
+    portTimer: 2600, navyTimer: 1400, stormTimer: 2200,
+    scroll: 0,
+    ship: { x: W/2 - 13, y: H - 96, w: 26, h: 34, cooldown: 0, invulnUntil: 0, flash: 0 },
+    prizes: [], navy: [], storms: [], ports: [], shots: [], wake: [], fx: [],
+    supply: cfg.supplyMax,
+    input: { left:false, right:false, up:false, down:false },
+    elapsed: 0,
+    hits: 0, damagePts: 0,
+    combo: 0, bestCombo: 0, comboPts: 0,
+    playerHits: 0,
+    over: false, banked: false, outOfSupply: false
+  };
+
+  function waveCfg(){ return cfg.waves[E.wave]; }
+  // the meandering lane: a center that winds and a half width that narrows by wave
+  E.center = function(worldY){
+    return W/2 + Math.sin(worldY * 0.0052) * 104 + Math.sin(worldY * 0.0131 + 1.7) * 52;
+  };
+  E.half = function(){ return waveCfg().half; };
+
+  function addFx(text, x, y, bad){ E.fx.push({ text:text, x:x, y:y, t:900, bad:!!bad }); }
+
+  function takeHit(reason, x, y){
+    if (E.elapsed < E.ship.invulnUntil) return;
+    E.playerHits++;
+    E.combo = 0;
+    E.ship.invulnUntil = E.elapsed + 1000;
+    E.ship.flash = 1000;
+    addFx(reason, x, y, true);
+  }
+
+  E.fire = function(){
+    if (E.over) return false;
+    if (E.ship.cooldown > 0) return false;
+    E.ship.cooldown = cfg.shotCooldown;
+    E.shots.push({ x: E.ship.x + E.ship.w/2 - 2, y: E.ship.y - 6, w: 4, h: 10 });
+    return true;
+  };
+
+  function spawnPrize(){
+    var wc = waveCfg();
+    E.prizeSeq++;
+    var fat = wc.fatEvery > 0 && (E.prizeSeq % wc.fatEvery === 0);
+    var w = fat ? 40 : 28, h = fat ? 30 : 22;
+    var cx = E.center(E.scroll + H + 40), hw = E.half();
+    var x = cx - hw + 14 + rng() * (hw * 2 - 28 - w);
+    E.prizes.push({ x:x, y:-h, w:w, h:h, hp: fat ? 2 : 1, fat:fat, pts: fat ? cfg.fatPts : cfg.hitPts, sway: 8 + rng()*10, phase: rng()*6.28, baseX:x });
+    E.spawned++;
+  }
+  function spawnNavy(){
+    var wc = waveCfg();
+    var cx = E.center(E.scroll + H + 40), hw = E.half();
+    var x = cx - hw + 12 + rng() * (hw * 2 - 24 - 30);
+    E.navy.push({ x:x, y:-30, w:30, h:24, vx:(rng()<0.5?-1:1) * wc.navySway, baseX:x });
+  }
+  function spawnStorm(){
+    var cx = E.center(E.scroll + H + 40), hw = E.half();
+    var x = cx - hw + rng() * (hw * 2 - 46);
+    E.storms.push({ x:x, y:-46, w:46, h:42, vx:(rng()<0.5?-1:1)*26 });
+  }
+  function spawnPort(){
+    var cx = E.center(E.scroll + H + 40), hw = E.half();
+    var side = rng() < 0.5 ? -1 : 1;
+    var x = cx + side * (hw - 30);
+    E.ports.push({ x:x - 18, y:-30, w:36, h:30, used:false });
+  }
+
+  E.update = function(dt){
+    if (E.over) return;
+    E.elapsed += dt;
+    var s = dt / 1000;
+    var wc = waveCfg();
+    E.scroll += wc.scroll * s;
+
+    // powder and provisions burn down as you sail; empty hold ends the run
+    E.supply -= cfg.supplyDrain * s;
+    if (E.supply <= 0){ E.supply = 0; E.over = true; E.outOfSupply = true; }
+
+    // the ship answers the helm
+    if (E.ship.cooldown > 0) E.ship.cooldown -= dt;
+    if (E.ship.flash > 0) E.ship.flash -= dt;
+    var sp = cfg.shipSpeed * s;
+    if (E.input.left)  E.ship.x -= sp;
+    if (E.input.right) E.ship.x += sp;
+    if (E.input.up)    E.ship.y = Math.max(H*0.42, E.ship.y - sp);
+    if (E.input.down)  E.ship.y = Math.min(H - 50, E.ship.y + sp);
+    E.ship.x = Math.max(4, Math.min(E.ship.x, W - 4 - E.ship.w));
+
+    // run aground if you stray onto the reef banks
+    var cx = E.center(E.scroll + (H - E.ship.y)), hw = E.half();
+    if (E.ship.x < cx - hw){ E.ship.x = cx - hw; takeHit((cfg.lines && cfg.lines.aground) || "RUN AGROUND", E.ship.x, E.ship.y - 12); }
+    if (E.ship.x + E.ship.w > cx + hw){ E.ship.x = cx + hw - E.ship.w; takeHit((cfg.lines && cfg.lines.aground) || "RUN AGROUND", E.ship.x, E.ship.y - 12); }
+
+    // a short wake for motion
+    if (E.elapsed % 60 < dt) E.wake.push({ x: E.ship.x + E.ship.w/2, y: E.ship.y + E.ship.h, t: 500 });
+
+    // spawn the lane's traffic
+    if (E.spawned < wc.count){
+      E.spawnTimer -= dt;
+      if (E.spawnTimer <= 0){ spawnPrize(); E.spawnTimer = wc.spawnGap; }
+    }
+    E.navyTimer -= dt; if (E.navyTimer <= 0){ spawnNavy(); E.navyTimer = wc.navyGap; }
+    E.stormTimer -= dt; if (E.stormTimer <= 0){ spawnStorm(); E.stormTimer = wc.stormGap; }
+    E.portTimer -= dt; if (E.portTimer <= 0){ spawnPort(); E.portTimer = cfg.portGap; }
+
+    // everything in the lane streams downstream as you sail up it
+    var dy = wc.scroll * s;
+    function drift(arr){ for (var i=arr.length-1;i>=0;i--){ if (arr[i].y > H + 50) arr.splice(i,1); } }
+
+    for (var i = E.prizes.length - 1; i >= 0; i--){
+      var p = E.prizes[i];
+      p.y += dy;
+      p.x = p.baseX + Math.sin(E.elapsed/600 + p.phase) * p.sway;
+      if (p.y > H + 40) E.prizes.splice(i, 1);
+    }
+    for (var n = E.navy.length - 1; n >= 0; n--){
+      var nv = E.navy[n];
+      nv.y += dy; nv.x += nv.vx * s;
+      var ncx = E.center(E.scroll + (H - nv.y)), nhw = E.half();
+      if (nv.x < ncx - nhw){ nv.x = ncx - nhw; nv.vx = Math.abs(nv.vx); }
+      if (nv.x + nv.w > ncx + nhw){ nv.x = ncx + nhw - nv.w; nv.vx = -Math.abs(nv.vx); }
+      if (nv.y > H + 40){ E.navy.splice(n, 1); continue; }
+      if (rectsOverlap(nv.x, nv.y, nv.w, nv.h, E.ship.x, E.ship.y, E.ship.w, E.ship.h))
+        takeHit((cfg.lines && cfg.lines.navy) || "THE NAVY RAKED YOU", E.ship.x, E.ship.y - 12);
+    }
+    for (var st = E.storms.length - 1; st >= 0; st--){
+      var so = E.storms[st];
+      so.y += dy; so.x += so.vx * s;
+      if (so.y > H + 50){ E.storms.splice(st, 1); continue; }
+      if (rectsOverlap(so.x+6, so.y+6, so.w-12, so.h-12, E.ship.x, E.ship.y, E.ship.w, E.ship.h))
+        takeHit((cfg.lines && cfg.lines.storm) || "A SQUALL THREW THE HELM", E.ship.x, E.ship.y - 12);
+    }
+    for (var pt = E.ports.length - 1; pt >= 0; pt--){
+      var po = E.ports[pt];
+      po.y += dy;
+      if (po.y > H + 40){ E.ports.splice(pt, 1); continue; }
+      if (!po.used && rectsOverlap(po.x, po.y, po.w, po.h, E.ship.x, E.ship.y, E.ship.w, E.ship.h)){
+        po.used = true;
+        E.supply = Math.min(cfg.supplyMax, E.supply + cfg.portRefill);
+        E.damagePts += cfg.portBonus;
+        addFx("RESUPPLIED +" + cfg.portBonus, E.ship.x, E.ship.y - 14, false);
+      }
+    }
+
+    // the cannon: shots rise and board prizes, and can rake the navy too
+    for (var j = E.shots.length - 1; j >= 0; j--){
+      var sh = E.shots[j];
+      sh.y -= cfg.shotSpeed * s;
+      if (sh.y + sh.h < 0){ E.shots.splice(j, 1); continue; }
+      var struck = false;
+      for (var k = E.prizes.length - 1; k >= 0; k--){
+        var pp = E.prizes[k];
+        if (rectsOverlap(sh.x, sh.y, sh.w, sh.h, pp.x, pp.y, pp.w, pp.h)){
+          E.shots.splice(j, 1); struck = true; pp.hp--;
+          if (pp.hp <= 0){
+            E.prizes.splice(k, 1);
+            E.hits++; E.damagePts += pp.pts; E.combo++;
+            if (E.combo > E.bestCombo) E.bestCombo = E.combo;
+            var line = "+" + pp.pts;
+            if (E.combo % cfg.comboEvery === 0){ E.comboPts += cfg.comboBonus; line = "STREAK x" + E.combo + " +" + cfg.comboBonus; }
+            addFx(line, pp.x + pp.w/2, pp.y, false);
+          } else { addFx("HULLED", pp.x + pp.w/2, pp.y, false); }
+          break;
+        }
+      }
+      if (struck) continue;
+      for (var m = E.navy.length - 1; m >= 0; m--){
+        var nn = E.navy[m];
+        if (rectsOverlap(sh.x, sh.y, sh.w, sh.h, nn.x, nn.y, nn.w, nn.h)){
+          E.shots.splice(j, 1); E.navy.splice(m, 1);
+          E.hits++; E.damagePts += cfg.navyPts; E.combo++;
+          if (E.combo > E.bestCombo) E.bestCombo = E.combo;
+          addFx("NAVY SUNK +" + cfg.navyPts, nn.x + nn.w/2, nn.y, false);
+          break;
+        }
+      }
+    }
+    drift(E.wake);
+    for (var wq = E.wake.length - 1; wq >= 0; wq--){ E.wake[wq].t -= dt; E.wake[wq].y += dy; if (E.wake[wq].t <= 0) E.wake.splice(wq, 1); }
+    for (var f = E.fx.length - 1; f >= 0; f--){ E.fx[f].t -= dt; E.fx[f].y -= 18 * s; if (E.fx[f].t <= 0) E.fx.splice(f, 1); }
+
+    // a wave clears when its prizes are spawned and the lane ahead is empty
+    if (E.spawned >= wc.count && E.prizes.length === 0){
+      if (E.wave < cfg.waves.length - 1){
+        E.wave++; E.spawned = 0; E.spawnTimer = 700;
+        addFx("LEG " + (E.wave + 1), W/2, H/2 - 40, false);
+      } else if (E.navy.length === 0 && E.storms.length === 0){
+        E.over = true;
+      }
+    }
+  };
+
+  E.score = function(){
+    var clean = (E.playerHits === 0 && !E.outOfSupply);
+    var noHit = clean ? cfg.noHitBonus : 0;
+    var speed = (E.over && !E.outOfSupply)
+      ? Math.max(0, Math.min(cfg.speedCap, Math.round(cfg.par - E.elapsed / 1000)))
+      : 0;
+    return {
+      damage: E.damagePts, comboPts: E.comboPts, bestCombo: E.bestCombo,
+      noHit: noHit, speed: speed,
+      total: E.damagePts + E.comboPts + noHit + speed
+    };
+  };
+
+  return E;
+}
+
+/* ---------- BLACK FLAG RUN renderer ---------- */
+function renderSea(){
+  var E = arcade, t = G.time;
+  ctx.fillStyle = "#0a2230"; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  // the lane: water in the channel, reef banks outside, scrolling
+  for (var y = 0; y <= VIEW_H; y += 8){
+    var worldY = E.scroll + (VIEW_H - y);
+    var cx = E.center(worldY), hw = E.half();
+    // reef banks
+    ctx.fillStyle = "#123a2a"; ctx.fillRect(0, y, Math.max(0, cx - hw), 8);
+    ctx.fillStyle = "#123a2a"; ctx.fillRect(cx + hw, y, VIEW_W - (cx + hw), 8);
+    ctx.fillStyle = "#0e3326"; ctx.fillRect(0, y, Math.max(0, cx - hw - 6), 8);
+    ctx.fillStyle = "#0e3326"; ctx.fillRect(cx + hw + 6, y, VIEW_W - (cx + hw + 6), 8);
+    // water with a scrolling crest
+    ctx.fillStyle = ((Math.floor((worldY)/8) % 2) === 0) ? "#13495f" : "#15506a";
+    ctx.fillRect(cx - hw, y, hw * 2, 8);
+    if ((Math.floor(worldY/24) % 3) === 0){ ctx.fillStyle = "rgba(150,205,224,.16)"; ctx.fillRect(cx - hw + 8, y + 2, 18, 2); }
+    // surf line at the bank edges
+    ctx.fillStyle = "rgba(214,238,245,.35)"; ctx.fillRect(cx - hw, y, 3, 8); ctx.fillRect(cx + hw - 3, y, 3, 8);
+  }
+  // ports
+  E.ports.forEach(function(po){
+    ctx.fillStyle = po.used ? "#5a4a3a" : "#caa66a"; ctx.fillRect(po.x, po.y, po.w, po.h);
+    ctx.fillStyle = "#6e5436"; ctx.fillRect(po.x + 6, po.y - 8, 6, 12);
+    ctx.fillStyle = po.used ? "#7a6a40" : "#e8b04b"; ctx.fillRect(po.x + 4, po.y - 12, 14, 5);
+  });
+  // storms
+  E.storms.forEach(function(so){
+    var pr = so.w/2;
+    ctx.fillStyle = "rgba(24,44,58,.6)"; ctx.beginPath(); ctx.arc(so.x+pr, so.y+pr-4, pr, 0, 7); ctx.fill();
+    var ro = (t/40)%10; ctx.fillStyle = "rgba(150,205,224,.6)";
+    for (var rx=0; rx<so.w; rx+=7){ ctx.fillRect(so.x+rx, so.y+pr+((ro+rx)%10), 1, 6); }
+    if (Math.floor(t/600)%5===0){ ctx.fillStyle="rgba(255,250,210,.85)"; ctx.fillRect(so.x+pr-1, so.y+pr, 3, so.h-pr); }
+  });
+  // prizes: fat merchant cogs and lean traders
+  E.prizes.forEach(function(p){
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(p.x+2, p.y+p.h-3, p.w-4, 4);
+    ctx.fillStyle = p.fat ? "#7a4f28" : "#8a6a44"; ctx.fillRect(p.x, p.y+4, p.w, p.h-6);
+    ctx.fillStyle = "#5c3a1e"; ctx.fillRect(p.x, p.y+4, p.w, 3);
+    ctx.fillStyle = "#3a2412"; ctx.fillRect(p.x+p.w/2-1, p.y-6, 2, 12);
+    var bil = Math.round(Math.sin(t/220+p.phase)*2);
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(p.x+p.w/2-7+bil, p.y-4, 14, 9);
+    if (p.fat){ ctx.fillStyle="#e8b04b"; ctx.fillRect(p.x+4, p.y+p.h-7, p.w-8, 3); }
+  });
+  // navy
+  E.navy.forEach(function(nv){
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(nv.x+2, nv.y+nv.h-3, nv.w-4, 4);
+    ctx.fillStyle = "#2a3744"; ctx.fillRect(nv.x, nv.y+4, nv.w, nv.h-6);
+    ctx.fillStyle = "#e8b04b"; for (var g=nv.x+5; g<nv.x+nv.w-4; g+=8){ ctx.fillRect(g, nv.y+nv.h-9, 3, 3); }
+    ctx.fillStyle = "#3a2412"; ctx.fillRect(nv.x+nv.w/2-1, nv.y-4, 2, 12);
+    var bil2 = Math.round(Math.sin(t/180)*2);
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(nv.x+nv.w/2-8+bil2, nv.y-2, 16, 10);
+    ctx.fillStyle = "#c23a2a"; ctx.fillRect(nv.x+nv.w/2+1, nv.y-8, 6, 4);
+  });
+  // shots
+  ctx.fillStyle = "#15121c";
+  E.shots.forEach(function(sh){ ctx.fillStyle = "#1a1a22"; ctx.beginPath(); ctx.arc(sh.x+2, sh.y+4, 4, 0, 7); ctx.fill(); ctx.fillStyle="rgba(232,176,75,.6)"; ctx.fillRect(sh.x, sh.y+8, 4, 5); });
+  // wake
+  E.wake.forEach(function(wk){ ctx.fillStyle = "rgba(214,238,245," + (wk.t/900).toFixed(2) + ")"; ctx.fillRect(wk.x-6, wk.y, 4, 6); ctx.fillRect(wk.x+2, wk.y, 4, 6); });
+  // the player's ship
+  var sh = E.ship;
+  var flashing = (E.elapsed < sh.invulnUntil) && (Math.floor(E.elapsed/120)%2===0);
+  if (!flashing){
+    ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(sh.x+3, sh.y+sh.h-3, sh.w-6, 5);
+    ctx.fillStyle = "#5c3a1e"; ctx.fillRect(sh.x, sh.y+6, sh.w, sh.h-8);
+    ctx.fillStyle = "#7a4f28"; ctx.fillRect(sh.x+2, sh.y, sh.w-4, 8);
+    ctx.fillStyle = "#8a6a44"; ctx.fillRect(sh.x+5, sh.y+10, sh.w-10, sh.h-14);
+    ctx.fillStyle = "#3a2412"; ctx.fillRect(sh.x+sh.w/2-1, sh.y-2, 2, 16);
+    var bil3 = Math.round(Math.sin(t/160)*2);
+    ctx.fillStyle = "#efe6d2"; ctx.fillRect(sh.x+sh.w/2-8+bil3, sh.y+2, 16, 11);
+    ctx.fillStyle = "#15121c"; ctx.fillRect(sh.x+sh.w/2+1, sh.y-8, 7, 5);  // black flag
+  }
+  // floating feedback
+  E.fx.forEach(function(fx){
+    ctx.fillStyle = fx.bad ? "#e25549" : "#7fe5b0";
+    ctx.font = "9px 'Press Start 2P', monospace"; ctx.textAlign = "center";
+    ctx.globalAlpha = Math.max(0, Math.min(1, fx.t/900));
+    ctx.fillText(fx.text, fx.x, fx.y); ctx.globalAlpha = 1;
+  });
+  // HUD: the supply gauge, the score, the leg, the streak
+  ctx.fillStyle = "rgba(13,10,18,.7)"; ctx.fillRect(0, 0, VIEW_W, 28);
+  ctx.fillStyle = "#cfc8b8"; ctx.font = "8px 'Press Start 2P', monospace"; ctx.textAlign = "left";
+  ctx.fillText("PLUNDER " + (E.damagePts + E.comboPts), 10, 18);
+  ctx.textAlign = "center"; ctx.fillStyle = "#e8b04b";
+  ctx.fillText("LEG " + (E.wave + 1) + " / " + E.cfg.waves.length, VIEW_W/2, 18);
+  if (E.combo >= 2){ ctx.fillStyle = "#7fe5b0"; ctx.fillText("STREAK x" + E.combo, VIEW_W/2, 27); }
+  // supply gauge on the right
+  ctx.textAlign = "right"; ctx.fillStyle = "#cfc8b8"; ctx.fillText("POWDER", VIEW_W - 70, 18);
+  var sw = 56, fillw = Math.round(sw * (E.supply / E.cfg.supplyMax));
+  ctx.fillStyle = "#2a2c33"; ctx.fillRect(VIEW_W - 64, 9, sw, 10);
+  ctx.fillStyle = E.supply < E.cfg.supplyMax * 0.3 ? "#e25549" : "#43d17c"; ctx.fillRect(VIEW_W - 64, 9, fillw, 10);
+}
+
+
 var CHP_ARCADE = {
-  engine:"catch", title:"BLACK FLAG RUN", skin:"gather",
-  startLabel:"MAKE SAIL", endTitle:"END OF THE RUN", hitVerb:"TAKE A PRIZE",
-  sumLabel:"Prizes taken", sumUnit:"taken", spoilUnit:"taken",
-  intro:"The sea scroller arrives in M19 S4.",
-  cleanLine:"Stage 4.", hitLine:"Stage 4.",
-  par:90, speedCap:30, noHitBonus:30, hitPts:8, comboEvery:4, comboBonus:12,
-  waves:[ { count:8, fall:70, spawnGap:520 } ],
-  catch:{ catcherW:64, items:[{ kind:"good", w:18, h:18, pts:6 }] }
+  engine: "sea",
+  title: "BLACK FLAG RUN",
+  skin: "sea",
+  startLabel: "MAKE SAIL",
+  endTitle: "THE LANE IS BEHIND YOU",
+  hitVerb: "PLUNDER A PRIZE",
+  sumLabel: "Prizes boarded",
+  sumUnit: "boarded",
+  spoilUnit: "hits taken",
+  intro: "The lane runs north between the reefs, and every merchant on it is a prize. Sail the channel, fire on the traders to board them, and keep clear of the navy patrols and the squalls. Your powder and provisions burn as you sail, so touch a friendly port before the hold runs dry. Three legs, narrower and faster each one. Plunder the lane.",
+  cleanLine: "Not a scratch on the hull and powder to spare. Three legs of open sea, and every prize that crossed your bow went into the hold.",
+  hitLine: "The hull took some shot and the powder ran low, but the hold is heavy and the lane is behind you. That is a run.",
+  lines: { aground: "RUN AGROUND ON THE REEF", navy: "THE NAVY RAKED YOUR DECK", storm: "A SQUALL THREW THE HELM" },
+  rulesHtml: "<b>PLUNDER A PRIZE</b> +8 for boarding a merchant, +16 for a fat cog<br>"
+    + "<b>SINK THE NAVY</b> +12 for raking a patrol before it rakes you<br>"
+    + "<b>STREAK OF 4</b> +14 each time, keep boarding without a scratch<br>"
+    + "<b>RESUPPLY</b> touch a friendly port to refill powder before the hold runs dry<br>"
+    + "<b>CLEAN VOYAGE</b> +35 if nothing touches you and the powder never runs out<br>"
+    + "<b>THE CLOCK</b> up to +30 for a fast run<br>"
+    + "SAIL: LEFT and RIGHT, UP and DOWN to nudge \u2022 FIRE: SPACE or A",
+  par: 60,
+  speedCap: 30,
+  noHitBonus: 35,
+  hitPts: 8,
+  fatPts: 16,
+  navyPts: 12,
+  comboEvery: 4,
+  comboBonus: 14,
+  supplyMax: 100,
+  supplyDrain: 7,
+  portRefill: 55,
+  portBonus: 6,
+  portGap: 6500,
+  shotCooldown: 260,
+  shotSpeed: 460,
+  shipSpeed: 222,
+  waves: [
+    { count: 10, scroll: 92,  half: 150, spawnGap: 620, fatEvery: 5, navySway: 40, navyGap: 2600, stormGap: 3200 },
+    { count: 13, scroll: 122, half: 124, spawnGap: 520, fatEvery: 4, navySway: 56, navyGap: 2000, stormGap: 2600 },
+    { count: 16, scroll: 152, half: 100, spawnGap: 440, fatEvery: 3, navySway: 72, navyGap: 1500, stormGap: 2100 }
+  ]
 };
 CHP_FREEPLAY.collapseTitle = CHP_DESK.collapseTitle;
 CHP_FREEPLAY.collapseLines = CHP_DESK.collapseLines;
@@ -11007,7 +11361,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M19.S3",
+  version: "M19.S4",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
