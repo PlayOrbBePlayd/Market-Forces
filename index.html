@@ -12815,6 +12815,477 @@ CHV_FREEPLAY.collapseTitle = CHV_DESK.collapseTitle;
 CHV_FREEPLAY.collapseLines = CHV_DESK.collapseLines;
 
 
+
+/* =====================================================
+   CAPITALISM QUALITY BAR PASS. Chapter 2, internal id ch1.
+   Milestone 21. Capitalism predated the Level 0 benchmark.
+   Its metro ground, decor, critters, hazards, and bespoke
+   interiors already sit at the bar; the one gap was the
+   buildings, which fell back to the generic gray box while
+   every prologue site wears a custom facade. This stage
+   gives all seven downtown buildings their own theme locked,
+   animated facade, so the market town skyline reads as one
+   coherent, living place. Pure rect and arc fills, driven by
+   G.time, no readable text, in the established studio style.
+   ===================================================== */
+
+/* a shared sidewalk base and cornice so the lots sit on the street */
+function dtBase(bx, by, bw, bh, body, cornice){
+  ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(bx - 4, by + bh - 4, bw + 8, 8);   // ground shadow
+  ctx.fillStyle = body; ctx.fillRect(bx, by + 10, bw, bh - 10);
+  ctx.fillStyle = cornice; ctx.fillRect(bx - 3, by + 4, bw + 6, 10);                  // cornice band
+}
+BUILDING_ART.factory1 = function(b, bx, by, bw, bh){
+  // a red brick works: barred windows, a loading bay, and a smokestack puffing
+  dtBase(bx, by, bw, bh, "#9e4a36", "#7d3527");
+  // brick courses
+  ctx.fillStyle = "rgba(0,0,0,.12)";
+  for (var ry = by + 16; ry < by + bh - 4; ry += 7){ ctx.fillRect(bx, ry, bw, 1); }
+  // tall industrial windows, lit from within
+  for (var wx = bx + 8; wx < bx + bw - 12; wx += 22){
+    ctx.fillStyle = "#2a2018"; ctx.fillRect(wx, by + 20, 14, bh - 28);
+    var lit = Math.floor(G.time / 700 + wx) % 4 !== 0;
+    ctx.fillStyle = lit ? "rgba(232,176,75,.5)" : "rgba(40,30,20,.6)"; ctx.fillRect(wx + 2, by + 22, 10, bh - 32);
+    ctx.fillStyle = "#1a140e"; ctx.fillRect(wx + 6, by + 20, 2, bh - 28);   // mullion
+  }
+  // a roll up loading bay
+  ctx.fillStyle = "#3a2c20"; ctx.fillRect(bx + bw - 26, by + bh - 16, 20, 14);
+  ctx.fillStyle = "#5a4636"; for (var ly = by + bh - 14; ly < by + bh - 2; ly += 3){ ctx.fillRect(bx + bw - 26, ly, 20, 1); }
+  // smokestack with a slow rising puff
+  ctx.fillStyle = "#6e3527"; ctx.fillRect(bx + 6, by - 22, 8, 30);
+  ctx.fillStyle = "#8a4636"; ctx.fillRect(bx + 6, by - 22, 8, 4);
+  for (var p = 0; p < 3; p++){
+    var pt = (G.time / 1600 + p * 0.33) % 1;
+    ctx.fillStyle = "rgba(200,200,205," + (0.4 - pt * 0.35).toFixed(2) + ")";
+    var pr = 4 + pt * 7;
+    ctx.beginPath(); ctx.arc(bx + 10 + Math.sin(pt * 6) * 4, by - 24 - pt * 20, pr, 0, 7); ctx.fill();
+  }
+};
+BUILDING_ART.bank1 = function(b, bx, by, bw, bh){
+  // a classical bank: stone columns, a pediment, gold trim, and a clock
+  dtBase(bx, by, bw, bh, "#c2bba8", "#8e887a");
+  // pediment
+  ctx.fillStyle = "#d8d2c2"; ctx.beginPath(); ctx.moveTo(bx - 4, by + 8); ctx.lineTo(bx + bw / 2, by - 8); ctx.lineTo(bx + bw + 4, by + 8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#b0a890"; ctx.fillRect(bx - 4, by + 8, bw + 8, 4);
+  // fluted columns
+  for (var cx = bx + 6; cx < bx + bw - 6; cx += 13){
+    ctx.fillStyle = "#e6e0d0"; ctx.fillRect(cx, by + 16, 8, bh - 18);
+    ctx.fillStyle = "rgba(0,0,0,.12)"; ctx.fillRect(cx + 3, by + 16, 2, bh - 18);
+    ctx.fillStyle = "#d0c8b4"; ctx.fillRect(cx - 1, by + 16, 10, 3);
+  }
+  // a brass clock with sweeping hands
+  var cxx = bx + bw / 2, cyy = by + 2;
+  ctx.fillStyle = "#caa23f"; ctx.beginPath(); ctx.arc(cxx, cyy, 7, 0, 7); ctx.fill();
+  ctx.fillStyle = "#f2e8d5"; ctx.beginPath(); ctx.arc(cxx, cyy, 5, 0, 7); ctx.fill();
+  var a = G.time / 4000;
+  ctx.strokeStyle = "#1d1812"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cxx, cyy); ctx.lineTo(cxx + Math.cos(a) * 4, cyy + Math.sin(a) * 4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cxx, cyy); ctx.lineTo(cxx + Math.cos(a * 12) * 3, cyy + Math.sin(a * 12) * 3); ctx.stroke();
+  // a small gold coin glint on the step
+  var gl = Math.floor(G.time / 500) % 2 === 0;
+  ctx.fillStyle = gl ? "#ffe9b0" : "#caa23f"; ctx.fillRect(bx + 6, by + bh - 6, 4, 4);
+};
+BUILDING_ART.exchange1 = function(b, bx, by, bw, bh){
+  // a trading hall: columns, a scrolling ticker band, and a rising index
+  dtBase(bx, by, bw, bh, "#4f7390", "#3c566e");
+  ctx.fillStyle = "#5e84a4"; ctx.fillRect(bx, by + 14, bw, 4);
+  for (var cx = bx + 7; cx < bx + bw - 6; cx += 12){ ctx.fillStyle = "#9fc0d8"; ctx.fillRect(cx, by + 20, 5, bh - 22); }
+  // a ticker band of abstract green and red bars scrolling, no text
+  var band = by + bh - 12;
+  ctx.fillStyle = "#0e1820"; ctx.fillRect(bx + 2, band, bw - 4, 8);
+  var roll = (G.time / 40) % 14;
+  for (var tx = bx + 4 - 14 + roll; tx < bx + bw - 2; tx += 14){
+    var up = (Math.floor((tx) / 14) % 2 === 0);
+    ctx.fillStyle = up ? "#43d17c" : "#e25549";
+    ctx.fillRect(tx, band + 2, 4, 4); ctx.fillRect(tx + 5, band + (up ? 1 : 3), 6, 3);
+  }
+  // a glowing index arrow over the roof, ticking up and down
+  var tick = Math.sin(G.time / 900);
+  ctx.strokeStyle = "#43d17c"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(bx + bw / 2 - 10, by + 2); ctx.lineTo(bx + bw / 2 - 2, by - 4 - tick * 4); ctx.lineTo(bx + bw / 2 + 4, by - 1 + tick * 2); ctx.lineTo(bx + bw / 2 + 12, by - 8 - tick * 4); ctx.stroke();
+  ctx.fillStyle = "#43d17c"; ctx.beginPath(); ctx.moveTo(bx + bw / 2 + 12, by - 8 - tick * 4); ctx.lineTo(bx + bw / 2 + 7, by - 6 - tick * 4); ctx.lineTo(bx + bw / 2 + 11, by - 3 - tick * 4); ctx.closePath(); ctx.fill();
+  ctx.lineWidth = 1;
+};
+BUILDING_ART.garage1 = function(b, bx, by, bw, bh){
+  // a startup garage: a roll up door glowing with whiteboard light, string bulbs, a launch bulb
+  dtBase(bx, by, bw, bh, "#6f6484", "#4f4763");
+  // the open roll up door with a lit interior
+  ctx.fillStyle = "#1a1622"; ctx.fillRect(bx + 5, by + 16, bw - 10, bh - 18);
+  var work = Math.floor(G.time / 600) % 2 === 0;
+  ctx.fillStyle = work ? "rgba(127,178,229,.45)" : "rgba(63,184,175,.4)"; ctx.fillRect(bx + 8, by + 19, bw - 16, bh - 24);
+  // a glowing whiteboard scribble inside
+  ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bx + 11, by + 26); ctx.lineTo(bx + 16, by + 22); ctx.lineTo(bx + 21, by + 27); ctx.stroke();
+  // string lights across the top
+  for (var sx = bx + 4; sx < bx + bw - 4; sx += 8){
+    var on = Math.floor(G.time / 300 + sx) % 3 !== 0;
+    ctx.fillStyle = on ? "#ffe9b0" : "#7a6a40"; ctx.fillRect(sx, by + 12, 3, 3);
+  }
+  // a bright idea bulb floating above, blinking on
+  var glow = Math.floor(G.time / 700) % 2 === 0;
+  if (glow){ ctx.fillStyle = "rgba(232,210,120,.3)"; ctx.beginPath(); ctx.arc(bx + bw - 8, by - 6, 9, 0, 7); ctx.fill(); }
+  ctx.fillStyle = glow ? "#ffe9b0" : "#9a8a50"; ctx.beginPath(); ctx.arc(bx + bw - 8, by - 6, 5, 0, 7); ctx.fill();
+  ctx.fillStyle = "#3a3330"; ctx.fillRect(bx + bw - 10, by - 1, 4, 3);
+};
+BUILDING_ART.bar1 = function(b, bx, by, bw, bh){
+  // The Gilded Tap: warm pub front, a swinging neon tankard, frosted glass glow
+  dtBase(bx, by, bw, bh, "#8a5f30", "#6e4a24");
+  // frosted windows with a warm inner glow and patron silhouettes
+  for (var wx = bx + 7; wx < bx + bw - 12; wx += 18){
+    ctx.fillStyle = "#2a1c10"; ctx.fillRect(wx, by + 18, 13, bh - 24);
+    ctx.fillStyle = "rgba(232,176,75,.4)"; ctx.fillRect(wx + 2, by + 20, 9, bh - 28);
+    var sway = Math.round(Math.sin(G.time / 600 + wx) * 1);
+    ctx.fillStyle = "rgba(40,26,12,.7)"; ctx.fillRect(wx + 4 + sway, by + 24, 4, bh - 32);  // a patron
+  }
+  // a hanging bracket and a swinging neon tankard sign
+  ctx.fillStyle = "#3a2c18"; ctx.fillRect(bx + bw - 8, by + 2, 2, 8);
+  var sw = Math.round(Math.sin(G.time / 380) * 3);
+  var lit = Math.floor(G.time / 500) % 2 === 0;
+  ctx.fillStyle = lit ? "rgba(232,176,75,.3)" : "rgba(0,0,0,0)";
+  if (lit){ ctx.beginPath(); ctx.arc(bx + bw - 13 + sw, by + 18, 11, 0, 7); ctx.fill(); }
+  ctx.fillStyle = lit ? "#ffd97a" : "#9a7a30"; ctx.fillRect(bx + bw - 18 + sw, by + 12, 10, 12);
+  ctx.fillStyle = lit ? "#fff2c0" : "#b08a40"; ctx.fillRect(bx + bw - 18 + sw, by + 12, 10, 3);  // foam
+  ctx.fillStyle = "#3a2c18"; ctx.fillRect(bx + bw - 9 + sw, by + 14, 3, 7);  // handle
+};
+BUILDING_ART.casino1 = function(b, bx, by, bw, bh){
+  // The Lucky Bull: an electric palace, chasing marquee bulbs, a neon bull
+  dtBase(bx, by, bw, bh, "#7a3349", "#5d2538");
+  // a deep marquee with chasing bulbs around the border
+  ctx.fillStyle = "#2a1420"; ctx.fillRect(bx + 4, by + 16, bw - 8, bh - 20);
+  var n = Math.floor((bw - 8) / 8);
+  for (var i = 0; i < n; i++){
+    var on = (Math.floor(G.time / 120) + i) % 3 === 0;
+    ctx.fillStyle = on ? "#ffe9b0" : "#7a4a30";
+    ctx.fillRect(bx + 6 + i * 8, by + 16, 4, 4);                       // top row
+    ctx.fillRect(bx + 6 + i * 8, by + bh - 8, 4, 4);                   // bottom row
+  }
+  // a glowing neon bull head, eyes pulsing
+  var cxx = bx + bw / 2, cyy = by + bh / 2 + 2;
+  var pulse = Math.floor(G.time / 400) % 2 === 0;
+  ctx.strokeStyle = pulse ? "#e8607f" : "#9a3a52"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cxx, cyy, 8, 0.5, 2.64); ctx.stroke();      // face curve
+  ctx.beginPath(); ctx.moveTo(cxx - 8, cyy - 4); ctx.lineTo(cxx - 13, cyy - 10); ctx.stroke();  // horn
+  ctx.beginPath(); ctx.moveTo(cxx + 8, cyy - 4); ctx.lineTo(cxx + 13, cyy - 10); ctx.stroke();  // horn
+  ctx.lineWidth = 1;
+  ctx.fillStyle = pulse ? "#ffe9b0" : "#9a7a30"; ctx.fillRect(cxx - 5, cyy, 3, 3); ctx.fillRect(cxx + 2, cyy, 3, 3);
+  // a small spotlight sweep above
+  var sweep = Math.sin(G.time / 700);
+  ctx.fillStyle = "rgba(255,233,176,.12)";
+  ctx.beginPath(); ctx.moveTo(cxx, by - 2); ctx.lineTo(cxx - 10 + sweep * 14, by - 14); ctx.lineTo(cxx + 6 + sweep * 14, by - 14); ctx.closePath(); ctx.fill();
+};
+BUILDING_ART.institute1 = function(b, bx, by, bw, bh){
+  // a civic hall of learning: a green marquee, a glowing lamp of knowledge, banners
+  dtBase(bx, by, bw, bh, "#3a6e5a", "#2a4a3c");
+  ctx.fillStyle = "#4f8a72"; ctx.fillRect(bx, by + 14, bw, 4);
+  // arched windows
+  for (var wx = bx + 9; wx < bx + bw - 10; wx += 16){
+    ctx.fillStyle = "#1c3a30"; ctx.fillRect(wx, by + 22, 11, bh - 26);
+    ctx.beginPath(); ctx.arc(wx + 5, by + 22, 5, 3.14, 0); ctx.fill();
+    ctx.fillStyle = "rgba(127,229,176,.4)"; ctx.fillRect(wx + 2, by + 24, 7, bh - 30);
+  }
+  // a glowing lamp of knowledge over the door
+  var glow = (Math.sin(G.time / 600) + 1) / 2;
+  ctx.fillStyle = "rgba(127,229,176," + (0.2 + glow * 0.3).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 4, 10, 0, 7); ctx.fill();
+  ctx.fillStyle = "#7fe5b0"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 4, 5, 0, 7); ctx.fill();
+  ctx.fillStyle = "#2a4a3c"; ctx.fillRect(bx + bw / 2 - 1, by + 8, 2, 6);
+  // two small banners gently waving
+  var wv = Math.round(Math.sin(G.time / 500) * 2);
+  ctx.fillStyle = "#caa23f"; ctx.fillRect(bx + 6, by + 16, 5, 14 + wv); ctx.fillRect(bx + bw - 11, by + 16, 5, 14 - wv);
+};
+
+
+/* =====================================================
+   SOCIALISM QUALITY BAR PASS. Chapter 3, internal id ch2.
+   Milestone 22. Socialism predated the Level 0 benchmark.
+   Its commons ground, decor, critters, hazards, and bespoke
+   interiors already sit at the bar; the gap was the buildings,
+   which fell back to the generic box (and the institute's
+   facade was a dead alias to a function that did not yet
+   exist). This stage gives all six cooperative town buildings
+   a theme locked, animated facade in the warm communal style:
+   solidarity banners, public service signs, shared light.
+   Pure rect and arc fills, driven by G.time, no readable text.
+   ===================================================== */
+BUILDING_ART.union2 = function(b, bx, by, bw, bh){
+  // a workers' hall: brick civic front, a raised fist emblem, a long solidarity banner
+  dtBase(bx, by, bw, bh, "#9a4a49", "#6e3231");
+  // warm lit windows
+  for (var wx = bx + 8; wx < bx + bw - 12; wx += 20){
+    ctx.fillStyle = "#2a1818"; ctx.fillRect(wx, by + 18, 13, bh - 24);
+    var lit = Math.floor(G.time / 800 + wx) % 3 !== 0;
+    ctx.fillStyle = lit ? "rgba(232,176,75,.5)" : "rgba(40,24,24,.6)"; ctx.fillRect(wx + 2, by + 20, 9, bh - 28);
+  }
+  // a raised fist emblem glowing over the door
+  var glow = (Math.sin(G.time / 600) + 1) / 2;
+  ctx.fillStyle = "rgba(232,200,90," + (0.2 + glow * 0.25).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 4, 11, 0, 7); ctx.fill();
+  ctx.fillStyle = "#f2d98a";
+  ctx.fillRect(bx + bw / 2 - 4, by + 2, 8, 7);                 // fist
+  ctx.fillRect(bx + bw / 2 - 3, by - 6, 6, 8);                 // forearm
+  // a solidarity banner waving across the front
+  var wv = Math.round(Math.sin(G.time / 400) * 2);
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(bx + 4, by + 14 + wv, bw - 8, 6);
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx + 4, by + 15 + wv, bw - 8, 2);
+};
+BUILDING_ART.clinic2 = function(b, bx, by, bw, bh){
+  // a public clinic: clean stone, a glowing teal cross, a welcoming canopy
+  dtBase(bx, by, bw, bh, "#d2cabb", "#928c7d");
+  // an entry canopy
+  ctx.fillStyle = "#b8b0a0"; ctx.fillRect(bx + bw / 2 - 14, by + 14, 28, 5);
+  ctx.fillStyle = "#9aa6b8"; ctx.fillRect(bx + bw / 2 - 14, by + 18, 28, 2);
+  // calm lit windows
+  for (var wx = bx + 7; wx < bx + bw - 10; wx += 16){
+    ctx.fillStyle = "#cfe2ef"; ctx.fillRect(wx, by + 22, 11, bh - 28);
+    ctx.fillStyle = "rgba(63,184,175,.3)"; ctx.fillRect(wx + 1, by + 23, 9, 4);
+  }
+  // a glowing teal medical cross, gently pulsing
+  var pulse = (Math.sin(G.time / 700) + 1) / 2;
+  var cxx = bx + bw / 2, cyy = by + 4;
+  ctx.fillStyle = "rgba(63,184,175," + (0.25 + pulse * 0.3).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(cxx, cyy, 10, 0, 7); ctx.fill();
+  ctx.fillStyle = "#3fb8af";
+  ctx.fillRect(cxx - 2, cyy - 6, 4, 12); ctx.fillRect(cxx - 6, cyy - 2, 12, 4);
+};
+BUILDING_ART.coop2 = function(b, bx, by, bw, bh){
+  // a worker cooperative: a shared workshop window, a vote tally, communal bunting
+  dtBase(bx, by, bw, bh, "#7a5036", "#5c3a25");
+  // a wide workshop window showing a shared bench
+  ctx.fillStyle = "#241a12"; ctx.fillRect(bx + 6, by + 18, bw - 12, bh - 24);
+  ctx.fillStyle = "rgba(232,176,75,.4)"; ctx.fillRect(bx + 8, by + 20, bw - 16, bh - 28);
+  ctx.fillStyle = "#5c4326"; ctx.fillRect(bx + 10, by + bh - 14, bw - 20, 5);     // bench
+  // figures working side by side, a small bob
+  var bob = Math.floor(G.time / 500) % 2;
+  ctx.fillStyle = "#3a2c1a";
+  ctx.fillRect(bx + 14, by + bh - 22 - bob, 4, 8); ctx.fillRect(bx + 24, by + bh - 22 + bob, 4, 8); ctx.fillRect(bx + 34, by + bh - 22 - bob, 4, 8);
+  // a vote tally board with rising marks
+  ctx.fillStyle = "#2a3a30"; ctx.fillRect(bx + bw - 16, by + 2, 12, 12);
+  var marks = Math.floor(G.time / 900) % 4 + 1;
+  ctx.fillStyle = "#7fe5b0";
+  for (var m = 0; m < marks; m++){ ctx.fillRect(bx + bw - 14 + m * 3, by + 5, 2, 6); }
+  // communal bunting strung across the top
+  for (var fx2 = bx + 2; fx2 < bx + bw - 2; fx2 += 8){
+    ctx.fillStyle = (fx2 % 16 < 8) ? "#c23a2a" : "#3fb8af";
+    var hang = Math.round(Math.sin(G.time / 500 + fx2) * 1);
+    ctx.beginPath(); ctx.moveTo(fx2, by + 8); ctx.lineTo(fx2 + 4, by + 13 + hang); ctx.lineTo(fx2 + 8, by + 8); ctx.closePath(); ctx.fill();
+  }
+};
+BUILDING_ART.works2 = function(b, bx, by, bw, bh){
+  // the people's works: a public utility plant, a turning gear, a water tank, steam
+  dtBase(bx, by, bw, bh, "#4f7390", "#3c566e");
+  // a tall water tank on legs
+  ctx.fillStyle = "#3a4a56"; ctx.fillRect(bx + 4, by - 10, 14, 14);
+  ctx.fillStyle = "#5b7f9e"; ctx.fillRect(bx + 4, by - 10, 14, 4);
+  ctx.fillStyle = "#2a3640"; ctx.fillRect(bx + 5, by + 4, 3, 8); ctx.fillRect(bx + 14, by + 4, 3, 8);
+  // a large turning gear on the facade
+  var spin = G.time / 900;
+  var gcx = bx + bw - 16, gcy = by + bh / 2 + 2, gr = 11;
+  ctx.fillStyle = "#9aa6b8"; ctx.beginPath(); ctx.arc(gcx, gcy, gr, 0, 7); ctx.fill();
+  ctx.fillStyle = "#5b7f9e"; ctx.beginPath(); ctx.arc(gcx, gcy, gr - 4, 0, 7); ctx.fill();
+  ctx.fillStyle = "#cfe2ef";
+  for (var gt = 0; gt < 8; gt++){
+    var a = spin + gt * 0.785;
+    ctx.fillRect(gcx + Math.cos(a) * gr - 1.5, gcy + Math.sin(a) * gr - 1.5, 3, 3);
+  }
+  // lit control windows
+  for (var wx = bx + 8; wx < bx + bw - 24; wx += 12){
+    var on = Math.floor(G.time / 400 + wx) % 2 === 0;
+    ctx.fillStyle = on ? "#7fe5b0" : "#2a4a44"; ctx.fillRect(wx, by + 22, 7, 7);
+  }
+  // a puff of steam from a vent
+  var st = (G.time / 1400) % 1;
+  ctx.fillStyle = "rgba(214,238,245," + (0.35 - st * 0.3).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + 24, by + 14 - st * 14, 4 + st * 6, 0, 7); ctx.fill();
+};
+BUILDING_ART.meeting2 = function(b, bx, by, bw, bh){
+  // the meeting hall: an overfull agenda, a clock that crawls, coffee steam, seated silhouettes
+  dtBase(bx, by, bw, bh, "#6f6484", "#4f4763");
+  // dim windows with seated figures that never leave
+  for (var wx = bx + 8; wx < bx + bw - 12; wx += 18){
+    ctx.fillStyle = "#1c1826"; ctx.fillRect(wx, by + 18, 13, bh - 24);
+    ctx.fillStyle = "rgba(127,178,229,.25)"; ctx.fillRect(wx + 2, by + 20, 9, bh - 28);
+    ctx.fillStyle = "#2a2436"; ctx.fillRect(wx + 4, by + 24, 4, bh - 30);   // a seated head, motionless
+  }
+  // an overfull agenda board, lines never shrinking
+  ctx.fillStyle = "#f2e8d5"; ctx.fillRect(bx + 4, by + 2, 14, 12);
+  ctx.fillStyle = "#7a6e52"; for (var ln = 0; ln < 5; ln++){ ctx.fillRect(bx + 6, by + 4 + ln * 2, 10 - (ln % 2) * 3, 1); }
+  // a wall clock whose hands barely move
+  var cxx = bx + bw - 10, cyy = by + 6;
+  ctx.fillStyle = "#cfc8b8"; ctx.beginPath(); ctx.arc(cxx, cyy, 6, 0, 7); ctx.fill();
+  ctx.fillStyle = "#15121c"; ctx.beginPath(); ctx.arc(cxx, cyy, 5, 0, 7); ctx.fill();
+  var crawl = G.time / 30000;     // painfully slow
+  ctx.strokeStyle = "#cfc8b8"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cxx, cyy); ctx.lineTo(cxx + Math.cos(crawl) * 4, cyy + Math.sin(crawl) * 4); ctx.stroke();
+  // coffee urn steam, the only thing still going
+  var stm = (G.time / 1200) % 1;
+  ctx.fillStyle = "rgba(214,214,220," + (0.3 - stm * 0.25).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + 10, by + 14 - stm * 8, 3 + stm * 3, 0, 7); ctx.fill();
+};
+BUILDING_ART.institute2 = function(b, bx, by, bw, bh){
+  // the commons institute: a shared reading rotunda, a lamp of knowledge, solidarity banners
+  dtBase(bx, by, bw, bh, "#3a6e5a", "#2a4a3c");
+  ctx.fillStyle = "#4f8a72"; ctx.fillRect(bx, by + 14, bw, 4);
+  // a glowing rotunda dome, the shared roundtable of learning
+  ctx.fillStyle = "#2a4a3c"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 14, bw / 3, 3.14, 0); ctx.fill();
+  var glow = (Math.sin(G.time / 600) + 1) / 2;
+  ctx.fillStyle = "rgba(127,229,176," + (0.3 + glow * 0.3).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 8, 6, 0, 7); ctx.fill();
+  // round reading windows
+  for (var wx = bx + 9; wx < bx + bw - 8; wx += 14){
+    ctx.fillStyle = "#1c3a30"; ctx.beginPath(); ctx.arc(wx + 4, by + 28, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(127,229,176,.4)"; ctx.beginPath(); ctx.arc(wx + 4, by + 28, 3, 0, 7); ctx.fill();
+  }
+  // two solidarity banners waving
+  var wv = Math.round(Math.sin(G.time / 500) * 2);
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(bx + 6, by + 18, 4, 14 + wv); ctx.fillRect(bx + bw - 10, by + 18, 4, 14 - wv);
+};
+
+
+/* =====================================================
+   COMMAND ECONOMY QUALITY BAR PASS. Chapter 4, internal id ch3.
+   Milestone 23. The command city predated the Level 0 benchmark
+   and had no custom facades at all. Its planned ground, decor,
+   critters, hazards, and bespoke interiors already sit at the
+   bar; this stage gives all seven buildings a theme locked,
+   animated facade in the austere planned style: concrete
+   monuments, a generic red star, ration hatches, and queues.
+   Scarcity is shown as atmosphere, never as graphic suffering,
+   per the neutrality charter. Pure rect and arc fills, G.time
+   driven, no readable text and no real party branding.
+   ===================================================== */
+function redStar(cx, cy, r, fill){
+  // a plain five point red star, generic period iconography, no party logo
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  for (var i = 0; i < 10; i++){
+    var ang = -Math.PI / 2 + i * Math.PI / 5;
+    var rad = (i % 2 === 0) ? r : r * 0.42;
+    ctx.lineTo(cx + Math.cos(ang) * rad, cy + Math.sin(ang) * rad);
+  }
+  ctx.closePath(); ctx.fill();
+}
+BUILDING_ART.planbureau3 = function(b, bx, by, bw, bh){
+  // the planning bureau: a monumental concrete block, a red star, a shifting quota board
+  dtBase(bx, by, bw, bh, "#7a4438", "#5c2f25");
+  ctx.fillStyle = "#6a3a30"; ctx.fillRect(bx, by + 10, bw, 6);
+  // rows of identical austere windows
+  for (var wy = by + 22; wy < by + bh - 6; wy += 12){
+    for (var wx = bx + 8; wx < bx + bw - 8; wx += 12){
+      var lit = Math.floor(G.time / 1000 + wx + wy) % 5 !== 0;
+      ctx.fillStyle = lit ? "rgba(232,176,75,.32)" : "#1c1410"; ctx.fillRect(wx, wy, 7, 8);
+    }
+  }
+  // a big red star crowning the bureau, faintly pulsing
+  var pulse = (Math.sin(G.time / 800) + 1) / 2;
+  redStar(bx + bw / 2, by - 2, 9, "rgba(194,58,42," + (0.7 + pulse * 0.3).toFixed(2) + ")");
+  // a quota board: bars marching toward an ever receding target line
+  ctx.fillStyle = "#2a1c18"; ctx.fillRect(bx + bw - 30, by + 18, 24, 16);
+  var roll = (G.time / 60) % 24;
+  ctx.fillStyle = "#e8b04b";
+  for (var qb = 0; qb < 4; qb++){ var h = 4 + ((roll + qb * 6) % 12); ctx.fillRect(bx + bw - 27 + qb * 6, by + 32 - h, 4, h); }
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(bx + bw - 30, by + 20, 24, 1);  // the plan target line
+};
+BUILDING_ART.blackmarket3 = function(b, bx, by, bw, bh){
+  // the back room: a dim shuttered front, a single flickering bulb, furtive crates
+  dtBase(bx, by, bw, bh, "#553544", "#3d2530");
+  // a shuttered, mostly closed window
+  ctx.fillStyle = "#1a1018"; ctx.fillRect(bx + 6, by + 18, bw - 12, bh - 24);
+  for (var sy = by + 19; sy < by + bh - 6; sy += 3){ ctx.fillStyle = "#2e1e28"; ctx.fillRect(bx + 6, sy, bw - 12, 1); }
+  // a furtive figure glimpsed in a gap
+  var peek = Math.floor(G.time / 900) % 3 === 0;
+  if (peek){ ctx.fillStyle = "rgba(232,176,75,.4)"; ctx.fillRect(bx + bw - 12, by + 22, 5, bh - 28); ctx.fillStyle = "#15121c"; ctx.fillRect(bx + bw - 11, by + 24, 3, 4); }
+  // a single bare bulb flickering over the door
+  var flick = Math.floor(G.time / 130) % 7 !== 0;
+  ctx.fillStyle = "#2a2030"; ctx.fillRect(bx + bw / 2 - 1, by + 4, 2, 6);
+  if (flick){ ctx.fillStyle = "rgba(232,210,150,.3)"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 12, 8, 0, 7); ctx.fill(); }
+  ctx.fillStyle = flick ? "#ffe9b0" : "#5a4a30"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 12, 3, 0, 7); ctx.fill();
+};
+BUILDING_ART.rationoffice3 = function(b, bx, by, bw, bh){
+  // the ration office: a drab counter front, a service hatch, a waiting queue rope
+  dtBase(bx, by, bw, bh, "#8a7a4e", "#6a5d3a");
+  ctx.fillStyle = "#766a44"; ctx.fillRect(bx, by + 10, bw, 5);
+  // a small service hatch, half shuttered
+  ctx.fillStyle = "#3a3020"; ctx.fillRect(bx + bw / 2 - 12, by + 20, 24, 14);
+  ctx.fillStyle = "#1c1810"; ctx.fillRect(bx + bw / 2 - 12, by + 20, 24, 7);     // shutter half down
+  var lit = Math.floor(G.time / 700) % 2 === 0;
+  ctx.fillStyle = lit ? "rgba(232,176,75,.4)" : "#241c10"; ctx.fillRect(bx + bw / 2 - 10, by + 28, 20, 5);
+  // a queue rope with posts, the line that is the lesson
+  for (var px = bx + 6; px < bx + bw - 6; px += 14){
+    ctx.fillStyle = "#5a5040"; ctx.fillRect(px, by + bh - 10, 2, 8);
+    ctx.strokeStyle = "#cfc8b8"; ctx.lineWidth = 1; var sag = Math.round(Math.sin(G.time / 600 + px) * 1);
+    ctx.beginPath(); ctx.moveTo(px, by + bh - 8); ctx.lineTo(px + 14, by + bh - 8 + sag); ctx.stroke();
+  }
+  // a couple of small standing figures in the queue
+  ctx.fillStyle = "#3a3020"; ctx.fillRect(bx + 10, by + bh - 18, 4, 8); ctx.fillRect(bx + 22, by + bh - 18, 4, 8);
+};
+BUILDING_ART.statefactory3 = function(b, bx, by, bw, bh){
+  // the state factory: a heavy works, a smokestack, an output tally, a red banner, a stamping pulse
+  dtBase(bx, by, bw, bh, "#506470", "#3a4a56");
+  // sawtooth factory roof
+  ctx.fillStyle = "#3a4a56";
+  for (var rx = bx; rx < bx + bw; rx += 12){ ctx.beginPath(); ctx.moveTo(rx, by + 12); ctx.lineTo(rx + 6, by + 4); ctx.lineTo(rx + 12, by + 12); ctx.closePath(); ctx.fill(); }
+  // a smokestack venting grey
+  ctx.fillStyle = "#3a4a56"; ctx.fillRect(bx + bw - 14, by - 16, 8, 26);
+  var pt = (G.time / 1500) % 1; ctx.fillStyle = "rgba(160,160,165," + (0.4 - pt * 0.35).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + bw - 10, by - 18 - pt * 16, 4 + pt * 6, 0, 7); ctx.fill();
+  // an output tally board with a stamping pulse
+  ctx.fillStyle = "#1c2630"; ctx.fillRect(bx + 8, by + 20, 26, 14);
+  var stamp = Math.floor(G.time / 500) % 2 === 0;
+  ctx.fillStyle = stamp ? "#43d17c" : "#1f4a36";
+  for (var t = 0; t < 5; t++){ ctx.fillRect(bx + 11 + t * 5, by + 28, 3, stamp ? 4 : 2); }
+  // a red banner down the side
+  var wv = Math.round(Math.sin(G.time / 450) * 2);
+  ctx.fillStyle = "#c23a2a"; ctx.fillRect(bx + bw - 8, by + 14, 5, bh - 14 + wv);
+  redStar(bx + bw - 5, by + 22, 3, "#e8b04b");
+};
+BUILDING_ART.institute3 = function(b, bx, by, bw, bh){
+  // the planned city institute: austere concrete civic hall, a lamp of knowledge, a small star
+  dtBase(bx, by, bw, bh, "#3a6e5a", "#2a4a3c");
+  ctx.fillStyle = "#345f4e"; ctx.fillRect(bx, by + 14, bw, 4);
+  // plain tall windows
+  for (var wx = bx + 9; wx < bx + bw - 8; wx += 13){
+    ctx.fillStyle = "#1c3a30"; ctx.fillRect(wx, by + 20, 8, bh - 24);
+    ctx.fillStyle = "rgba(127,229,176,.35)"; ctx.fillRect(wx + 1, by + 22, 6, bh - 28);
+  }
+  // a lamp of knowledge over the door, the one warm thing
+  var glow = (Math.sin(G.time / 600) + 1) / 2;
+  ctx.fillStyle = "rgba(127,229,176," + (0.2 + glow * 0.3).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 4, 9, 0, 7); ctx.fill();
+  ctx.fillStyle = "#7fe5b0"; ctx.beginPath(); ctx.arc(bx + bw / 2, by + 4, 4, 0, 7); ctx.fill();
+  // a small red star at the cornice, theme locking it to the command city
+  redStar(bx + 8, by + 9, 3, "#c23a2a");
+};
+BUILDING_ART.breadqueue3 = function(b, bx, by, bw, bh){
+  // the bread shop: a long queue rope, a near bare window, a couple of loaves
+  dtBase(bx, by, bw, bh, "#a8824a", "#7a5d28");
+  // the shop window, mostly empty shelves
+  ctx.fillStyle = "#2a2014"; ctx.fillRect(bx + 6, by + 18, bw - 12, bh - 24);
+  ctx.fillStyle = "rgba(232,176,75,.3)"; ctx.fillRect(bx + 8, by + 20, bw - 16, bh - 28);
+  ctx.fillStyle = "#5a4326";
+  ctx.fillRect(bx + 8, by + 26, bw - 16, 2); ctx.fillRect(bx + 8, by + 32, bw - 16, 2);   // bare shelves
+  // a couple of remaining loaves on the top shelf
+  ctx.fillStyle = "#caa06a"; ctx.beginPath(); ctx.arc(bx + 12, by + 25, 3, 3.14, 0); ctx.fill(); ctx.beginPath(); ctx.arc(bx + 20, by + 25, 3, 3.14, 0); ctx.fill();
+  // a queue rope outside with waiting figures shuffling
+  for (var px = bx + 4; px < bx + bw - 4; px += 10){
+    var shuffle = Math.floor(G.time / 700 + px) % 2;
+    ctx.fillStyle = "#5a4630"; ctx.fillRect(px, by + bh - 16 - shuffle, 4, 9);
+    ctx.fillStyle = "#3a2c1a"; ctx.fillRect(px, by + bh - 19 - shuffle, 4, 4);
+  }
+  // an OPEN or CLOSED lamp, mostly red
+  var open = Math.floor(G.time / 2400) % 4 === 0;
+  ctx.fillStyle = open ? "#43d17c" : "#c23a2a"; ctx.fillRect(bx + bw - 10, by + 4, 6, 4);
+};
+BUILDING_ART.cinema3 = function(b, bx, by, bw, bh){
+  // the people's cinema: a marquee with a flickering projector beam, a big red star, a poster
+  dtBase(bx, by, bw, bh, "#723636", "#4f2525");
+  // a deep marquee
+  ctx.fillStyle = "#2a1414"; ctx.fillRect(bx + 4, by + 14, bw - 8, 8);
+  var n = Math.floor((bw - 8) / 7);
+  for (var i = 0; i < n; i++){ var on = (Math.floor(G.time / 160) + i) % 4 === 0; ctx.fillStyle = on ? "#ffe9b0" : "#6a4030"; ctx.fillRect(bx + 6 + i * 7, by + 15, 3, 3); }
+  // an abstract propaganda poster, bold blocks of color, no text
+  ctx.fillStyle = "#a8302a"; ctx.fillRect(bx + 8, by + 24, 16, bh - 28);
+  ctx.fillStyle = "#e8b04b"; ctx.fillRect(bx + 11, by + 27, 10, 5);
+  redStar(bx + 16, by + 36, 4, "#f2e8d5");
+  // a flickering projector beam from a high window
+  var flick = Math.floor(G.time / 110) % 5 !== 0;
+  if (flick){ ctx.fillStyle = "rgba(255,250,210,.12)"; ctx.beginPath(); ctx.moveTo(bx + bw - 8, by + 20); ctx.lineTo(bx + bw - 30, by + bh - 2); ctx.lineTo(bx + bw - 16, by + bh - 2); ctx.closePath(); ctx.fill(); }
+  // a big red star crowning the cinema
+  var pulse = (Math.sin(G.time / 700) + 1) / 2;
+  redStar(bx + bw / 2, by - 2, 8, "rgba(194,58,42," + (0.7 + pulse * 0.3).toFixed(2) + ")");
+};
+
 var CHAPTER_ID = "ch1";
 var CUR = CHAPTERS.ch1;
 var DESK_CFG = CH1_DESK;
@@ -12871,7 +13342,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M20.S5",
+  version: "M23.S1",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
