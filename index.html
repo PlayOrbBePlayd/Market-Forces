@@ -274,7 +274,8 @@
     perspective:300px;perspective-origin:50% 0%;overflow:hidden;z-index:2}
   .bf-tilt{width:min(680px,86%);transform-origin:50% 100%;transform:rotateX(30deg)}
   .bf-crawl{width:100%;color:var(--paper);will-change:transform}
-  .bf-crawl.bf-scroll{animation:bfCrawl 32s linear forwards}
+  .bf-crawl.bf-scroll{animation:bfCrawl var(--bf-dur,64s) linear forwards}
+  .bf-crawl.bf-paused{animation-play-state:paused}
   @keyframes bfCrawl{0%{transform:translateY(72vh)}100%{transform:translateY(-165%)}}
   .bf-eyebrow{font-family:var(--display);font-size:9px;letter-spacing:1px;color:var(--bf-accent);
     line-height:1.7;margin-bottom:12px}
@@ -293,7 +294,11 @@
   .bf-hint{position:absolute;top:12px;right:14px;z-index:5;font-family:var(--display);
     font-size:7px;color:#8d83a5}
   .bf-controls{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;
-    padding:16px;background:linear-gradient(rgba(8,6,15,0), var(--bf-bg2) 62%)}
+    align-items:center;gap:10px;flex-wrap:wrap;padding:16px;background:linear-gradient(rgba(8,6,15,0), var(--bf-bg2) 62%)}
+  .bf-ctl{font-family:var(--display);font-size:8px;color:var(--paper);background:rgba(13,10,18,.72);
+    border:2px solid rgba(255,255,255,.22);border-radius:8px;padding:10px 12px;cursor:pointer;
+    box-shadow:0 3px 0 var(--shadow)}
+  .bf-ctl:active{transform:translateY(2px);box-shadow:0 1px 0 var(--shadow)}
   #briefing-btn{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;
     font-family:var(--display);font-size:8px;color:var(--teal);background:rgba(13,10,18,.74);
     border:2px solid var(--teal);border-radius:8px;padding:8px 11px;cursor:pointer;display:none;
@@ -420,11 +425,11 @@
         <div id="gallery-intro">
           <div class="gi-kicker">BELLA VITA LABS</div>
           <div class="gi-title">THE LONG VIEW</div>
-          <div class="gi-sub">Seven worlds. One traveler.<br>The pixels were a promise.</div>
+          <div class="gi-sub">Seven worlds. One curious light.<br>The pixels were a promise.</div>
         </div>
         <div id="gallery-topbar">
           <button id="gallery-leave">LEAVE</button>
-          <div class="gal-reveal">We built it in eight bits on purpose.<br>This is where it was always headed.<br><b>One traveler. Seven worlds.</b></div>
+          <div class="gal-reveal">We built it in eight bits on purpose.<br>This is where it was always headed.<br><b>One light. Seven worlds.</b></div>
         </div>
         <div id="gallery-card"></div>
       </div>
@@ -6415,7 +6420,7 @@ function completeChapter(){
     var finale = el("button", "btn tick", "\u2605 ENTER THE LONG VIEW");
     finale.addEventListener("click", function(){ openGallery({ from: "COMPLETE" }); });
     completeInner.appendChild(finale);
-    completeInner.appendChild(el("div", "sub", "Every world is cleared. The traveler's hall is open. Walk it and meet who you have been."));
+    completeInner.appendChild(el("div", "sub", "Every world is cleared. The hall of light is open. Walk it as a curious light and hear every world make its case."));
   }
 
   var again = el("button", "btn ghost", "WALK AGAIN");
@@ -6678,12 +6683,46 @@ function buildCrawlBody(cfg){
 
 /* ---------- The briefing engine ---------- */
 var panelBriefing = document.getElementById("panel-briefing");
-var briefing = null;          // { mode, chId, onDone }
+var briefing = null;          // { mode, chId, onDone, paused }
 var briefingCrawlEl = null;
+var briefingPauseBtn = null;
+var briefingEndHandler = null;
+
+// The crawl scrolls over this many seconds, roughly half the original pace.
+// This is the authoritative value, applied inline so it wins over the CSS default.
+var BF_SCROLL_SECONDS = 64;
 
 function briefingButtonVisible(show){
   var b = document.getElementById("briefing-btn");
   if (b) b.style.display = show ? "block" : "none";
+}
+
+function updateBriefingPauseLabel(){
+  if (briefingPauseBtn) briefingPauseBtn.textContent = (briefing && briefing.paused) ? "RESUME" : "PAUSE";
+}
+
+function startBriefingScroll(){
+  var crawl = briefingCrawlEl;
+  if (!crawl) return;
+  if (briefingEndHandler){ crawl.removeEventListener("animationend", briefingEndHandler); briefingEndHandler = null; }
+  if (briefing) briefing.paused = false;
+  crawl.style.animationDuration = BF_SCROLL_SECONDS + "s";
+  crawl.classList.remove("bf-paused");
+  crawl.classList.remove("bf-scroll");
+  void crawl.offsetWidth;       // reflow so the animation replays from the top
+  crawl.classList.add("bf-scroll");
+  briefingEndHandler = function(){ briefingEndHandler = null; onCrawlEnd(); };
+  crawl.addEventListener("animationend", briefingEndHandler, { once: true });
+  updateBriefingPauseLabel();
+}
+
+function restartBriefingScroll(){ startBriefingScroll(); }
+
+function toggleBriefingPause(){
+  if (!briefing || !briefingCrawlEl) return;
+  briefing.paused = !briefing.paused;
+  briefingCrawlEl.classList.toggle("bf-paused", briefing.paused);
+  updateBriefingPauseLabel();
 }
 
 function renderBriefing(eyebrow, title, body, themeKey){
@@ -6717,17 +6756,30 @@ function renderBriefing(eyebrow, title, body, themeKey){
   inner.appendChild(el("div", "bf-hint", "SPACE or A to continue"));
 
   var controls = el("div", "bf-controls");
+
+  var pause = el("button", "bf-ctl", "PAUSE");
+  pause.id = "bf-pause-btn";
+  pause.setAttribute("type", "button");
+  pause.addEventListener("click", function(){ toggleBriefingPause(); this.blur(); });
+  controls.appendChild(pause);
+  briefingPauseBtn = pause;
+
+  var restart = el("button", "bf-ctl", "START OVER");
+  restart.id = "bf-restart-btn";
+  restart.setAttribute("type", "button");
+  restart.addEventListener("click", function(){ restartBriefingScroll(); this.blur(); });
+  controls.appendChild(restart);
+
   var label = (briefing && briefing.mode === "review") ? "CLOSE" : "ENTER THE WALK";
   var go = el("button", "btn ghost", label);
+  go.setAttribute("type", "button");
   go.addEventListener("click", endBriefing);
   controls.appendChild(go);
+
   inner.appendChild(controls);
 
-  // (re)start the scroll
-  crawl.classList.remove("bf-scroll");
-  void crawl.offsetWidth;       // reflow so the animation replays
-  crawl.classList.add("bf-scroll");
-  crawl.addEventListener("animationend", onCrawlEnd, { once: true });
+  // start the scroll at the slower pace, with pause and start over wired up
+  startBriefingScroll();
 }
 
 function onCrawlEnd(){ endBriefing(); }
@@ -6760,6 +6812,9 @@ function playBriefing(chId, opts){
 function endBriefing(){
   if (!briefing) return;
   var done = briefing.onDone;
+  if (briefingCrawlEl && briefingEndHandler){ briefingCrawlEl.removeEventListener("animationend", briefingEndHandler); }
+  briefingEndHandler = null;
+  briefingPauseBtn = null;
   panelBriefing.classList.remove("open");
   var inner = panelBriefing.querySelector(".panel-inner");
   if (inner) inner.innerHTML = "";
@@ -6785,25 +6840,36 @@ function reviewBriefing(){
    A separate renderer in the same single file: a DPR aware canvas,
    painted vector characters with soft shadows and rim light, smooth
    delta timed motion, a following spotlight, themed glow zones, and
-   drifting light motes. The caveman Oro is controllable and can meet
-   one protagonist from every world. Pure state engine, no DOM in the
+   drifting light motes. The player is a neutral mote of light meeting one
+   protagonist from every world, Oro the forager among them, each making the
+   case for their system. Pure state engine, no DOM in the
    step, headless safe. This is the reveal: the pixels were on purpose.
    =================================================================== */
-var GAL_W = 2720, GAL_H = 600;          // world units (the hall)
+var GAL_W = 3200, GAL_H = 600;          // world units (the hall)
 var GAL_VIEW_H = 600;                   // world units that fill the height
 var GAL_ACC = 2600, GAL_FRIC = 0.0018, GAL_MAX = 268;  // movement feel
 var GAL_TALK_R = 132;                   // proximity to a guest
 
 var GALLERY_GUESTS = [
+  { id:"oro", chId:"ch0", name:"ORO THE FORAGER", sys:"THE FIRST TRADE",
+    kit:"caveman",
+    pal:{ skin:"#cf9b6a", hair:"#3a2616", cloth:"#9a6a3a", cloth2:"#b07f47", accent:"#caa06e", trim:"#5d3f23" },
+    glow:"#e8b04b",
+    tag:"The world before money: sharing, gift, and barter.",
+    lines:[
+      "A wandering light, with no belly to fill and no coin to carry. You are what the band always reached for. Sit by the fire and let me make my case.",
+      "Before money there was the circle. A good hunt is shared, never sold, because tomorrow your own luck turns and the circle feeds you instead. Trust was the only wealth we kept, and it never once ran out.",
+      "Think on it, little light. You owe no one and no one owns you. That is the oldest freedom there is, older than every wall and ledger that came after. We had it right at the very start, and you could live it still."
+    ] },
   { id:"cob", chId:"chF", name:"COB THE MILLER", sys:"FEUDALISM",
     kit:"miller",
     pal:{ skin:"#caa06e", hair:"#6e4a2a", cloth:"#7a5a34", cloth2:"#8c6a3e", accent:"#e8d6a8", trim:"#5a3f22" },
     glow:"#e8b04b",
     tag:"Land and obligation, the ledger paid in grain.",
     lines:[
-      "Oro! Still no coin on you, I see. Out here we pay the lord in grain, the miller in grain, the priest in grain. Mostly I just end up holding grain.",
-      "Bound to the land, bound to the lord, born to my station and dying in it. You wander free and I almost envy it. Almost. The bread here is very good.",
-      "You shared a hunt so the band survived. We render a harvest so the manor survives. Older than coin, the both of us."
+      "A light with no lord and no land. Strange thing. Out here every soul belongs to someone above and shelters someone below, and there is a deep safety in that you would feel at once.",
+      "Coin is thin armor when the roads run dark. The bond is thicker. The lord owes me his protection, I owe him the harvest, and not one of us faces the winter alone. There is a roof in that, light, and a place that is always yours.",
+      "A world of nothing but prices forgets that people need to belong before they need a bargain. We never forgot it. Stay, and you would always be ours, and we would always be yours. Tell me that means nothing to a soul made of light."
     ] },
   { id:"jun", chId:"ch1", name:"FOUNDER JUN", sys:"CAPITALISM",
     kit:"founder",
@@ -6811,9 +6877,9 @@ var GALLERY_GUESTS = [
     glow:"#43d17c",
     tag:"The price signal coordinates a million strangers.",
     lines:[
-      "The forager who invented trade, in the flesh! You are basically my whole origin story. Want the pitch? Of course you want the pitch.",
-      "Third startup finally shipped. The market did not care about the first two, and the market is honest like that. Brutal, but honest.",
-      "Nobody here gives the orders. The price says make more or make less, and a thousand strangers listen at once. Still amazes me."
+      "A free agent made of pure light, answering to no one alive. Do you know how rare that is? You were built for the market. Let me show you why it beats every other room you have walked.",
+      "No one here gives the orders. A price says make more or make less, and a million strangers move as one, no king required. Bring a single good idea, light, and the market pays you to be right and teaches you fast where you are wrong.",
+      "It booms and it busts, and the gap can yawn wide. I will not pretend it does not. But nothing else turns a spark into something real this quickly, and a spark is exactly what you are. Come build, and watch what freedom makes."
     ] },
   { id:"amara", chId:"ch2", name:"DR. AMARA", sys:"SOCIALISM",
     kit:"clinician",
@@ -6821,9 +6887,9 @@ var GALLERY_GUESTS = [
     glow:"#3fb8af",
     tag:"Ownership and care, decided from below.",
     lines:[
-      "No coupon, no bill, no number at this door, traveler. We decided together that some things should simply be free. Sit. Drink water.",
-      "Your old band shared the hunt so nobody starved on a bad day. We are doing the same thing, only with a clinic, a union, and a vote.",
-      "Shared ownership has a cost, mind you. The meetings are long and the spur is softer. We think the floor under everyone is worth it."
+      "No coupon, no bill, no number at this door, bright one. We decided together that some things should simply be free. A being of light should grasp that faster than anyone.",
+      "The market is clever, but it lets people fall, and a fall can last a lifetime. Here we own the work in common and vote on its rules, so the floor never drops out beneath a single soul. Security is its own kind of freedom, and we would extend it to you.",
+      "The meetings run long and the private spur runs softer, I will grant you that freely. But ask what a world is even for. We say it is for everyone inside it, and we built one that truly means it. Stand with us, light."
     ] },
   { id:"voska", chId:"ch3", name:"PLANNER VOSKA", sys:"COMMAND ECONOMY",
     kit:"planner",
@@ -6831,9 +6897,9 @@ var GALLERY_GUESTS = [
     glow:"#e25549",
     tag:"One plan sets the whole board from above.",
     lines:[
-      "You. Unscheduled. The plan did not allocate a visitor for today, and yet here you stand. The plan and reality have this argument often.",
-      "Give me every number in the republic and I will hand you next year, neatly. The trouble is always the numbers that nobody reports to me.",
-      "Full employment, steel by the trainload, a city raised in a decade. Also the queue, also the empty shelf. I am told to mention only the first part."
+      "An unscheduled light. The plan did not allocate a visitor today, yet here you shine. The plan and reality have this argument often. Be counted, and hear me out.",
+      "Hand me every number in the republic and I will hand you next year, aimed on purpose at one goal. No fortunes sit idle while others starve, no rival factories waste the same work twice. A whole people can face one direction, light, and that is a power the market never held.",
+      "I am ordered to praise only the full employment and the steel by the trainload. So I will also murmur the queue and the bare shelf, because you deserve the honest figure. Weigh both, then choose. That is more than the citizens here are ever handed."
     ] },
   { id:"sable", chId:"chP", name:"QUARTERMASTER SABLE", sys:"PIRACY",
     kit:"pirate",
@@ -6841,9 +6907,9 @@ var GALLERY_GUESTS = [
     glow:"#3fb8af",
     tag:"Order without a state, written in Articles.",
     lines:[
-      "Every soul aboard signed the Articles, captain included, and every share is counted fair before my eyes. No king out here, and we like it that way.",
-      "You trade at the edge of the water, I take what crosses it. Different trades, the same sea. Keep one eye on the horizon for the navy.",
-      "Folk think we are chaos. We elected our captain and we can vote him out by supper. There is more law on this deck than on most thrones."
+      "A light no crown can tax and no navy can run down. You would have made a rare pirate. Out here there is no king at all, and we would not trade that for any treasure. Sign and see.",
+      "Folk call us chaos. Yet every soul aboard signed the Articles, the captain too, and we can vote him out by supper. Every prize is split by a fair share set down in writing. There is more law on this deck, light, than on most thrones ashore.",
+      "The honest part. The sea is violent, and this trade was bound up with the slave trade, and I will not paint over that. But order can rise from nothing more than reputation and a signed page. No state handed it down to us. We wrote it ourselves, and a free light should honor that."
     ] },
   { id:"koa", chId:"chV", name:"DESIGNER KOA", sys:"THE VENUS PROJECT",
     kit:"designer",
@@ -6851,9 +6917,9 @@ var GALLERY_GUESTS = [
     glow:"#7fb0ff",
     tag:"Designed abundance, allocation by need.",
     lines:[
-      "Five hundred years on and still no money, traveler. The machines make plenty and the city allocates by need. Most days it even works as drawn.",
-      "You began with sharing one hunt. We simply scaled the hunt to a whole city and let the robots do the chasing. The idea is the same idea.",
-      "The hard part was never the building. It is who decides what counts as need, and what we do the day someone simply wants more. We are still deciding."
+      "Five hundred years on, and still no money anywhere, traveling light. The machines make plenty and the city allocates by need. Of every world you have crossed, you arrived in the one that might already think the way you do.",
+      "Picture want abolished by design. No price on water, no bill for care, no soul laboring only to keep breathing. Effort set free for the things a mind actually wants to make. That is what we built toward, light, and most days it even works as drawn.",
+      "The hard part was never the building. It is who decides what counts as need, and what we do the day someone simply wants more. We are still deciding. I will be honest and call this hope, not proof, since it has never run at full scale. But tell me true, light. Of all of them, is this not the one that sounds like you?"
     ] }
 ];
 
@@ -6865,7 +6931,7 @@ function galInit(){
   var guests = GALLERY_GUESTS.map(function(g, i){
     return {
       ref: g,
-      x: 470 + i * 360,
+      x: 480 + i * 360,
       y: GAL_H * 0.60,
       phase: Math.random() * Math.PI * 2,
       blink: 2 + Math.random() * 3,
@@ -6989,7 +7055,7 @@ function galHero(c, ch, t, isPlayer){
   var bob = (gal && gal.reduceMotion) ? 0 : Math.sin(t*1.6 + ch.phase) * 4;
   var sway = Math.sin(t*0.9 + ch.phase) * 0.04;
   var hop = ch.react ? Math.abs(Math.sin(ch.react*9)) * 14 * ch.react : 0;
-  var dir = isPlayer ? (ch.dir||1) : -1;          // guests face the aisle (left), Oro faces travel
+  var dir = isPlayer ? (ch.dir||1) : -1;          // guests face the aisle (left)
   var moving = isPlayer && ch.moving;
   var legSwing = moving ? Math.sin(ch.anim*9) * 10 : 0;
   var armSwing = moving ? Math.sin(ch.anim*9) * 9 : Math.sin(t*1.3+ch.phase)*2;
@@ -7205,8 +7271,8 @@ function lighten(hex, amt){
   return "rgb("+r+","+g+","+b+")";
 }
 
-var ORO_REF = { name:"ORO", kit:"caveman",
-  pal:{ skin:"#cf9b6a", hair:"#3a2616", cloth:"#9a6a3a", cloth2:"#b07f47", accent:"#caa06e", trim:"#5d3f23" } };
+/* The player is rendered as a neutral mote of light (galOrb), not a humanoid,
+   so no character ref is needed for it. */
 
 function galRender(){
   if (!gctx || !gal) return;
@@ -7234,8 +7300,8 @@ function galRender(){
 
   // depth sort by y, then paint
   var actors = gal.guests.map(function(g){ return { y:g.y, draw:function(){ galHero(c, g, gal.t, false); galGuestPlate(c, g); } }; });
-  var pl = gal.player; pl.selfRef = ORO_REF;
-  actors.push({ y: pl.y, draw:function(){ galHero(c, pl, gal.t, true); } });
+  var pl = gal.player;
+  actors.push({ y: pl.y, draw:function(){ galOrb(c, pl, gal.t); } });
   actors.sort(function(a,b){ return a.y-b.y; });
   for (var a=0;a<actors.length;a++) actors[a].draw();
 
@@ -7278,8 +7344,90 @@ function galBloom(c, pl){
   }
   c.shadowColor = "#ffe6b0"; c.shadowBlur = 30;
   c.fillStyle = "rgba(255,230,176,0.42)";
-  c.beginPath(); c.arc(pl.x, pl.y-98, 9, 0, Math.PI*2); c.fill();
+  c.beginPath(); c.arc(pl.x, pl.y-62, 9, 0, Math.PI*2); c.fill();
   c.restore();
+}
+
+/* The player: a neutral, curious mote of light. Warm white core, slow
+   shimmer rings, drifting sparks. No allegiance, no costume. It brightens
+   a touch when near a guest or mid conversation, as if leaning in to listen. */
+function galOrb(c, p, t){
+  var still = gal && gal.reduceMotion;
+  var cx = p.x;
+  var bob = still ? 0 : Math.sin(t * 1.3 + (p.phase || 0)) * 5;
+  var cy = (p.y - 62) + bob;
+  var listening = !!(gal && (gal.talking || gal.near));
+  var lift = listening ? 1.12 : 1.0;     // brightens when leaning in
+  var R = 21 * lift;                      // core radius
+
+  c.save();
+
+  // floor shadow (kept soft and grounded so the orb reads as present)
+  c.globalCompositeOperation = "source-over";
+  c.fillStyle = "rgba(0,0,0,0.22)";
+  c.beginPath();
+  c.ellipse(cx, p.y - 6, 26, 8, 0, 0, Math.PI*2);
+  c.fill();
+
+  // everything luminous is additive
+  c.globalCompositeOperation = "lighter";
+
+  // outer halo
+  var halo = c.createRadialGradient(cx, cy, R*0.3, cx, cy, R*4.2);
+  halo.addColorStop(0,   "rgba(255,247,224," + (0.50*lift).toFixed(3) + ")");
+  halo.addColorStop(0.4, "rgba(255,228,176,0.22)");
+  halo.addColorStop(1,   "rgba(255,224,160,0)");
+  c.fillStyle = halo;
+  c.beginPath(); c.arc(cx, cy, R*4.2, 0, Math.PI*2); c.fill();
+
+  // two slow shimmer rings, one cool one warm, drifting in opposite spins
+  if (!still){
+    var rs = [
+      { rot: t*0.6,  rx: R*2.0, ry: R*0.8, col:"rgba(180,214,255,0.30)" },
+      { rot: -t*0.45, rx: R*1.7, ry: R*0.66, col:"rgba(255,210,150,0.30)" }
+    ];
+    for (var i=0;i<rs.length;i++){
+      var r = rs[i];
+      c.save();
+      c.translate(cx, cy); c.rotate(r.rot);
+      c.strokeStyle = r.col; c.lineWidth = 2.2;
+      c.beginPath(); c.ellipse(0, 0, r.rx, r.ry, 0, 0, Math.PI*2); c.stroke();
+      c.restore();
+    }
+  } else {
+    c.strokeStyle = "rgba(200,220,255,0.22)"; c.lineWidth = 2;
+    c.beginPath(); c.ellipse(cx, cy, R*1.85, R*0.74, 0, 0, Math.PI*2); c.stroke();
+  }
+
+  // core sphere with inner bloom
+  c.shadowColor = "rgba(255,236,190,0.9)";
+  c.shadowBlur = still ? 16 : 26;
+  var core = c.createRadialGradient(cx - R*0.28, cy - R*0.32, R*0.15, cx, cy, R);
+  core.addColorStop(0,   "#fffef9");
+  core.addColorStop(0.55,"#fff1d2");
+  core.addColorStop(1,   "rgba(255,228,176,0.9)");
+  c.fillStyle = core;
+  c.beginPath(); c.arc(cx, cy, R, 0, Math.PI*2); c.fill();
+
+  // specular highlight
+  c.shadowBlur = 0;
+  c.fillStyle = "rgba(255,255,255,0.85)";
+  c.beginPath(); c.arc(cx - R*0.30, cy - R*0.34, R*0.26, 0, Math.PI*2); c.fill();
+
+  // a few orbiting sparks
+  var sparks = still ? 0 : 3;
+  for (var s=0;s<sparks;s++){
+    var a = t*1.1 + s*(Math.PI*2/3);
+    var orx = R*2.4, ory = R*1.0;
+    var sx = cx + Math.cos(a)*orx;
+    var sy = cy + Math.sin(a)*ory;
+    var tw = 0.5 + 0.5*Math.abs(Math.sin(t*2.2 + s));
+    c.fillStyle = "rgba(255,244,210," + tw.toFixed(3) + ")";
+    c.beginPath(); c.arc(sx, sy, 2.2, 0, Math.PI*2); c.fill();
+  }
+
+  c.restore();
+  c.globalCompositeOperation = "source-over";
 }
 
 function galDrawHall(c){
@@ -14446,7 +14594,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M25.S2",
+  version: "M26.S2",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -14464,6 +14612,7 @@ window.MF = {
   galRenderOnce: function(){ return galRender(); },
   galReduceMotion: function(){ return gal ? gal.reduceMotion : null; },
   galNearest: galNearest,
+  galConfig: function(){ return { W:GAL_W, H:GAL_H, talkR:GAL_TALK_R, max:GAL_MAX, viewH:GAL_VIEW_H }; },
   allChaptersCleared: allChaptersCleared,
   briefingThemes: BRIEFING_THEMES,
   buildAmbient: buildAmbient,
@@ -14473,6 +14622,11 @@ window.MF = {
   playGameIntro: playGameIntro,
   reviewBriefing: reviewBriefing,
   skipBriefing: endBriefing,
+  briefingPause: toggleBriefingPause,
+  briefingTogglePause: toggleBriefingPause,
+  briefingRestart: restartBriefingScroll,
+  briefingPaused: function(){ return briefing ? !!briefing.paused : null; },
+  briefingScrollSeconds: BF_SCROLL_SECONDS,
   beginWalk: beginWalk,
   briefingState: function(){ return briefing; },
   briefingText: function(){ return briefingCrawlEl ? (briefingCrawlEl.textContent || "") : ""; },
