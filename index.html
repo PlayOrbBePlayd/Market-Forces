@@ -11028,9 +11028,18 @@ ARRIVALS.ch0 = {
     hello: "She holds up a fish and points at your axe, and waits without a word. Trade?",
     action: "TRY THE TRADE",
     bye: "Goods for goods, and only when both wants meet. That is barter at the edge." },
-  miro: { who: "ELDER MIRO", hello: "", action: "", bye: "" },
-  bran: { who: "BRAN THE HOARDER", hello: "", action: "", bye: "" },
-  ula:  { who: "FAR TRADER ULA", hello: "", action: "", bye: "" }
+  miro: { who: "ELDER MIRO",
+    hello: "Sit a moment by the fire, young hunter. There is a thing about how this band eats that is worth your knowing.",
+    action: "SPEAK WITH MIRO",
+    bye: "Carry it with you out there. The band is the only storehouse a body like ours has ever had." },
+  bran: { who: "BRAN THE HOARDER",
+    hello: "Lean in, away from the others. I have a little trick of my own, or so I keep telling myself.",
+    action: "HEAR BRAN OUT",
+    bye: "Think on it as you go. A hidden stash and a circle you snubbed make for a cold, lonely winter." },
+  ula:  { who: "FAR TRADER ULA",
+    hello: "She catches your eye across the water, a dried fish held up in one hand, and waits to see what you carry.",
+    action: "APPROACH ULA",
+    bye: "Goods for goods, and only when both wants meet at once. Until then, you each walk on." }
 };
 
 /* ----- Prologue shelters: no buildings, only what a band could make ----- */
@@ -14594,7 +14603,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M26.S2",
+  version: "M27.S1",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
