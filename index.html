@@ -640,6 +640,18 @@ var SCENES = {
   reefP:         "Images/reefP.jpg",
   magsP:         "Images/magsP.jpg",
   deskP:         "Images/deskP.jpg",
+  // Chapter 6, The Venus Project
+  allochubV:   "Images/allochubV.jpg",
+  fabfarmV:    "Images/fabfarmV.jpg",
+  designlabV:  "Images/designlabV.jpg",
+  archiveV:    "Images/archiveV.jpg",
+  immersionV:  "Images/immersionV.jpg",
+  statusV:     "Images/statusV.jpg",
+  instituteV:  "Images/instituteV.jpg",
+  ansaV:       "Images/ansaV.jpg",
+  oriV:        "Images/oriV.jpg",
+  veshV:       "Images/veshV.jpg",
+  deskV:       "Images/deskV.jpg",
 };
 var fadeEl = document.getElementById("fade");
 var fadeTimer = null;
@@ -12731,16 +12743,44 @@ var CHV_ARCADE = {
     { drops: 4, gravity: 100, thrust: 208, sideThrust: 146, burnUp: 28, burnSide: 19, fuel: 98,  padW: 58, maxLandV: 42, maxLandVx: 22, wind: 28, entryDrift: 58 }
   ]
 };
-var CHV_FREEPLAY = {         /* S5 */
+var CHV_FREEPLAY = {
   chapter: "CHAPTER 6: THE VENUS PROJECT",
   tickMs: 1600,
   needleNames: { prosperity:"ABUNDANCE", equality:"ACCESS", freedom:"AUTONOMY", stability:"HARMONY" },
-  intro: "",
+  intro: "The design is yours for as long as you can hold it together. Every cycle the city drifts: machines wear, needs grow, and the quiet friction of who gets what never fully rests. Set the four levers, read the board, and adjust. There is no win condition and no proof this could ever run for real, so treat it as a stress test you can play forever. Keep the city humming, or watch the ideal come apart in a single cycle. Both are lessons.",
   banksNote: "FREE PLAY BANKS NOTHING. THE SANDBOX IS THE REWARD.",
   drift: { prosperity: -1, stability: -1 },
   shockEvery: { min: 7, max: 13 },
-  levers: [],
-  shocks: []
+  levers: [
+    { id:"fabs", name:"THE FABS", start:1, positions:[
+      { t:"RUN LEAN",      fx:{ prosperity:-1, stability:1 } },
+      { t:"STEADY OUTPUT", fx:{ prosperity:1, stability:-1 } },
+      { t:"FULL TILT",     fx:{ prosperity:2, freedom:1, stability:-2 } }
+    ]},
+    { id:"allocation", name:"ALLOCATION", start:1, positions:[
+      { t:"OPEN CRITERIA", fx:{ freedom:2, stability:-1 } },
+      { t:"MEASURED NEED", fx:{ equality:2, stability:1, freedom:-1 } },
+      { t:"EXPERT PANEL",  fx:{ stability:2, freedom:-2 } }
+    ]},
+    { id:"design", name:"THE DESIGN", start:1, positions:[
+      { t:"LOOSE PLAN",    fx:{ freedom:2, stability:-1 } },
+      { t:"GUIDED DESIGN", fx:{ stability:1, prosperity:1, freedom:-1 } },
+      { t:"TOTAL DESIGN",  fx:{ stability:2, prosperity:1, freedom:-2 } }
+    ]},
+    { id:"contribution", name:"CONTRIBUTION", start:1, positions:[
+      { t:"VOLUNTARY",     fx:{ freedom:2, prosperity:-1 } },
+      { t:"FAIR ROTATION", fx:{ equality:2, stability:1, freedom:-1 } },
+      { t:"EXTRA REWARDS", fx:{ prosperity:1, equality:-2 } }
+    ]}
+  ],
+  shocks: [
+    { id:"demand",  fx:{ prosperity:-8, stability:-4 },           line:"DEMAND SURGE. A wave of new requests outran what the fabs could make this cycle, and with no price to ration them the backlog grew and the patience thinned." },
+    { id:"model",   fx:{ prosperity:-10, equality:-2 },           line:"THE MODEL MISSED IT. The allocation model underestimated a need and a district went short. Measuring need without a price is the hardest task here, and this cycle it slipped." },
+    { id:"dispute", fx:{ equality:-6, stability:-6 },             line:"NEED OR WANT. The city split over whether a contested request was a need at all, and the deliberation turned loud and personal." },
+    { id:"rigid",   fx:{ freedom:-8, stability:-2 },              line:"THE PLAN OVERRODE THEM. The master design enforced a use a neighborhood never wanted, and the residents feel run by the model rather than served by it." },
+    { id:"status",  fx:{ equality:-6, freedom:-2 },              line:"STATUS FLARE. With money gone, a scramble for rank and recognition broke out, and the wanting to be first is straining the even keel." },
+    { id:"break",   fx:{ prosperity:8, stability:-2, equality:-2 }, line:"A BREAKTHROUGH. A new fabrication method made a whole class of goods nearly free overnight. Plenty leapt ahead, and the city is already arguing over who gets the credit." }
+  ]
 };
 
 CHAPTERS.chV = {
@@ -12831,7 +12871,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M20.S4",
+  version: "M20.S5",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
