@@ -252,6 +252,68 @@
   .arcade-room .score-table td{border-bottom-color:#1d4a31}
   .arcade-room .score-table td:last-child{color:var(--ticker)}
   .arcade-room .score-table tr.total td:last-child{color:var(--brass)}
+  /* ---------- THE BRIEFING (the opening crawl). Milestone 24. ---------- */
+  #panel-briefing{--bf-accent:#3fb8af;--bf-title:#e8b04b;--bf-bg1:#1a1430;--bf-bg2:#08060f;
+    background:radial-gradient(ellipse at 50% 62%, var(--bf-bg1) 0%, var(--bf-bg2) 82%);overflow:hidden}
+  #panel-briefing .panel-inner{width:100%;max-width:100%;height:100%;max-height:100%;padding:0;
+    overflow:hidden;text-align:center;position:relative}
+  .bf-sky{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+  .bf-p{position:absolute;border-radius:50%;pointer-events:none;opacity:.5}
+  .bf-star{width:2px;height:2px;background:var(--paper);animation:bfTwinkle 3s ease-in-out infinite}
+  .bf-warm{width:2px;height:2px;background:#e8d6a8;animation:bfTwinkle 3.4s ease-in-out infinite}
+  .bf-sea{width:2px;height:2px;background:#7fe6df;animation:bfTwinkle 2.6s ease-in-out infinite}
+  .bf-ember{width:3px;height:3px;background:#f0a648;box-shadow:0 0 5px #e8731f;animation:bfRise linear infinite}
+  .bf-mote{width:2px;height:2px;background:#8fd9ff;box-shadow:0 0 6px #6db8ff;animation:bfRise linear infinite}
+  .bf-snow{width:2px;height:2px;background:#dfe7f0;animation:bfFall linear infinite}
+  .bf-ticker{width:2px;height:14px;border-radius:1px;background:linear-gradient(#43d17c,rgba(67,209,124,0));
+    animation:bfFall linear infinite}
+  @keyframes bfTwinkle{0%,100%{opacity:.14}50%{opacity:.66}}
+  @keyframes bfRise{0%{transform:translateY(10px);opacity:0}12%{opacity:.7}100%{transform:translateY(-130px);opacity:0}}
+  @keyframes bfFall{0%{transform:translateY(-16px);opacity:0}12%{opacity:.6}100%{transform:translateY(130px);opacity:0}}
+  .bf-stage{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;
+    perspective:300px;perspective-origin:50% 0%;overflow:hidden;z-index:2}
+  .bf-tilt{width:min(680px,86%);transform-origin:50% 100%;transform:rotateX(30deg)}
+  .bf-crawl{width:100%;color:var(--paper);will-change:transform}
+  .bf-crawl.bf-scroll{animation:bfCrawl 32s linear forwards}
+  @keyframes bfCrawl{0%{transform:translateY(72vh)}100%{transform:translateY(-165%)}}
+  .bf-eyebrow{font-family:var(--display);font-size:9px;letter-spacing:1px;color:var(--bf-accent);
+    line-height:1.7;margin-bottom:12px}
+  .bf-title{font-family:var(--display);font-size:clamp(15px,4vw,24px);line-height:1.5;color:var(--bf-title);
+    text-shadow:0 3px 0 var(--shadow);margin-bottom:24px}
+  .bf-body{font-size:clamp(15px,2.4vw,19px);line-height:1.7;color:var(--paper);text-align:left}
+  .bf-body h4{font-family:var(--display);font-size:10px;letter-spacing:1px;color:var(--bf-accent);
+    margin:22px 0 8px;text-align:center}
+  .bf-body p{margin:0 0 12px}
+  .bf-body .for{font-family:var(--display);font-size:8px;color:var(--brass)}
+  .bf-body .against{font-family:var(--display);font-size:8px;color:var(--teal)}
+  .bf-body .bf-close{margin-top:24px;text-align:center;font-family:var(--display);font-size:10px;
+    line-height:1.8;color:var(--bf-title)}
+  .bf-fade{position:absolute;left:0;right:0;top:0;height:30%;z-index:3;pointer-events:none;
+    background:linear-gradient(var(--bf-bg2), rgba(8,6,15,0))}
+  .bf-hint{position:absolute;top:12px;right:14px;z-index:5;font-family:var(--display);
+    font-size:7px;color:#8d83a5}
+  .bf-controls{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;
+    padding:16px;background:linear-gradient(rgba(8,6,15,0), var(--bf-bg2) 62%)}
+  #briefing-btn{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;
+    font-family:var(--display);font-size:8px;color:var(--teal);background:rgba(13,10,18,.74);
+    border:2px solid var(--teal);border-radius:8px;padding:8px 11px;cursor:pointer;display:none;
+    box-shadow:0 3px 0 var(--shadow)}
+  #briefing-btn:active{transform:translateX(-50%) translateY(2px)}
+  body.touch #briefing-btn{top:auto;bottom:184px}
+  .title-about{font-size:15px;line-height:1.55;color:var(--paper);opacity:.92;
+    max-width:520px;margin:0 auto 18px}
+  @media (max-width:560px){
+    .bf-stage{perspective:240px}
+    .bf-tilt{width:94%;transform:rotateX(22deg)}
+    .bf-body{font-size:16px}
+    .bf-controls{padding:12px}
+    body.touch .bf-hint{display:none}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .bf-stage{align-items:flex-start;overflow-y:auto;perspective:none}
+    .bf-tilt{transform:none}
+    .bf-crawl.bf-scroll{animation:none}
+  }
 </style>
 </head>
 <body>
@@ -273,6 +335,7 @@
       <div class="hud-card" id="hud-ledger" style="display:none"><span class="lbl">OBLIGATION LEDGER</span><span id="led-rows"></span></div>
       <div class="hud-card" style="text-align:right"><span class="lbl" id="lbl-run">RUN PTS</span><span id="hud-run">0</span><span class="lbl" id="lbl-life" style="margin-top:4px">LIFETIME</span><span id="hud-life">0</span></div>
     </div>
+    <button id="briefing-btn">BRIEFING</button>
 
     <div id="toast"></div>
     <div id="dialogue">
@@ -300,6 +363,10 @@
         <div id="chapter-list"></div>
         <div class="keys">MOVE: ARROWS or WASD<br>ACT: SPACE or ENTER<br>ON PHONES: PAD and A</div>
       </div>
+    </div>
+
+    <div class="panel" id="panel-briefing">
+      <div class="panel-inner"></div>
     </div>
 
     <div class="panel" id="panel-interior">
@@ -553,6 +620,7 @@ function refreshHUD(){
   elStatus.style.borderColor = slowed ? "var(--panic)" : "var(--teal)";
   elStatus.style.color = slowed ? "var(--panic)" : "var(--teal)";
   elStatus.style.display = (slowed || cared) ? "block" : "none";
+  briefingButtonVisible(G.scene === "WALK");
 }
 
 function toast(msg, ms){
@@ -3554,10 +3622,13 @@ bindHold("d-up","up"); bindHold("d-down","down");
 bindHold("d-left","left"); bindHold("d-right","right");
 var abtn = document.getElementById("abtn");
 if (abtn) abtn.addEventListener("pointerdown", function(e){ action(); e.preventDefault(); });
+var briefBtn = document.getElementById("briefing-btn");
+if (briefBtn) briefBtn.addEventListener("click", function(e){ reviewBriefing(); e.preventDefault(); });
 if (typeof window.ontouchstart !== "undefined") document.body.classList.add("touch");
 
 /* ---------- Action button ---------- */
 function action(){
+  if (G.scene==="BRIEFING"){ endBriefing(); return; }
   if (G.scene==="TITLE"){ startGame(); return; }
   if (G.scene==="DIALOGUE"){ advanceDialogue(); return; }
   if (G.scene==="ARRIVAL"){
@@ -5802,6 +5873,7 @@ function renderArcadeIntro(){
 }
 
 function startArcade(){
+  briefingButtonVisible(false);
   arcade = makeArcade(ARCADE_CFG);
   panelArcade.classList.remove("open");
   arcadeInner.innerHTML = "";
@@ -6317,10 +6389,29 @@ function resetRun(){
 }
 
 /* ---------- The title hub: a chapter chooser ---------- */
+function ensureTitleAbout(){
+  var inner = panelTitle.querySelector(".panel-inner");
+  if (!inner || inner.querySelector(".title-about")) return;
+  var about = el("div", "title-about",
+    "Walk seven economic worlds, study the thinkers who argued for and against each one, then run it yourself at the Decision Desk while four needles answer back. The game takes no side.");
+  var btn = el("button", "btn ghost", "ABOUT THE GAME");
+  btn.addEventListener("click", function(){
+    playGameIntro({ onDone: function(){ panelTitle.classList.add("open"); G.scene = "TITLE"; refreshTitle(); } });
+  });
+  var anchor = inner.querySelector("#title-progress");
+  if (anchor){
+    inner.insertBefore(about, anchor.nextSibling);
+    inner.insertBefore(btn, about.nextSibling);
+  } else {
+    inner.appendChild(about); inner.appendChild(btn);
+  }
+}
+
 function refreshTitle(){
   var prog = document.getElementById("title-progress");
   var list = document.getElementById("chapter-list");
   if (!prog || !list) return;
+  ensureTitleAbout();
   if (G.lifetime > 0){
     prog.style.display = "";
     prog.innerHTML = "LIFETIME: " + G.lifetime;
@@ -6363,16 +6454,268 @@ function refreshTitle(){
   });
 }
 
+/* ===================================================================
+   THE BRIEFING. Milestone 24. A scrolling chapter intro in the star
+   crawl tradition. One game wide explainer on first boot, one per
+   chapter before THE WALK, re viewable any time from the level.
+   Original text, strict neutrality, both shelves at full strength.
+   =================================================================== */
+var GAME_INTRO = {
+  eyebrow: "BELLA VITA LABS PRESENTS",
+  title: "MARKET FORCES",
+  body:
+    "<p>This is a game about the great economic systems of history and of theory, and it teaches them by letting you live inside each one.</p>"
+  + "<p>You will not read about a system and then take a quiz. You will walk its streets and feel its incentives in your own movement. You will study its thinkers, the ones who argued for it and the ones who argued against.</p>"
+  + "<p>Then you will sit at the Decision Desk and run the system yourself, while four needles, PROSPERITY, EQUALITY, FREEDOM, and STABILITY, answer every choice you make.</p>"
+  + "<p>The game takes no side. Every world shows its real strengths and its real failure modes, with real books arguing both ways, so the view you walk out with is your own.</p>"
+  + "<p>Move with the ARROWS or WASD. Act with SPACE. On a phone, use the pad and the A button. Step in when you are ready.</p>"
+};
+
+var CRAWLS = {
+  ch0: {
+    ep: "BRIEFING ZERO",
+    title: "THE FIRST TRADE",
+    theory: "Long before coins, people met their needs three ways. They shared inside the band, they gave and repaid gifts among kin and allies, and they bartered only at the edges, with strangers they did not yet trust. The question argued to this day is whether money grew out of barter or out of debt and obligation.",
+    place: "Deep prehistory. The foraging bands and the first farming villages, settled along the rivers where water, fish, and flint all came together.",
+    forWho: "Adam Smith and Carl Menger tell the story of money emerging on its own from barter, as traders reach for the one good that everyone will accept.",
+    againstWho: "David Graeber and Marcel Mauss answer that credit, debt, and the gift came first, and that the tidy barter origin is a story told long afterward.",
+    pro: "Sharing is the band's insurance. On the day your own hunt fails, the circle still feeds you.",
+    con: "Where there is no bank, sharing is the bank. The one who hoards the surplus is the one left outside the circle when the lean season comes.",
+    close: "Cross the valley. Trade at the Far Bank. Feel the world before money."
+  },
+  chF: {
+    ep: "BRIEFING ONE",
+    title: "FEUDALISM",
+    theory: "An economy of land and obligation rather than money and markets. Wealth is land and the labor bound to it, status is fixed at birth, and most exchange happens in service and in kind, not in coin. Everyone owes someone above and protects someone below.",
+    place: "Medieval Western Europe, roughly the ninth through the fifteenth centuries, the manor of lords, vassals, and serfs. Tokugawa Japan ran a kindred order, where wealth was counted in rice.",
+    forWho: "Marc Bloch and Regine Pernoud map the bonds that held the realm together and the security those bonds could offer in a dangerous age.",
+    againstWho: "Rodney Hilton and the historians of the Brenner debate weigh how heavily those same bonds pressed on the people who actually worked the land.",
+    pro: "Order and protection when no state could provide them. Everyone has a place, a lord, and a roof.",
+    con: "That place is also a cage. Mobility is near zero, and the lord's mill grinds the serf's grain whether the serf likes the toll or not.",
+    close: "Ride the manor. Render upward, gather below, and read the bond that holds it all together."
+  },
+  ch1: {
+    ep: "BRIEFING TWO",
+    title: "CAPITALISM",
+    theory: "Private ownership, open markets, prices, competition, profit, and wage labor. No one gives the orders. The price signal alone coordinates millions of strangers, telling each of them what to make more of and what to use less of.",
+    place: "Industrial Britain, with its factories, banks, and stock exchange. The modern United States. Hong Kong, long cited as a famously market heavy economy.",
+    forWho: "Adam Smith and Milton Friedman argue that free exchange builds wealth and disperses power, so that no single authority controls anyone's livelihood.",
+    againstWho: "Karl Polanyi and Thomas Piketty answer that an unchecked market strains the society it depends on and lets wealth pile up faster than work can earn it.",
+    pro: "Innovation, growth, and choice on a scale no earlier system ever matched.",
+    con: "Booms turn to busts, and the gap between those who own and those who earn can widen without any natural limit.",
+    close: "Walk the market town. Gather four insights. Mind the traffic, and the temptations."
+  },
+  ch2: {
+    ep: "BRIEFING THREE",
+    title: "SOCIALISM",
+    theory: "Social or collective ownership, decided democratically and from below, and usually still using markets. Cooperatives, unions, and public provision share out what private owners would otherwise hold alone. This is the from below branch, kept distinct from the command plan.",
+    place: "The Mondragon worker cooperatives of the Basque country. Yugoslavia's worker self management. The Nordic social democracies. The Israeli kibbutz.",
+    forWho: "Albert Einstein and Bhaskar Sunkara argue that shared ownership tames insecurity and gives the people who do the work a real voice in it.",
+    againstWho: "Friedrich Hayek and Ludwig von Mises warn that planning away the market throws away the knowledge that prices carry, and freedom with it.",
+    pro: "Security, dignity, and a solid floor under everyone, with the gains of the enterprise shared by the people inside it.",
+    con: "Meetings multiply, decisions slow, and shared ownership can blunt the private spur that drives individual effort.",
+    close: "Walk the town of cooperatives. Gather four insights. Watch for the tram, and the long meeting."
+  },
+  ch3: {
+    ep: "BRIEFING FOUR",
+    title: "THE COMMAND ECONOMY",
+    theory: "A single party state owns the means of production, and a central plan, not the market, sets output, prices, and who receives what. This is the authoritarian, centrally planned branch, command from above rather than cooperation from below.",
+    place: "The Soviet Union and its Five Year Plans, from 1928 to 1991. Maoist China before the 1978 reforms. North Korea. Cuba.",
+    forWho: "Cockshott and Cottrell, and the storyteller Francis Spufford, show the plan's ambition and the logic of marshaling a whole nation toward one aim.",
+    againstWho: "Friedrich Hayek argues that no central office can ever gather the scattered knowledge a market holds, and the historical record logs the shortages that followed.",
+    pro: "Rapid industrial buildup and full employment on paper, with resources aimed at a single national purpose.",
+    con: "Chronic shortages and queues, and in the worst cases famine, named here as outcomes and never shown.",
+    close: "Walk the planned city. The labels come off now. Read the quota, and the queue."
+  },
+  chP: {
+    ep: "BRIEFING FIVE",
+    title: "THE PIRATE SEA",
+    theory: "Stateless order. No central authority at all. Wealth is seized by force and sold in a free port, and order itself emerges from written articles, from reputation, and from plain self interest. It is the exact opposite of order by design.",
+    place: "The Golden Age of Piracy, roughly 1650 to 1730. Nassau in the Bahamas was a working pirate republic from about 1706 to 1718, alongside Port Royal and the havens of Madagascar.",
+    forWho: "Peter Leeson and Marcus Rediker show crews who signed Articles, elected their captains, and split the loot by fixed shares, governing themselves with no state above them.",
+    againstWho: "Mancur Olson weighs the roving bandit against the settled one, and David Cordingly looks past the romance to the violence underneath it.",
+    pro: "Real self government and fair shares, agreed in writing, with no crown to enforce them.",
+    con: "Push raiding too hard and the navy closes in while the crew turns on itself. The trade was bound up with genuine violence and with the slave trade.",
+    close: "Sail the open sea. Each island serves one need. Sign the Articles, and take your share."
+  },
+  chV: {
+    ep: "BRIEFING SIX",
+    title: "THE VENUS PROJECT",
+    theory: "A designed post scarcity society, rendered five hundred years on. Automation allocates resources by need, with no money at all. Order by total design, the far pole from the pirate sea, where nothing was designed at all.",
+    place: "No full example exists, which is why this is the speculative finale. The closest real things are the Venus Project's own research center and commons projects like open source software, where great value is made with no price tag.",
+    forWho: "Jacque Fresco and post scarcity optimists picture abundance freed from money, and work freed from the struggle just to survive.",
+    againstWho: "Ludwig von Mises and James C. Scott answer that without prices the calculation breaks down, and that grand designs tend to misread the very people they plan for.",
+    pro: "Want abolished by design, and human effort released for something other than earning a living.",
+    con: "Who decides what counts as need, and what happens when one person simply wants more. Flagged honestly as informed speculation, since this system has never run at scale.",
+    close: "Walk the city of the future. Then decide for yourself whether it holds."
+  }
+};
+
+var BRIEFING_THEMES = {
+  intro: { accent:"#3fb8af", title:"#e8b04b", bg1:"#1a1430", bg2:"#08060f", motif:"star",   count:64 },
+  ch0:   { accent:"#e8b04b", title:"#f0c36a", bg1:"#2a1d12", bg2:"#0f0a06", motif:"ember",  count:46 },
+  chF:   { accent:"#e8b04b", title:"#e8c87a", bg1:"#231809", bg2:"#0c0905", motif:"warm",   count:50 },
+  ch1:   { accent:"#43d17c", title:"#e8b04b", bg1:"#13202a", bg2:"#08060f", motif:"ticker", count:40 },
+  ch2:   { accent:"#3fb8af", title:"#e8b04b", bg1:"#241522", bg2:"#0c0810", motif:"warm",   count:50 },
+  ch3:   { accent:"#e25549", title:"#e8b04b", bg1:"#2a1414", bg2:"#0c0606", motif:"snow",   count:54 },
+  chP:   { accent:"#3fb8af", title:"#e8b04b", bg1:"#0e2030", bg2:"#05080f", motif:"sea",    count:60 },
+  chV:   { accent:"#5fd6e8", title:"#b98cff", bg1:"#141a30", bg2:"#070611", motif:"mote",   count:50 }
+};
+
+function briefingTheme(key){ return BRIEFING_THEMES[key] || BRIEFING_THEMES.intro; }
+
+function buildAmbient(motif, count){
+  var rise = (motif === "ember" || motif === "mote");
+  var fall = (motif === "snow" || motif === "ticker");
+  var html = "";
+  for (var i=0;i<count;i++){
+    var x = (Math.random()*100).toFixed(2);
+    var y = rise ? (40 + Math.random()*60).toFixed(2)
+          : fall ? (Math.random()*70).toFixed(2)
+          : (Math.random()*100).toFixed(2);
+    var delay = (Math.random()*5).toFixed(2);
+    var dur = rise ? (4 + Math.random()*4).toFixed(2)
+            : (motif === "ticker") ? (2.4 + Math.random()*2.6).toFixed(2)
+            : fall ? (6 + Math.random()*4).toFixed(2)
+            : (2.4 + Math.random()*1.6).toFixed(2);
+    html += "<span class='bf-p bf-" + motif + "' style='left:" + x + "%;top:" + y
+         + "%;animation-delay:" + delay + "s;animation-duration:" + dur + "s'></span>";
+  }
+  return html;
+}
+
+function buildCrawlBody(cfg){
+  return ""
+    + "<h4>THE THEORY</h4><p>" + cfg.theory + "</p>"
+    + "<h4>WHERE IT RAN</h4><p>" + cfg.place + "</p>"
+    + "<h4>WHO ARGUED IT</h4>"
+    + "<p><span class='for'>FOR.</span> " + cfg.forWho + "</p>"
+    + "<p><span class='against'>AGAINST.</span> " + cfg.againstWho + "</p>"
+    + "<h4>THE PROMISE</h4><p>" + cfg.pro + "</p>"
+    + "<h4>THE PRICE</h4><p>" + cfg.con + "</p>"
+    + "<p class='bf-close'>" + cfg.close + "</p>";
+}
+
+/* ---------- The briefing engine ---------- */
+var panelBriefing = document.getElementById("panel-briefing");
+var briefing = null;          // { mode, chId, onDone }
+var briefingCrawlEl = null;
+
+function briefingButtonVisible(show){
+  var b = document.getElementById("briefing-btn");
+  if (b) b.style.display = show ? "block" : "none";
+}
+
+function renderBriefing(eyebrow, title, body, themeKey){
+  var inner = panelBriefing.querySelector(".panel-inner");
+  inner.innerHTML = "";
+
+  var th = briefingTheme(themeKey);
+  panelBriefing.style.setProperty("--bf-accent", th.accent);
+  panelBriefing.style.setProperty("--bf-title", th.title);
+  panelBriefing.style.setProperty("--bf-bg1", th.bg1);
+  panelBriefing.style.setProperty("--bf-bg2", th.bg2);
+
+  var sky = el("div", "bf-sky");
+  sky.innerHTML = buildAmbient(th.motif, th.count);
+  inner.appendChild(sky);
+
+  inner.appendChild(el("div", "bf-fade top"));
+
+  var stage = el("div", "bf-stage");
+  var tilt = el("div", "bf-tilt");
+  var crawl = el("div", "bf-crawl");
+  crawl.innerHTML =
+      "<div class='bf-eyebrow'>" + eyebrow + "</div>"
+    + "<div class='bf-title'>" + title + "</div>"
+    + "<div class='bf-body'>" + body + "</div>";
+  tilt.appendChild(crawl);
+  stage.appendChild(tilt);
+  inner.appendChild(stage);
+  briefingCrawlEl = crawl;
+
+  inner.appendChild(el("div", "bf-hint", "SPACE or A to continue"));
+
+  var controls = el("div", "bf-controls");
+  var label = (briefing && briefing.mode === "review") ? "CLOSE" : "ENTER THE WALK";
+  var go = el("button", "btn ghost", label);
+  go.addEventListener("click", endBriefing);
+  controls.appendChild(go);
+  inner.appendChild(controls);
+
+  // (re)start the scroll
+  crawl.classList.remove("bf-scroll");
+  void crawl.offsetWidth;       // reflow so the animation replays
+  crawl.classList.add("bf-scroll");
+  crawl.addEventListener("animationend", onCrawlEnd, { once: true });
+}
+
+function onCrawlEnd(){ endBriefing(); }
+
+function playGameIntro(opts){
+  opts = opts || {};
+  briefing = { mode: "intro", chId: null, onDone: opts.onDone || function(){} };
+  panelTitle.classList.remove("open");
+  panelBriefing.classList.add("open");
+  G.scene = "BRIEFING";
+  briefingButtonVisible(false);
+  renderBriefing(GAME_INTRO.eyebrow, GAME_INTRO.title, GAME_INTRO.body, "intro");
+}
+
+function playBriefing(chId, opts){
+  opts = opts || {};
+  var cr = CRAWLS[chId];
+  if (!cr){ if (opts.onDone) opts.onDone(); return false; }
+  var ch = CHAPTERS[chId];
+  briefing = { mode: opts.review ? "review" : "chapter", chId: chId, onDone: opts.onDone || function(){} };
+  panelTitle.classList.remove("open");
+  panelBriefing.classList.add("open");
+  G.scene = "BRIEFING";
+  briefingButtonVisible(false);
+  var eyebrow = cr.ep + "  \u2022  " + (ch ? ch.name : cr.title);
+  renderBriefing(eyebrow, cr.title, buildCrawlBody(cr), chId);
+  return true;
+}
+
+function endBriefing(){
+  if (!briefing) return;
+  var done = briefing.onDone;
+  panelBriefing.classList.remove("open");
+  var inner = panelBriefing.querySelector(".panel-inner");
+  if (inner) inner.innerHTML = "";
+  briefing = null;
+  briefingCrawlEl = null;
+  if (typeof done === "function") done();
+}
+
+function reviewBriefing(){
+  var id = CHAPTER_ID;
+  if (!CRAWLS[id]) return;
+  var back = G.scene;
+  playBriefing(id, { review: true, onDone: function(){
+    G.scene = (back === "WALK") ? "WALK" : back;
+    briefingButtonVisible(G.scene === "WALK");
+    refreshHUD();
+  }});
+}
+
+
 function startChapter(id){
+  if (!CHAPTERS[id] || !chapterUnlocked(id)) return;
+  selectChapter(id);
+  // The briefing rolls first, then the walk begins.
+  playBriefing(id, { onDone: function(){ beginWalk(id); } });
+}
+
+function beginWalk(id){
   sceneFlash();
   sceneHide();
   spawnCritters(id);
-  if (!CHAPTERS[id] || !chapterUnlocked(id)) return;
-  selectChapter(id);
   resetRun();
   panelTitle.classList.remove("open");
   refreshHUD();
   toast(CUR.walkToast, 4200);
+  briefingButtonVisible(true);
 }
 
 function startGame(){
@@ -13340,9 +13683,15 @@ if (window.requestAnimationFrame) window.requestAnimationFrame(frame);
 refreshHUD();
 refreshTitle();
 
+/* First boot: the game wide briefing rolls once, then the title hub. */
+if (!Store.get("mf_seen_intro", false)){
+  Store.set("mf_seen_intro", true);
+  playGameIntro({ onDone: function(){ panelTitle.classList.add("open"); G.scene = "TITLE"; refreshTitle(); } });
+}
+
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M23.S1",
+  version: "M24.S2",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -13350,6 +13699,18 @@ window.MF = {
   chapter: function(){ return CUR; },
   selectChapter: selectChapter,
   scenes: SCENES,
+  crawls: CRAWLS,
+  briefingThemes: BRIEFING_THEMES,
+  buildAmbient: buildAmbient,
+  gameIntro: GAME_INTRO,
+  buildCrawlBody: buildCrawlBody,
+  playBriefing: playBriefing,
+  playGameIntro: playGameIntro,
+  reviewBriefing: reviewBriefing,
+  skipBriefing: endBriefing,
+  beginWalk: beginWalk,
+  briefingState: function(){ return briefing; },
+  briefingText: function(){ return briefingCrawlEl ? (briefingCrawlEl.textContent || "") : ""; },
   grain: function(){ return G.grain; },
   sheaves: function(){ return G.sheaves; },
   feudalState: function(){ return { grain:G.grain, lord:G.lordRendered, tithe:G.titheRendered, protected:G.protected, plague:G.plagueArrived, handMillRisk:G.handMillRisk, alchemistFed:G.alchemistFed }; },
