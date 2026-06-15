@@ -343,6 +343,22 @@
   .gc-hint{font-family:var(--display);font-size:7px;color:var(--teal);text-align:right}
   body.touch #gallery-card{bottom:182px}
   @media (max-width:560px){ .gal-reveal{display:none} .gc-line{font-size:15px} }
+  /* ---------- THE LONG VIEW: reveal intro (M25.S2) ---------- */
+  #gallery-intro{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse at 50% 42%, #0b0a16 0%, #050409 82%)}
+  #gallery-intro.run{animation:galIntro 3.4s ease forwards}
+  .gi-kicker{font-family:var(--display);font-size:8px;letter-spacing:3px;color:var(--teal);
+    margin-bottom:18px;opacity:0;animation:giUp .9s ease .2s forwards}
+  .gi-title{font-family:var(--display);font-size:clamp(20px,6vw,40px);color:var(--brass);
+    text-shadow:0 4px 0 var(--shadow);letter-spacing:2px;margin-bottom:18px;opacity:0;
+    animation:giUp 1s ease .5s forwards}
+  .gi-sub{font-family:var(--display);font-size:9px;line-height:2;color:#cdbfe0;opacity:0;
+    animation:giUp 1s ease 1s forwards}
+  @keyframes galIntro{0%{opacity:1}66%{opacity:1}100%{opacity:0}}
+  @keyframes giUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+  #gallery-card{cursor:pointer}
+  @media (prefers-reduced-motion: reduce){ #gallery-intro{display:none} }
 </style>
 </head>
 <body>
@@ -401,6 +417,11 @@
     <div id="panel-gallery">
       <canvas id="gallery-canvas"></canvas>
       <div id="gallery-ui">
+        <div id="gallery-intro">
+          <div class="gi-kicker">BELLA VITA LABS</div>
+          <div class="gi-title">THE LONG VIEW</div>
+          <div class="gi-sub">Seven worlds. One traveler.<br>The pixels were a promise.</div>
+        </div>
         <div id="gallery-topbar">
           <button id="gallery-leave">LEAVE</button>
           <div class="gal-reveal">We built it in eight bits on purpose.<br>This is where it was always headed.<br><b>One traveler. Seven worlds.</b></div>
@@ -3667,6 +3688,8 @@ var briefBtn = document.getElementById("briefing-btn");
 if (briefBtn) briefBtn.addEventListener("click", function(e){ reviewBriefing(); e.preventDefault(); });
 var galLeaveBtn = document.getElementById("gallery-leave");
 if (galLeaveBtn) galLeaveBtn.addEventListener("click", function(e){ closeGallery(); e.preventDefault(); });
+var galCardClick = document.getElementById("gallery-card");
+if (galCardClick) galCardClick.addEventListener("click", function(){ if (gal && gal.talking) galAdvance(); });
 window.addEventListener("resize", function(){ if (G.scene==="GALLERY") galSizeCanvas(); });
 if (typeof window.ontouchstart !== "undefined") document.body.classList.add("touch");
 
@@ -6388,6 +6411,13 @@ function completeChapter(){
   fp.addEventListener("click", function(){ openFreePlay(); });
   if (CUR.freeplay) completeInner.appendChild(fp);
 
+  if (allChaptersCleared()){
+    var finale = el("button", "btn tick", "\u2605 ENTER THE LONG VIEW");
+    finale.addEventListener("click", function(){ openGallery({ from: "COMPLETE" }); });
+    completeInner.appendChild(finale);
+    completeInner.appendChild(el("div", "sub", "Every world is cleared. The traveler's hall is open. Walk it and meet who you have been."));
+  }
+
   var again = el("button", "btn ghost", "WALK AGAIN");
   again.addEventListener("click", resetRun);
   completeInner.appendChild(again);
@@ -6898,7 +6928,7 @@ function galUpdate(dt){
   for (var i=0;i<gal.motes.length;i++){
     var m = gal.motes[i];
     m.y -= m.sp * s;
-    m.x += Math.sin(gal.t*m.drift + m.ph) * 6 * s;
+    m.x += (gal.reduceMotion ? 0 : Math.sin(gal.t*m.drift + m.ph) * 6 * s);
     if (m.y < -10){ m.y = GAL_H + 10; m.x = Math.random()*GAL_W; }
   }
 
@@ -6910,10 +6940,12 @@ function galUpdate(dt){
   }
   p.blink -= s; if (p.blink < 0) p.blink = 2.6 + Math.random()*3.2;
 
-  if (gal.talking){
-    // hold still while a card is open; gentle reaction continues
+  var locked = (gal.introT < 2.2) && !gal.reduceMotion;
+  if (gal.talking || locked){
+    // hold still while the reveal plays or a card is open
     p.vx *= 0.7; p.vy *= 0.7;
     p.x += p.vx*s; p.y += p.vy*s;
+    gal.near = locked ? null : galNearest();
     return;
   }
 
@@ -6954,7 +6986,7 @@ function galHero(c, ch, t, isPlayer){
   // ch: { x, y, phase, react, blink, ref?, dir? }  drawn in world space
   var ref = ch.ref ? ch.ref : ch.selfRef;
   var pal = ref.pal;
-  var bob = Math.sin(t*1.6 + ch.phase) * 4;
+  var bob = (gal && gal.reduceMotion) ? 0 : Math.sin(t*1.6 + ch.phase) * 4;
   var sway = Math.sin(t*0.9 + ch.phase) * 0.04;
   var hop = ch.react ? Math.abs(Math.sin(ch.react*9)) * 14 * ch.react : 0;
   var dir = isPlayer ? (ch.dir||1) : -1;          // guests face the aisle (left), Oro faces travel
@@ -7003,13 +7035,25 @@ function galHero(c, ch, t, isPlayer){
   // back arm
   c.strokeStyle = pal.cloth2; c.lineWidth = 12;
   c.beginPath(); c.moveTo(-18, -104); c.quadraticCurveTo(-30, -86+armSwing, -26, -64+armSwing); c.stroke();
-  // front arm
-  c.strokeStyle = pal.cloth; c.lineWidth = 13;
-  c.beginPath(); c.moveTo(18, -104); c.quadraticCurveTo(30, -86-armSwing, 26, -62-armSwing); c.stroke();
-  // hands
+  // back hand
   c.fillStyle = pal.skin;
   c.beginPath(); c.arc(-26, -62+armSwing, 6.5, 0, Math.PI*2); c.fill();
-  c.beginPath(); c.arc(26, -62-armSwing, 6.5, 0, Math.PI*2); c.fill();
+  // front arm + hand: a raised wave when a guest is greeted
+  var waving = (!isPlayer && ch.react > 0.05);
+  if (waving){
+    var wv = Math.sin(t*16) * 0.5;
+    c.strokeStyle = pal.cloth; c.lineWidth = 13;
+    c.beginPath(); c.moveTo(18, -104); c.quadraticCurveTo(30, -128, 30, -150); c.stroke();
+    c.save(); c.translate(30, -150); c.rotate(wv);
+    c.strokeStyle = pal.cloth; c.lineWidth = 12;
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -14); c.stroke();
+    c.fillStyle = pal.skin; c.beginPath(); c.arc(0, -18, 6.5, 0, Math.PI*2); c.fill();
+    c.restore();
+  } else {
+    c.strokeStyle = pal.cloth; c.lineWidth = 13;
+    c.beginPath(); c.moveTo(18, -104); c.quadraticCurveTo(30, -86-armSwing, 26, -62-armSwing); c.stroke();
+    c.fillStyle = pal.skin; c.beginPath(); c.arc(26, -62-armSwing, 6.5, 0, Math.PI*2); c.fill();
+  }
 
   // neck + head
   c.fillStyle = pal.skin;
@@ -7210,6 +7254,9 @@ function galRender(){
   }
   c.globalCompositeOperation = "source-over";
 
+  // soft bloom pass over the bright zones
+  galBloom(c, pl);
+
   // proximity prompt over the near guest (world space)
   if (gal.near && !gal.talking) galPrompt(c, gal.near);
 
@@ -7218,6 +7265,21 @@ function galRender(){
   var vg = c.createRadialGradient(cssW/2, cssH/2, cssH*0.35, cssW/2, cssH/2, cssH*0.85);
   vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)");
   c.fillStyle = vg; c.fillRect(0,0,cssW,cssH);
+}
+
+function galBloom(c, pl){
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  for (var i=0;i<gal.guests.length;i++){
+    var g = gal.guests[i];
+    c.shadowColor = g.ref.glow; c.shadowBlur = 26;
+    c.fillStyle = hexA(g.ref.glow, 0.45);
+    c.beginPath(); c.arc(g.x, g.y-98, 9, 0, Math.PI*2); c.fill();
+  }
+  c.shadowColor = "#ffe6b0"; c.shadowBlur = 30;
+  c.fillStyle = "rgba(255,230,176,0.42)";
+  c.beginPath(); c.arc(pl.x, pl.y-98, 9, 0, Math.PI*2); c.fill();
+  c.restore();
 }
 
 function galDrawHall(c){
@@ -7360,6 +7422,13 @@ function openGallery(opts){
   if (typeof elHud !== "undefined" && elHud) elHud.style.display = "none";
   briefingButtonVisible(false);
   document.getElementById("panel-gallery").classList.add("on");
+  gal.reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var introEl = document.getElementById("gallery-intro");
+  if (introEl && !gal.reduceMotion){
+    introEl.classList.remove("run"); void introEl.offsetWidth; introEl.classList.add("run");
+    introEl.addEventListener("animationend", function h(){ introEl.classList.remove("run"); introEl.removeEventListener("animationend", h); });
+  }
+  if (gal.reduceMotion) gal.introT = 3.4;
   G.keys = {};
   G.scene = "GALLERY";
   galHideCard();
@@ -14377,7 +14446,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M25.S1",
+  version: "M25.S2",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -14393,6 +14462,7 @@ window.MF = {
   galStep: function(dt){ return galUpdate(dt); },
   galAct: galAct,
   galRenderOnce: function(){ return galRender(); },
+  galReduceMotion: function(){ return gal ? gal.reduceMotion : null; },
   galNearest: galNearest,
   allChaptersCleared: allChaptersCleared,
   briefingThemes: BRIEFING_THEMES,
