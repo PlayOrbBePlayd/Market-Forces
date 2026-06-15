@@ -314,6 +314,35 @@
     .bf-tilt{transform:none}
     .bf-crawl.bf-scroll{animation:none}
   }
+  /* ---------- THE LONG VIEW (finale gallery). Milestone 25. ---------- */
+  #panel-gallery{position:absolute;inset:0;z-index:24;display:none;background:#070610}
+  #panel-gallery.on{display:block}
+  #gallery-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:auto}
+  #gallery-ui{position:absolute;inset:0;pointer-events:none;z-index:2}
+  #gallery-topbar{position:absolute;top:12px;left:12px;right:12px;display:flex;
+    justify-content:space-between;align-items:flex-start;gap:12px;z-index:3}
+  #gallery-leave{pointer-events:auto;font-family:var(--display);font-size:8px;color:var(--teal);
+    background:rgba(13,10,18,.72);border:2px solid var(--teal);border-radius:8px;padding:8px 11px;
+    cursor:pointer;box-shadow:0 3px 0 var(--shadow)}
+  #gallery-leave:active{transform:translateY(2px)}
+  .gal-reveal{font-family:var(--display);font-size:8px;color:#9a93b5;line-height:1.9;max-width:58%;
+    text-align:right;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+  .gal-reveal b{color:var(--brass)}
+  #gallery-card{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);width:min(640px,92%);
+    background:rgba(10,9,18,.93);border:2px solid rgba(255,255,255,.12);border-radius:14px;padding:14px 16px;
+    display:none;pointer-events:auto;box-shadow:0 14px 44px rgba(0,0,0,.6)}
+  #gallery-ui.on #gallery-card{display:flex;gap:14px;align-items:flex-start}
+  .gc-port{width:64px;height:64px;border-radius:12px;border:2px solid #888;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:20px;color:#fff;
+    text-shadow:0 2px 6px rgba(0,0,0,.7)}
+  .gc-main{flex:1 1 auto;text-align:left}
+  .gc-name{font-family:var(--display);font-size:10px;margin-bottom:4px}
+  .gc-sys{font-family:var(--display);font-size:7px;color:#8d83a5;margin-bottom:10px}
+  .gc-line{font-size:16px;line-height:1.5;color:var(--paper);margin-bottom:8px}
+  .gc-tag{font-size:13px;color:var(--teal);line-height:1.4;margin-bottom:8px}
+  .gc-hint{font-family:var(--display);font-size:7px;color:var(--teal);text-align:right}
+  body.touch #gallery-card{bottom:182px}
+  @media (max-width:560px){ .gal-reveal{display:none} .gc-line{font-size:15px} }
 </style>
 </head>
 <body>
@@ -367,6 +396,17 @@
 
     <div class="panel" id="panel-briefing">
       <div class="panel-inner"></div>
+    </div>
+
+    <div id="panel-gallery">
+      <canvas id="gallery-canvas"></canvas>
+      <div id="gallery-ui">
+        <div id="gallery-topbar">
+          <button id="gallery-leave">LEAVE</button>
+          <div class="gal-reveal">We built it in eight bits on purpose.<br>This is where it was always headed.<br><b>One traveler. Seven worlds.</b></div>
+        </div>
+        <div id="gallery-card"></div>
+      </div>
     </div>
 
     <div class="panel" id="panel-interior">
@@ -3600,6 +3640,7 @@ var KEYMAP = {
   ArrowLeft:"left", KeyA:"left", ArrowRight:"right", KeyD:"right"
 };
 function onKeyDown(e){
+  if (e.code==="Escape" && G.scene==="GALLERY"){ closeGallery(); e.preventDefault(); return; }
   if (KEYMAP[e.code]) { G.keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code==="Space" || e.code==="Enter") { action(); e.preventDefault(); }
 }
@@ -3624,11 +3665,15 @@ var abtn = document.getElementById("abtn");
 if (abtn) abtn.addEventListener("pointerdown", function(e){ action(); e.preventDefault(); });
 var briefBtn = document.getElementById("briefing-btn");
 if (briefBtn) briefBtn.addEventListener("click", function(e){ reviewBriefing(); e.preventDefault(); });
+var galLeaveBtn = document.getElementById("gallery-leave");
+if (galLeaveBtn) galLeaveBtn.addEventListener("click", function(e){ closeGallery(); e.preventDefault(); });
+window.addEventListener("resize", function(){ if (G.scene==="GALLERY") galSizeCanvas(); });
 if (typeof window.ontouchstart !== "undefined") document.body.classList.add("touch");
 
 /* ---------- Action button ---------- */
 function action(){
   if (G.scene==="BRIEFING"){ endBriefing(); return; }
+  if (G.scene==="GALLERY"){ galAct(); return; }
   if (G.scene==="TITLE"){ startGame(); return; }
   if (G.scene==="DIALOGUE"){ advanceDialogue(); return; }
   if (G.scene==="ARRIVAL"){
@@ -6452,6 +6497,11 @@ function refreshTitle(){
     card.appendChild(row);
     list.appendChild(card);
   });
+  var finRow = el("div", "ch-row");
+  var finBtn = el("button", "btn ghost", allChaptersCleared() ? "\u2605 THE LONG VIEW \u2022 THE FINALE" : "THE LONG VIEW \u2022 A GLIMPSE AHEAD");
+  finBtn.addEventListener("click", function(){ openGallery({ from: "TITLE" }); });
+  finRow.appendChild(finBtn);
+  list.appendChild(finRow);
 }
 
 /* ===================================================================
@@ -6700,6 +6750,640 @@ function reviewBriefing(){
 }
 
 
+/* ===================================================================
+   THE LONG VIEW. Milestone 25. The high fidelity finale gallery.
+   A separate renderer in the same single file: a DPR aware canvas,
+   painted vector characters with soft shadows and rim light, smooth
+   delta timed motion, a following spotlight, themed glow zones, and
+   drifting light motes. The caveman Oro is controllable and can meet
+   one protagonist from every world. Pure state engine, no DOM in the
+   step, headless safe. This is the reveal: the pixels were on purpose.
+   =================================================================== */
+var GAL_W = 2720, GAL_H = 600;          // world units (the hall)
+var GAL_VIEW_H = 600;                   // world units that fill the height
+var GAL_ACC = 2600, GAL_FRIC = 0.0018, GAL_MAX = 268;  // movement feel
+var GAL_TALK_R = 132;                   // proximity to a guest
+
+var GALLERY_GUESTS = [
+  { id:"cob", chId:"chF", name:"COB THE MILLER", sys:"FEUDALISM",
+    kit:"miller",
+    pal:{ skin:"#caa06e", hair:"#6e4a2a", cloth:"#7a5a34", cloth2:"#8c6a3e", accent:"#e8d6a8", trim:"#5a3f22" },
+    glow:"#e8b04b",
+    tag:"Land and obligation, the ledger paid in grain.",
+    lines:[
+      "Oro! Still no coin on you, I see. Out here we pay the lord in grain, the miller in grain, the priest in grain. Mostly I just end up holding grain.",
+      "Bound to the land, bound to the lord, born to my station and dying in it. You wander free and I almost envy it. Almost. The bread here is very good.",
+      "You shared a hunt so the band survived. We render a harvest so the manor survives. Older than coin, the both of us."
+    ] },
+  { id:"jun", chId:"ch1", name:"FOUNDER JUN", sys:"CAPITALISM",
+    kit:"founder",
+    pal:{ skin:"#e3a877", hair:"#22201f", cloth:"#1f6f63", cloth2:"#28897a", accent:"#43d17c", trim:"#0f3b35" },
+    glow:"#43d17c",
+    tag:"The price signal coordinates a million strangers.",
+    lines:[
+      "The forager who invented trade, in the flesh! You are basically my whole origin story. Want the pitch? Of course you want the pitch.",
+      "Third startup finally shipped. The market did not care about the first two, and the market is honest like that. Brutal, but honest.",
+      "Nobody here gives the orders. The price says make more or make less, and a thousand strangers listen at once. Still amazes me."
+    ] },
+  { id:"amara", chId:"ch2", name:"DR. AMARA", sys:"SOCIALISM",
+    kit:"clinician",
+    pal:{ skin:"#8a5a3c", hair:"#241c18", cloth:"#eef3f4", cloth2:"#cfe0e2", accent:"#3fb8af", trim:"#2c6e69" },
+    glow:"#3fb8af",
+    tag:"Ownership and care, decided from below.",
+    lines:[
+      "No coupon, no bill, no number at this door, traveler. We decided together that some things should simply be free. Sit. Drink water.",
+      "Your old band shared the hunt so nobody starved on a bad day. We are doing the same thing, only with a clinic, a union, and a vote.",
+      "Shared ownership has a cost, mind you. The meetings are long and the spur is softer. We think the floor under everyone is worth it."
+    ] },
+  { id:"voska", chId:"ch3", name:"PLANNER VOSKA", sys:"COMMAND ECONOMY",
+    kit:"planner",
+    pal:{ skin:"#c89878", hair:"#3a3a3a", cloth:"#5a5e66", cloth2:"#474b52", accent:"#e25549", trim:"#2b2e33" },
+    glow:"#e25549",
+    tag:"One plan sets the whole board from above.",
+    lines:[
+      "You. Unscheduled. The plan did not allocate a visitor for today, and yet here you stand. The plan and reality have this argument often.",
+      "Give me every number in the republic and I will hand you next year, neatly. The trouble is always the numbers that nobody reports to me.",
+      "Full employment, steel by the trainload, a city raised in a decade. Also the queue, also the empty shelf. I am told to mention only the first part."
+    ] },
+  { id:"sable", chId:"chP", name:"QUARTERMASTER SABLE", sys:"PIRACY",
+    kit:"pirate",
+    pal:{ skin:"#7a5236", hair:"#171717", cloth:"#243a4a", cloth2:"#2f4d61", accent:"#e8b04b", trim:"#13242f" },
+    glow:"#3fb8af",
+    tag:"Order without a state, written in Articles.",
+    lines:[
+      "Every soul aboard signed the Articles, captain included, and every share is counted fair before my eyes. No king out here, and we like it that way.",
+      "You trade at the edge of the water, I take what crosses it. Different trades, the same sea. Keep one eye on the horizon for the navy.",
+      "Folk think we are chaos. We elected our captain and we can vote him out by supper. There is more law on this deck than on most thrones."
+    ] },
+  { id:"koa", chId:"chV", name:"DESIGNER KOA", sys:"THE VENUS PROJECT",
+    kit:"designer",
+    pal:{ skin:"#9a6b4a", hair:"#0e0e12", cloth:"#2a2740", cloth2:"#3a3660", accent:"#5fd6e8", trim:"#1a1830" },
+    glow:"#7fb0ff",
+    tag:"Designed abundance, allocation by need.",
+    lines:[
+      "Five hundred years on and still no money, traveler. The machines make plenty and the city allocates by need. Most days it even works as drawn.",
+      "You began with sharing one hunt. We simply scaled the hunt to a whole city and let the robots do the chasing. The idea is the same idea.",
+      "The hard part was never the building. It is who decides what counts as need, and what we do the day someone simply wants more. We are still deciding."
+    ] }
+];
+
+/* ---------- The gallery engine (pure state) ---------- */
+var galCanvas = null, gctx = null, galDpr = 1;
+var gal = null;
+
+function galInit(){
+  var guests = GALLERY_GUESTS.map(function(g, i){
+    return {
+      ref: g,
+      x: 470 + i * 360,
+      y: GAL_H * 0.60,
+      phase: Math.random() * Math.PI * 2,
+      blink: 2 + Math.random() * 3,
+      react: 0,
+      lineIx: 0
+    };
+  });
+  gal = {
+    t: 0,
+    player: { x: 150, y: GAL_H * 0.60, vx: 0, vy: 0, dir: 1, anim: 0, moving: false, blink: 3 },
+    guests: guests,
+    cam: { x: 0, y: 0 },
+    near: null,
+    talking: null,
+    motes: galMakeMotes(46),
+    introT: 0
+  };
+}
+
+function galMakeMotes(n){
+  var m = [];
+  for (var i=0;i<n;i++){
+    m.push({ x: Math.random()*GAL_W, y: Math.random()*GAL_H, r: 0.6+Math.random()*2.0,
+             sp: 6+Math.random()*16, ph: Math.random()*Math.PI*2, drift: 0.3+Math.random()*0.7 });
+  }
+  return m;
+}
+
+function galSizeCanvas(){
+  if (!galCanvas) return;
+  var w = window.innerWidth || 640, h = window.innerHeight || 480;
+  galDpr = Math.min(2, window.devicePixelRatio || 1);
+  galCanvas.width = Math.round(w * galDpr);
+  galCanvas.height = Math.round(h * galDpr);
+  galCanvas.style.width = w + "px";
+  galCanvas.style.height = h + "px";
+  gal && (gal.cssW = w, gal.cssH = h);
+}
+
+function galNearest(){
+  if (!gal) return null;
+  var p = gal.player, best = null, bd = GAL_TALK_R*GAL_TALK_R;
+  for (var i=0;i<gal.guests.length;i++){
+    var g = gal.guests[i];
+    var dx = g.x - p.x, dy = (g.y - p.y);
+    var d = dx*dx + dy*dy*2.2;   // weight vertical so you must line up
+    if (d < bd){ bd = d; best = g; }
+  }
+  return best;
+}
+
+function galUpdate(dt){
+  if (!gal) return;
+  var s = Math.min(50, dt) / 1000;
+  gal.t += s;
+  if (gal.introT < 3.2) gal.introT += s;
+  var p = gal.player;
+
+  // motes drift
+  for (var i=0;i<gal.motes.length;i++){
+    var m = gal.motes[i];
+    m.y -= m.sp * s;
+    m.x += Math.sin(gal.t*m.drift + m.ph) * 6 * s;
+    if (m.y < -10){ m.y = GAL_H + 10; m.x = Math.random()*GAL_W; }
+  }
+
+  // idle blink timers
+  for (var b=0;b<gal.guests.length;b++){
+    var gg = gal.guests[b];
+    gg.blink -= s; if (gg.blink < 0) gg.blink = 2.4 + Math.random()*3.4;
+    if (gg.react > 0) gg.react = Math.max(0, gg.react - s*1.7);
+  }
+  p.blink -= s; if (p.blink < 0) p.blink = 2.6 + Math.random()*3.2;
+
+  if (gal.talking){
+    // hold still while a card is open; gentle reaction continues
+    p.vx *= 0.7; p.vy *= 0.7;
+    p.x += p.vx*s; p.y += p.vy*s;
+    return;
+  }
+
+  var ax = (G.keys.right?1:0) - (G.keys.left?1:0);
+  var ay = (G.keys.down?1:0)  - (G.keys.up?1:0);
+  if (ax && ay){ var inv = 0.7071; ax*=inv; ay*=inv; }
+  p.vx += ax * GAL_ACC * s;
+  p.vy += ay * GAL_ACC * s;
+  if (!ax) p.vx *= Math.pow(GAL_FRIC, s);
+  if (!ay) p.vy *= Math.pow(GAL_FRIC, s);
+  var sp = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+  if (sp > GAL_MAX){ var k = GAL_MAX/sp; p.vx*=k; p.vy*=k; }
+  p.x += p.vx*s; p.y += p.vy*s;
+
+  // bounds: walk a band of the hall floor
+  var minY = GAL_H*0.50, maxY = GAL_H*0.78;
+  if (p.x < 90){ p.x = 90; p.vx = 0; }
+  if (p.x > GAL_W-90){ p.x = GAL_W-90; p.vx = 0; }
+  if (p.y < minY){ p.y = minY; p.vy = 0; }
+  if (p.y > maxY){ p.y = maxY; p.vy = 0; }
+
+  p.moving = sp > 14;
+  if (Math.abs(p.vx) > 6) p.dir = p.vx > 0 ? 1 : -1;
+  p.anim += (p.moving ? sp : 0) * s * 0.02;
+
+  // camera follows x, clamped to the hall
+  var viewW = (gal.cssW || 640) * (GAL_VIEW_H / (gal.cssH || 480));
+  var tx = p.x - viewW/2;
+  tx = Math.max(0, Math.min(tx, GAL_W - viewW));
+  gal.cam.x += (tx - gal.cam.x) * Math.min(1, s*5.5);
+  gal.cam.y = 0;
+
+  gal.near = galNearest();
+}
+
+/* ---------- Painting ---------- */
+function galHero(c, ch, t, isPlayer){
+  // ch: { x, y, phase, react, blink, ref?, dir? }  drawn in world space
+  var ref = ch.ref ? ch.ref : ch.selfRef;
+  var pal = ref.pal;
+  var bob = Math.sin(t*1.6 + ch.phase) * 4;
+  var sway = Math.sin(t*0.9 + ch.phase) * 0.04;
+  var hop = ch.react ? Math.abs(Math.sin(ch.react*9)) * 14 * ch.react : 0;
+  var dir = isPlayer ? (ch.dir||1) : -1;          // guests face the aisle (left), Oro faces travel
+  var moving = isPlayer && ch.moving;
+  var legSwing = moving ? Math.sin(ch.anim*9) * 10 : 0;
+  var armSwing = moving ? Math.sin(ch.anim*9) * 9 : Math.sin(t*1.3+ch.phase)*2;
+
+  c.save();
+  c.translate(ch.x, ch.y - bob - hop);
+
+  // soft contact shadow
+  c.save();
+  c.translate(0, bob + hop + 6);
+  var sg = c.createRadialGradient(0, 0, 2, 0, 0, 60);
+  sg.addColorStop(0, "rgba(0,0,0,0.40)");
+  sg.addColorStop(1, "rgba(0,0,0,0)");
+  c.fillStyle = sg;
+  c.beginPath(); c.ellipse(0, 0, 54, 16, 0, 0, Math.PI*2); c.fill();
+  c.restore();
+
+  c.rotate(sway);
+  c.scale(dir, 1);
+
+  var H = 150;                       // nominal height
+  // legs
+  c.lineCap = "round";
+  function leg(off, swing){
+    c.strokeStyle = pal.trim; c.lineWidth = 13;
+    c.beginPath(); c.moveTo(off, -54); c.lineTo(off + swing*0.4, -16);
+    c.lineTo(off + swing, -2); c.stroke();
+  }
+  leg(-12, legSwing); leg(12, -legSwing);
+  // shoes / feet
+  c.fillStyle = pal.trim;
+  c.beginPath(); c.ellipse(-12+legSwing, 0, 11, 5, 0, 0, Math.PI*2); c.fill();
+  c.beginPath(); c.ellipse(12-legSwing, 0, 11, 5, 0, 0, Math.PI*2); c.fill();
+
+  // torso with vertical gradient
+  var tg = c.createLinearGradient(0, -118, 0, -40);
+  tg.addColorStop(0, pal.cloth2); tg.addColorStop(1, pal.cloth);
+  c.fillStyle = tg;
+  roundBody(c, -24, -120, 48, 74, 18);
+  // costume accents per kit
+  galCostume(c, ref, pal);
+
+  // back arm
+  c.strokeStyle = pal.cloth2; c.lineWidth = 12;
+  c.beginPath(); c.moveTo(-18, -104); c.quadraticCurveTo(-30, -86+armSwing, -26, -64+armSwing); c.stroke();
+  // front arm
+  c.strokeStyle = pal.cloth; c.lineWidth = 13;
+  c.beginPath(); c.moveTo(18, -104); c.quadraticCurveTo(30, -86-armSwing, 26, -62-armSwing); c.stroke();
+  // hands
+  c.fillStyle = pal.skin;
+  c.beginPath(); c.arc(-26, -62+armSwing, 6.5, 0, Math.PI*2); c.fill();
+  c.beginPath(); c.arc(26, -62-armSwing, 6.5, 0, Math.PI*2); c.fill();
+
+  // neck + head
+  c.fillStyle = pal.skin;
+  c.fillRect(-7, -132, 14, 14);
+  var hg = c.createRadialGradient(-6, -150, 4, 0, -146, 30);
+  hg.addColorStop(0, lighten(pal.skin, 18)); hg.addColorStop(1, pal.skin);
+  c.fillStyle = hg;
+  c.beginPath(); c.ellipse(0, -148, 19, 22, 0, 0, Math.PI*2); c.fill();
+  // ear
+  c.beginPath(); c.arc(17, -148, 4, 0, Math.PI*2); c.fill();
+
+  // face: eyes (blink), brow, mouth
+  var open = ch.blink > 0.16;
+  c.fillStyle = "#241b16";
+  if (open){
+    c.beginPath(); c.ellipse(-7, -150, 2.4, 3.2, 0, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(6, -150, 2.4, 3.2, 0, 0, Math.PI*2); c.fill();
+  } else {
+    c.lineWidth = 2; c.strokeStyle = "#241b16";
+    c.beginPath(); c.moveTo(-10,-150); c.lineTo(-4,-150); c.moveTo(3,-150); c.lineTo(9,-150); c.stroke();
+  }
+  c.strokeStyle = "rgba(40,28,20,0.5)"; c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(-11,-157); c.lineTo(-3,-158); c.moveTo(3,-158); c.lineTo(11,-157); c.stroke();
+  c.strokeStyle = "#7a4a3a"; c.lineWidth = 2.2;
+  var sm = ch.react ? 5 : 2;
+  c.beginPath(); c.moveTo(-6,-140); c.quadraticCurveTo(0,-140+sm, 6,-140); c.stroke();
+
+  // hair / headwear per kit
+  galHead(c, ref, pal);
+
+  // rim light down one side
+  c.globalCompositeOperation = "lighter";
+  var rl = c.createLinearGradient(-26,-120,-10,-40);
+  rl.addColorStop(0, "rgba(255,255,255,0.10)"); rl.addColorStop(1, "rgba(255,255,255,0)");
+  c.fillStyle = rl; roundBody(c, -24, -120, 24, 74, 18);
+  c.globalCompositeOperation = "source-over";
+
+  c.restore();
+}
+
+function roundBody(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x+r, y);
+  c.arcTo(x+w, y, x+w, y+h, r);
+  c.arcTo(x+w, y+h, x, y+h, r);
+  c.arcTo(x, y+h, x, y, r);
+  c.arcTo(x, y, x+w, y, r);
+  c.closePath(); c.fill();
+}
+
+function galCostume(c, ref, pal){
+  // a chest accent strip in the world's accent color for every guest
+  c.fillStyle = pal.accent;
+  if (ref.kit === "clinician"){
+    // open coat seam + stethoscope
+    c.fillStyle = "rgba(0,0,0,0.06)"; c.fillRect(-2,-118,4,72);
+    c.strokeStyle = pal.accent; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(-10,-112); c.quadraticCurveTo(0,-84,10,-112); c.stroke();
+    c.fillStyle = pal.accent; c.beginPath(); c.arc(0,-80,4,0,Math.PI*2); c.fill();
+  } else if (ref.kit === "founder"){
+    // hoodie pocket + drawstrings
+    c.strokeStyle = pal.accent; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(-6,-116); c.lineTo(-6,-104); c.moveTo(6,-116); c.lineTo(6,-104); c.stroke();
+    c.fillStyle = "rgba(0,0,0,0.12)"; roundBody(c,-16,-78,32,16,6);
+  } else if (ref.kit === "planner"){
+    // tunic belt + a small red star
+    c.fillStyle = pal.trim; c.fillRect(-24,-66,48,8);
+    c.fillStyle = pal.accent; galStar(c, 0, -104, 7);
+  } else if (ref.kit === "pirate"){
+    // sash across the chest
+    c.fillStyle = pal.accent; c.save(); c.beginPath();
+    c.moveTo(-24,-112); c.lineTo(-12,-116); c.lineTo(22,-58); c.lineTo(10,-54); c.closePath(); c.fill(); c.restore();
+  } else if (ref.kit === "designer"){
+    // glowing seams
+    c.globalCompositeOperation = "lighter";
+    c.strokeStyle = pal.accent; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(-14,-116); c.lineTo(-14,-50); c.moveTo(14,-116); c.lineTo(14,-50); c.stroke();
+    c.globalCompositeOperation = "source-over";
+  } else if (ref.kit === "miller"){
+    // flour apron
+    c.fillStyle = pal.accent; roundBody(c,-18,-104,36,52,8);
+    c.fillStyle = "rgba(255,255,255,0.18)";
+    c.beginPath(); c.arc(-6,-78,3,0,Math.PI*2); c.arc(8,-66,2.4,0,Math.PI*2); c.fill();
+  } else if (ref.kit === "caveman"){
+    // fur wrap edge
+    c.fillStyle = pal.accent;
+    c.beginPath();
+    for (var i=-22;i<=22;i+=8){ c.moveTo(i,-50); c.lineTo(i+4,-44); c.lineTo(i+8,-50); }
+    c.fill();
+  }
+}
+
+function galStar(c, x, y, r){
+  c.save(); c.translate(x,y); c.beginPath();
+  for (var i=0;i<5;i++){
+    var a = -Math.PI/2 + i*2*Math.PI/5;
+    c.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    var a2 = a + Math.PI/5;
+    c.lineTo(Math.cos(a2)*r*0.46, Math.sin(a2)*r*0.46);
+  }
+  c.closePath(); c.fill(); c.restore();
+}
+
+function galHead(c, ref, pal){
+  c.fillStyle = pal.hair;
+  if (ref.kit === "miller"){
+    // soft cap
+    c.fillStyle = pal.cloth2;
+    c.beginPath(); c.ellipse(0,-164,18,9,0,Math.PI,0); c.fill();
+    c.fillRect(-18,-164,36,5);
+  } else if (ref.kit === "planner"){
+    // peaked uniform cap
+    c.fillStyle = pal.cloth; c.beginPath(); c.ellipse(0,-166,19,10,0,Math.PI,0); c.fill();
+    c.fillStyle = pal.trim; c.fillRect(-20,-160,40,5);
+    c.fillStyle = pal.accent; galStar(c, 0, -168, 4);
+  } else if (ref.kit === "pirate"){
+    // tricorne
+    c.fillStyle = "#15110d";
+    c.beginPath(); c.moveTo(-26,-160); c.quadraticCurveTo(0,-184,26,-160);
+    c.quadraticCurveTo(0,-170,-26,-160); c.fill();
+    c.fillStyle = pal.accent; c.beginPath(); c.arc(-14,-166,3,0,Math.PI*2); c.fill();
+  } else if (ref.kit === "designer"){
+    // sleek hair + glowing visor
+    c.beginPath(); c.ellipse(0,-156,19,14,0,Math.PI,0); c.fill();
+    c.globalCompositeOperation = "lighter";
+    c.fillStyle = pal.accent; c.fillRect(-16,-152,32,4);
+    c.globalCompositeOperation = "source-over";
+  } else if (ref.kit === "caveman"){
+    // tousled mane + a bone tie
+    c.beginPath(); c.ellipse(0,-158,21,15,0,Math.PI,0); c.fill();
+    for (var i=-16;i<=16;i+=8){ c.beginPath(); c.moveTo(i,-160); c.lineTo(i-3,-172); c.lineTo(i+3,-168); c.fill(); }
+  } else {
+    // default tidy hair (founder, clinician)
+    c.beginPath(); c.ellipse(0,-156,19,13,0,Math.PI,0); c.fill();
+    if (ref.kit === "founder"){ // headset
+      c.strokeStyle = pal.accent; c.lineWidth=2.4;
+      c.beginPath(); c.arc(0,-150,21,Math.PI*1.05,Math.PI*1.95); c.stroke();
+      c.fillStyle = pal.accent; c.beginPath(); c.arc(-18,-148,3,0,Math.PI*2); c.fill();
+    }
+    if (ref.kit === "clinician"){ // a few locks
+      c.fillStyle = pal.hair; c.fillRect(-19,-150,5,12); c.fillRect(14,-150,5,12);
+    }
+  }
+}
+
+function lighten(hex, amt){
+  var n = parseInt(hex.slice(1),16);
+  var r=Math.min(255,(n>>16)+amt), g=Math.min(255,((n>>8)&255)+amt), b=Math.min(255,(n&255)+amt);
+  return "rgb("+r+","+g+","+b+")";
+}
+
+var ORO_REF = { name:"ORO", kit:"caveman",
+  pal:{ skin:"#cf9b6a", hair:"#3a2616", cloth:"#9a6a3a", cloth2:"#b07f47", accent:"#caa06e", trim:"#5d3f23" } };
+
+function galRender(){
+  if (!gctx || !gal) return;
+  var c = gctx, dpr = galDpr;
+  var cssW = gal.cssW || 640, cssH = gal.cssH || 480;
+  var scale = cssH / GAL_VIEW_H;
+
+  // clear in device space
+  c.setTransform(1,0,0,1,0,0);
+  c.clearRect(0,0,galCanvas.width, galCanvas.height);
+
+  // deep backdrop gradient (screen space)
+  c.setTransform(dpr,0,0,dpr,0,0);
+  var bg = c.createLinearGradient(0,0,0,cssH);
+  bg.addColorStop(0, "#0a0a14"); bg.addColorStop(0.55, "#11101f"); bg.addColorStop(1, "#070610");
+  c.fillStyle = bg; c.fillRect(0,0,cssW,cssH);
+
+  // world transform: dpr * scale, camera
+  c.setTransform(dpr*scale, 0, 0, dpr*scale, -gal.cam.x*dpr*scale, -gal.cam.y*dpr*scale);
+
+  galDrawHall(c);
+
+  // guest glow zones (behind characters)
+  for (var i=0;i<gal.guests.length;i++) galZoneGlow(c, gal.guests[i]);
+
+  // depth sort by y, then paint
+  var actors = gal.guests.map(function(g){ return { y:g.y, draw:function(){ galHero(c, g, gal.t, false); galGuestPlate(c, g); } }; });
+  var pl = gal.player; pl.selfRef = ORO_REF;
+  actors.push({ y: pl.y, draw:function(){ galHero(c, pl, gal.t, true); } });
+  actors.sort(function(a,b){ return a.y-b.y; });
+  for (var a=0;a<actors.length;a++) actors[a].draw();
+
+  // player spotlight (additive, world space)
+  c.globalCompositeOperation = "lighter";
+  var spg = c.createRadialGradient(pl.x, pl.y-40, 10, pl.x, pl.y-40, 260);
+  spg.addColorStop(0, "rgba(255,243,214,0.16)"); spg.addColorStop(1, "rgba(255,243,214,0)");
+  c.fillStyle = spg; c.fillRect(gal.cam.x-20, 0, cssW/scale+40, GAL_H);
+
+  // motes (additive)
+  for (var m=0;m<gal.motes.length;m++){
+    var mo = gal.motes[m];
+    var tw = 0.35 + 0.45*Math.abs(Math.sin(gal.t*1.5+mo.ph));
+    c.fillStyle = "rgba(255,240,200,"+tw.toFixed(3)+")";
+    c.beginPath(); c.arc(mo.x, mo.y, mo.r, 0, Math.PI*2); c.fill();
+  }
+  c.globalCompositeOperation = "source-over";
+
+  // proximity prompt over the near guest (world space)
+  if (gal.near && !gal.talking) galPrompt(c, gal.near);
+
+  // vignette (screen space)
+  c.setTransform(dpr,0,0,dpr,0,0);
+  var vg = c.createRadialGradient(cssW/2, cssH/2, cssH*0.35, cssW/2, cssH/2, cssH*0.85);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)");
+  c.fillStyle = vg; c.fillRect(0,0,cssW,cssH);
+}
+
+function galDrawHall(c){
+  // floor
+  var fy = GAL_H*0.46;
+  var fg = c.createLinearGradient(0, fy, 0, GAL_H);
+  fg.addColorStop(0, "#1b1b2b"); fg.addColorStop(1, "#0c0c16");
+  c.fillStyle = fg; c.fillRect(0, fy, GAL_W, GAL_H-fy);
+  // back wall
+  var wg = c.createLinearGradient(0, 0, 0, fy);
+  wg.addColorStop(0, "#0d0d18"); wg.addColorStop(1, "#191928");
+  c.fillStyle = wg; c.fillRect(0, 0, GAL_W, fy);
+  // horizon sheen
+  c.globalCompositeOperation = "lighter";
+  var hl = c.createLinearGradient(0, fy-30, 0, fy+30);
+  hl.addColorStop(0, "rgba(120,140,200,0)"); hl.addColorStop(0.5, "rgba(120,140,200,0.10)"); hl.addColorStop(1, "rgba(120,140,200,0)");
+  c.fillStyle = hl; c.fillRect(0, fy-30, GAL_W, 60);
+  c.globalCompositeOperation = "source-over";
+  // perspective guide lines on the floor
+  c.strokeStyle = "rgba(120,130,180,0.06)"; c.lineWidth = 1.5;
+  for (var gx=0; gx<=GAL_W; gx+=180){
+    c.beginPath(); c.moveTo(gx, fy); c.lineTo(gx + (gx-GAL_W/2)*0.25, GAL_H); c.stroke();
+  }
+  for (var gy=fy+40; gy<GAL_H; gy+=46){
+    c.strokeStyle = "rgba(120,130,180,"+(0.02+(gy-fy)/GAL_H*0.05).toFixed(3)+")";
+    c.beginPath(); c.moveTo(0, gy); c.lineTo(GAL_W, gy); c.stroke();
+  }
+  // wall etch: the reveal
+  c.fillStyle = "rgba(232,176,75,0.07)";
+  c.font = "700 120px 'Press Start 2P', monospace";
+  c.textAlign = "center";
+  c.fillText("THE LONG VIEW", GAL_W/2, fy*0.62);
+}
+
+function galZoneGlow(c, g){
+  c.globalCompositeOperation = "lighter";
+  var col = g.ref.glow;
+  var rad = c.createRadialGradient(g.x, g.y+8, 8, g.x, g.y+8, 200);
+  rad.addColorStop(0, hexA(col, 0.20)); rad.addColorStop(1, hexA(col, 0));
+  c.fillStyle = rad;
+  c.beginPath(); c.ellipse(g.x, g.y+10, 150, 60, 0, 0, Math.PI*2); c.fill();
+  // a soft pillar of light up the wall
+  var pil = c.createLinearGradient(g.x, GAL_H*0.18, g.x, g.y);
+  pil.addColorStop(0, hexA(col, 0)); pil.addColorStop(1, hexA(col, 0.10));
+  c.fillStyle = pil; c.fillRect(g.x-46, GAL_H*0.18, 92, g.y-GAL_H*0.18);
+  c.globalCompositeOperation = "source-over";
+}
+
+function galGuestPlate(c, g){
+  c.fillStyle = "rgba(8,8,16,0.55)";
+  roundRect(c, g.x-92, g.y+22, 184, 30, 8);
+  c.fillStyle = g.ref.glow;
+  c.font = "9px 'Press Start 2P', monospace"; c.textAlign = "center";
+  c.fillText(g.ref.name, g.x, g.y+38);
+  c.fillStyle = "rgba(242,232,213,0.7)";
+  c.font = "8px 'Press Start 2P', monospace";
+  c.fillText(g.ref.sys, g.x, g.y+49);
+}
+
+function galPrompt(c, g){
+  var y = g.y - 196 - Math.sin(gal.t*3)*3;
+  c.fillStyle = "rgba(8,8,16,0.82)";
+  roundRect(c, g.x-58, y-16, 116, 26, 8);
+  c.fillStyle = "#e8b04b"; c.font = "8px 'Press Start 2P', monospace"; c.textAlign = "center";
+  c.fillText("\u25B8 TALK", g.x, y+1);
+}
+
+function roundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); c.fill();
+}
+
+function hexA(hex, a){
+  var n = parseInt(hex.slice(1),16);
+  return "rgba("+(n>>16)+","+((n>>8)&255)+","+(n&255)+","+a+")";
+}
+
+/* ---------- Interaction + flow ---------- */
+function galAct(){
+  if (!gal) return;
+  if (gal.talking){ galAdvance(); return; }
+  if (gal.near){ galTalk(gal.near); }
+}
+
+function galTalk(g){
+  gal.talking = g;
+  g.react = 1;
+  g.lineIx = g.lineIx % g.ref.lines.length;
+  galShowCard(g);
+}
+
+function galAdvance(){
+  var g = gal.talking;
+  if (!g) return;
+  g.lineIx++;
+  if (g.lineIx >= g.ref.lines.length){
+    g.lineIx = 0;
+    galHideCard();
+    gal.talking = null;
+    return;
+  }
+  g.react = Math.max(g.react, 0.7);
+  galShowCard(g);
+}
+
+var galUiEl = null, galCardEl = null;
+function galShowCard(g){
+  if (!galUiEl) return;
+  galUiEl.classList.add("on");
+  var more = g.lineIx < g.ref.lines.length-1;
+  galCardEl.innerHTML =
+      "<div class='gc-port' style='--gc:"+g.ref.glow+"'></div>"
+    + "<div class='gc-main'>"
+    +   "<div class='gc-name' style='color:"+g.ref.glow+"'>"+g.ref.name+"</div>"
+    +   "<div class='gc-sys'>"+g.ref.sys+"</div>"
+    +   "<div class='gc-line'>"+g.ref.lines[g.lineIx]+"</div>"
+    +   "<div class='gc-tag'>"+g.ref.tag+"</div>"
+    +   "<div class='gc-hint'>"+(more ? "SPACE or A to continue" : "SPACE or A to part ways")+"</div>"
+    + "</div>";
+  // tint the portrait chip with the guest's accent
+  var port = galCardEl.querySelector(".gc-port");
+  if (port){ port.style.background = "radial-gradient(circle at 50% 38%, "+g.ref.glow+"55, rgba(8,8,16,0.6))";
+             port.style.borderColor = g.ref.glow; port.textContent = g.ref.name.charAt(0); }
+}
+function galHideCard(){ if (galUiEl) galUiEl.classList.remove("on"); }
+
+function openGallery(opts){
+  opts = opts || {};
+  galCanvas = document.getElementById("gallery-canvas");
+  gctx = galCanvas && galCanvas.getContext ? galCanvas.getContext("2d") : null;
+  galUiEl = document.getElementById("gallery-ui");
+  galCardEl = document.getElementById("gallery-card");
+  galFrom = opts.from || "TITLE";
+  galInit();
+  galSizeCanvas();
+  // hide other surfaces
+  panelTitle.classList.remove("open");
+  panelComplete.classList.remove("open");
+  if (typeof elHud !== "undefined" && elHud) elHud.style.display = "none";
+  briefingButtonVisible(false);
+  document.getElementById("panel-gallery").classList.add("on");
+  G.keys = {};
+  G.scene = "GALLERY";
+  galHideCard();
+}
+
+var galFrom = "TITLE";
+function closeGallery(){
+  document.getElementById("panel-gallery").classList.remove("on");
+  galHideCard();
+  gal = null; gctx = null;
+  if (typeof elHud !== "undefined" && elHud) elHud.style.display = "";
+  if (galFrom === "COMPLETE"){ panelComplete.classList.add("open"); G.scene = "COMPLETE"; }
+  else { panelTitle.classList.add("open"); G.scene = "TITLE"; refreshTitle(); }
+}
+
+function allChaptersCleared(){
+  for (var i=0;i<CHAPTER_ORDER.length;i++){
+    var id = CHAPTER_ORDER[i];
+    if (CHAPTERS[id] && !(Progress[id] && Progress[id].cleared)) return false;
+  }
+  return true;
+}
+
+
 function startChapter(id){
   if (!CHAPTERS[id] || !chapterUnlocked(id)) return;
   selectChapter(id);
@@ -6749,6 +7433,7 @@ function update(dt){
   G.time += dt;
   if (G.scene==="ARCADE"){ arcadeUpdate(dt); return; }
   if (G.scene==="FREEPLAY"){ freeUpdate(dt); return; }
+  if (G.scene==="GALLERY"){ galUpdate(dt); return; }
   if (G.scene!=="WALK") return;
   var p = G.player;
   var speed = p.speed * (G.time < G.slowUntil ? 0.5 : 1);
@@ -6802,6 +7487,7 @@ function camera(){
 }
 
 function render(){
+  if (G.scene==="GALLERY"){ galRender(); return; }
   if (!ctx) return; // headless safe
   if (arcade && (G.scene==="ARCADE" || G.scene==="ARCADE_MENU")){ renderArcade(); return; }
   if (G.scene === "INTERIOR" && currentRoom){ drawRoomCanvas(currentRoom); return; }
@@ -13691,7 +14377,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M24.S2",
+  version: "M25.S1",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -13700,6 +14386,15 @@ window.MF = {
   selectChapter: selectChapter,
   scenes: SCENES,
   crawls: CRAWLS,
+  galleryGuests: GALLERY_GUESTS,
+  openGallery: openGallery,
+  closeGallery: closeGallery,
+  galState: function(){ return gal; },
+  galStep: function(dt){ return galUpdate(dt); },
+  galAct: galAct,
+  galRenderOnce: function(){ return galRender(); },
+  galNearest: galNearest,
+  allChaptersCleared: allChaptersCleared,
   briefingThemes: BRIEFING_THEMES,
   buildAmbient: buildAmbient,
   gameIntro: GAME_INTRO,
