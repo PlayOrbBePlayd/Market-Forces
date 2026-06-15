@@ -5740,6 +5740,7 @@ function makeArcade(cfg){
   if (cfg.engine === "stack") return StackEngine(cfg);
   if (cfg.engine === "joust") return JoustEngine(cfg);
   if (cfg.engine === "sea") return SeaEngine(cfg);
+  if (cfg.engine === "lander") return LanderEngine(cfg);
   return ArcadeEngine(cfg);
 }
 
@@ -7289,6 +7290,7 @@ function renderArcade(){
   if (arcade && arcade.kind === "stack"){ renderStack(); return; }
   if (arcade && arcade.kind === "joust"){ renderJoust(); return; }
   if (arcade && arcade.kind === "sea"){ renderSea(); return; }
+  if (arcade && arcade.kind === "lander"){ renderLander(); return; }
   if (arcade && arcade.kind === "catch"){ if (arcade.cfg.skin === "gather") renderCatchGather(); else renderCatchNet(); return; }
   if (arcade && arcade.cfg.skin === "dispatch") renderArcadeDispatch();
   else renderArcadeTerminal();
@@ -12416,13 +12418,318 @@ var CHV_DESK = {
       ]}
   ]
 };
-var CHV_ARCADE = {           /* S4 */
-  engine: "lander", title: "SOFT LANDING", skin: "lander",
-  startLabel: "BEGIN DESCENT", endTitle: "ALL PODS DELIVERED",
-  hitVerb: "LAND A POD", sumLabel: "Pods landed", sumUnit: "landed", spoilUnit: "pods lost",
-  intro: "", cleanLine: "", hitLine: "",
-  rulesHtml: "", par: 60, speedCap: 30, noHitBonus: 35,
-  waves: []
+/* =====================================================
+   SOFT LANDING. The Chapter 6 cabinet. M20 S4. A physics
+   lander in the Lunar Lander tradition, and a brand new
+   engine, the sixth distinct chapter engine with no repeat:
+   joust, shooter, catcher, stacker, sea scroller, and now
+   lander. The player verb is allocate. You ferry resource
+   pods down onto the city's landing pads with finite thrust
+   and fuel, because abundance still obeys gravity. Descend
+   too fast, drift off the pad, or run the tanks dry and the
+   pod is lost. As the finale cabinet it is the hardest, dialed
+   above the Piracy sea scroller. Public API mirrors the other
+   engines: input, fire, update(dt), score, over, banked, hits,
+   playerHits, elapsed. Pure state, no DOM, seeded rng.
+   ===================================================== */
+function LanderEngine(cfg){
+  var W = VIEW_W, H = VIEW_H;
+  var GROUND_Y = H - 40;
+  var E = {
+    cfg: cfg, W: W, H: H, kind: "lander",
+    level: 0, dropsThisLevel: 0,
+    craft: null, pad: null, wind: 0,
+    stars: [], dust: [], fx: [],
+    input: { left:false, right:false, up:false, down:false },
+    elapsed: 0,
+    hits: 0, damagePts: 0,
+    combo: 0, bestCombo: 0, comboPts: 0,
+    playerHits: 0,
+    over: false, banked: false, crashedOut: false
+  };
+
+  // a still starfield behind the city skyline
+  for (var i = 0; i < 60; i++){ E.stars.push({ x: rng() * W, y: rng() * (GROUND_Y - 20), tw: rng() * 6.28 }); }
+
+  function lv(){ return cfg.levels[E.level]; }
+
+  function newCraft(){
+    var L = lv();
+    E.craft = {
+      x: W * (0.3 + rng() * 0.4) - 11, y: 56,
+      w: 22, h: 20, vx: (rng() - 0.5) * L.entryDrift, vy: 0,
+      fuel: L.fuel, state: "fly", timer: 0, impactV: 0,
+      flameUp: 0, flameL: 0, flameR: 0
+    };
+  }
+  function newPad(){
+    var L = lv();
+    var pw = L.padW;
+    E.pad = { x: 24 + rng() * (W - 48 - pw), y: GROUND_Y, w: pw, h: 8, lit: 0 };
+    E.wind = L.wind * (rng() < 0.5 ? -1 : 1);
+  }
+  newPad(); newCraft();
+
+  function addFx(text, x, y, bad){ E.fx.push({ text:text, x:x, y:y, t:1000, bad:!!bad }); }
+
+  function resolveDrop(){
+    E.dropsThisLevel++;
+    if (E.dropsThisLevel >= lv().drops){
+      if (E.level < cfg.levels.length - 1){
+        E.level++; E.dropsThisLevel = 0; newPad(); newCraft();
+        addFx("SECTOR " + (E.level + 1), W/2, H/2 - 30, false);
+      } else {
+        E.over = true;
+      }
+    } else { newPad(); newCraft(); }
+  }
+
+  function land(){
+    var c = E.craft, L = lv();
+    c.state = "land"; c.timer = 700; c.vy = 0; c.vx = 0;
+    c.y = GROUND_Y - c.h; E.pad.lit = 1;
+    E.hits++; E.combo++;
+    if (E.combo > E.bestCombo) E.bestCombo = E.combo;
+    var fuelFrac = Math.max(0, c.fuel / L.fuel);
+    var gentle = (c.impactV <= L.maxLandV * 0.5);
+    var pts = cfg.landPts + Math.round(fuelFrac * cfg.fuelBonus) + (gentle ? cfg.gentleBonus : 0);
+    E.damagePts += pts;
+    var line = "POD DELIVERED +" + pts;
+    if (E.combo % cfg.comboEvery === 0){ E.comboPts += cfg.comboBonus; line = "STREAK x" + E.combo + " +" + cfg.comboBonus; }
+    addFx(line, c.x + c.w/2, c.y - 6, false);
+  }
+  function crash(reason){
+    var c = E.craft;
+    c.state = "boom"; c.timer = 900;
+    E.playerHits++; E.combo = 0;
+    // a little debris burst
+    for (var d = 0; d < 10; d++){ E.dust.push({ x: c.x + c.w/2, y: c.y + c.h/2, vx: (rng()-0.5)*180, vy: -rng()*160, t: 700 }); }
+    addFx(reason, c.x + c.w/2, c.y - 4, true);
+  }
+
+  E.fire = function(){
+    // a thrust puff, so a tap of SPACE or A also lifts the craft
+    if (E.over || !E.craft || E.craft.state !== "fly") return false;
+    if (E.craft.fuel <= 0) return false;
+    E.craft.vy -= lv().thrust * 0.16;
+    E.craft.fuel -= 3;
+    E.craft.flameUp = 120;
+    return true;
+  };
+
+  E.update = function(dt){
+    if (E.over) return;
+    E.elapsed += dt;
+    var s = dt / 1000;
+    var c = E.craft, L = lv();
+    if (!c) return;
+
+    if (c.state === "land" || c.state === "boom"){
+      c.timer -= dt;
+      if (E.pad) E.pad.lit = Math.max(0, E.pad.lit - dt/700);
+      for (var i = E.dust.length - 1; i >= 0; i--){
+        var p = E.dust[i]; p.vy += 420 * s; p.x += p.vx * s; p.y += p.vy * s; p.t -= dt;
+        if (p.t <= 0) E.dust.splice(i, 1);
+      }
+      if (c.timer <= 0){ E.dust = []; resolveDrop(); }
+      for (var f0 = E.fx.length - 1; f0 >= 0; f0--){ E.fx[f0].t -= dt; E.fx[f0].y -= 16 * s; if (E.fx[f0].t <= 0) E.fx.splice(f0, 1); }
+      return;
+    }
+
+    // physics: gravity, wind, and the player's thrust against finite fuel
+    c.vy += L.gravity * s;
+    c.vx += E.wind * s;
+    c.flameUp = Math.max(0, c.flameUp - dt);
+    c.flameL = Math.max(0, c.flameL - dt);
+    c.flameR = Math.max(0, c.flameR - dt);
+    if (c.fuel > 0){
+      if (E.input.up){ c.vy -= L.thrust * s; c.fuel -= L.burnUp * s; c.flameUp = 80; }
+      if (E.input.down){ c.vy += L.thrust * 0.5 * s; c.fuel -= L.burnSide * s; }
+      if (E.input.left){ c.vx -= L.sideThrust * s; c.fuel -= L.burnSide * s; c.flameR = 80; }
+      if (E.input.right){ c.vx += L.sideThrust * s; c.fuel -= L.burnSide * s; c.flameL = 80; }
+      if (c.fuel < 0) c.fuel = 0;
+    }
+    c.x += c.vx * s; c.y += c.vy * s;
+
+    // keep the craft on screen: a soft bounce off the walls
+    if (c.x < 4){ c.x = 4; c.vx = Math.abs(c.vx) * 0.3; }
+    if (c.x + c.w > W - 4){ c.x = W - 4 - c.w; c.vx = -Math.abs(c.vx) * 0.3; }
+    if (c.y < 8){ c.y = 8; c.vy = Math.max(0, c.vy); }
+
+    // touchdown test
+    if (c.y + c.h >= GROUND_Y){
+      c.y = GROUND_Y - c.h;
+      c.impactV = c.vy;
+      var cx = c.x + c.w/2;
+      var onPad = (cx >= E.pad.x + 3 && cx <= E.pad.x + E.pad.w - 3);
+      var gentle = (c.vy <= L.maxLandV && Math.abs(c.vx) <= L.maxLandVx);
+      if (onPad && gentle){ land(); }
+      else if (!onPad){ crash((cfg.lines && cfg.lines.offpad) || "MISSED THE PAD"); }
+      else { crash((cfg.lines && cfg.lines.fast) || "DOWN TOO HARD"); }
+    }
+
+    for (var f = E.fx.length - 1; f >= 0; f--){ E.fx[f].t -= dt; E.fx[f].y -= 16 * s; if (E.fx[f].t <= 0) E.fx.splice(f, 1); }
+  };
+
+  E.score = function(){
+    var clean = (E.playerHits === 0);
+    var noHit = clean ? cfg.noHitBonus : 0;
+    var speed = E.over ? Math.max(0, Math.min(cfg.speedCap, Math.round(cfg.par - E.elapsed / 1000))) : 0;
+    return {
+      damage: E.damagePts, comboPts: E.comboPts, bestCombo: E.bestCombo,
+      noHit: noHit, speed: speed,
+      total: E.damagePts + E.comboPts + noHit + speed
+    };
+  };
+
+  return E;
+}
+
+/* ---------- SOFT LANDING renderer ---------- */
+function renderLander(){
+  var E = arcade, t = G.time;
+  var GROUND_Y = VIEW_H - 40;
+  // deep night sky over the circular city
+  ctx.fillStyle = "#070d18"; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  // stars twinkling
+  E.stars.forEach(function(st){
+    var tw = (Math.sin(t / 600 + st.tw) + 1) / 2;
+    ctx.fillStyle = "rgba(190,225,240," + (0.2 + tw * 0.6).toFixed(2) + ")";
+    ctx.fillRect(st.x, st.y, 2, 2);
+  });
+  // a soft city glow band along the horizon
+  ctx.fillStyle = "rgba(60,120,150,.18)"; ctx.fillRect(0, GROUND_Y - 26, VIEW_W, 26);
+  // distant skyline silhouette with lit windows
+  for (var b = 0; b < 12; b++){
+    var bx = b * 56 + ((Math.floor(b * 37) % 18));
+    var bh = 24 + (Math.floor(b * 53) % 40);
+    ctx.fillStyle = "#0e1a2a"; ctx.fillRect(bx, GROUND_Y - bh, 40, bh);
+    for (var wy = GROUND_Y - bh + 4; wy < GROUND_Y - 4; wy += 10){
+      var litw = Math.floor(t / 700 + b + wy) % 3 === 0;
+      ctx.fillStyle = litw ? "rgba(120,225,224,.5)" : "rgba(40,80,100,.4)";
+      ctx.fillRect(bx + 6, wy, 6, 5); ctx.fillRect(bx + 22, wy, 6, 5);
+    }
+  }
+  // the ground deck
+  ctx.fillStyle = "#13283a"; ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+  ctx.fillStyle = "#1c3a52"; ctx.fillRect(0, GROUND_Y, VIEW_W, 4);
+  // the landing pad, lit with guide lights
+  var pad = E.pad;
+  if (pad){
+    var glow = pad.lit > 0 ? pad.lit : (Math.sin(t / 300) + 1) / 2 * 0.5 + 0.3;
+    ctx.fillStyle = "rgba(120,225,224," + glow.toFixed(2) + ")"; ctx.fillRect(pad.x, pad.y - 2, pad.w, 4);
+    ctx.fillStyle = "#2f6e7a"; ctx.fillRect(pad.x, pad.y, pad.w, pad.h);
+    ctx.fillStyle = "#bfe9ea"; ctx.fillRect(pad.x, pad.y - 4, 4, 6); ctx.fillRect(pad.x + pad.w - 4, pad.y - 4, 4, 6);
+    // a beam of welcome light rising from the pad center
+    ctx.fillStyle = "rgba(120,225,224,.10)"; ctx.fillRect(pad.x + pad.w/2 - 8, pad.y - 70, 16, 70);
+    // chevrons pointing in
+    ctx.fillStyle = "rgba(190,235,240,.5)";
+    var ch = Math.floor(t / 300) % 2;
+    ctx.fillRect(pad.x + pad.w/2 - 6, pad.y - 12 - ch * 2, 12, 2);
+  }
+  // debris dust
+  E.dust.forEach(function(p){ ctx.fillStyle = "rgba(232,150,90," + Math.max(0, p.t/700).toFixed(2) + ")"; ctx.fillRect(p.x, p.y, 3, 3); });
+
+  // the lander craft, a pod slung under a thruster frame
+  var c = E.craft;
+  if (c){
+    if (c.state === "boom"){
+      var bt = 1 - c.timer/900;
+      var rad = 6 + bt * 26;
+      ctx.fillStyle = "rgba(232,150,90," + (1 - bt).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(c.x + c.w/2, c.y + c.h/2, rad, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(255,230,160," + (0.8 - bt).toFixed(2) + ")"; ctx.beginPath(); ctx.arc(c.x + c.w/2, c.y + c.h/2, rad * 0.5, 0, 7); ctx.fill();
+    } else {
+      // thruster flames first, behind the hull
+      if (c.flameUp > 0){
+        var fl = Math.floor(t/60) % 2 === 0 ? 0 : 2;
+        ctx.fillStyle = "#e8b04b"; ctx.fillRect(c.x + 6, c.y + c.h, 10, 8 + fl);
+        ctx.fillStyle = "#ffe9b0"; ctx.fillRect(c.x + 8, c.y + c.h, 6, 5 + fl);
+        ctx.fillStyle = "rgba(120,225,224,.5)"; ctx.fillRect(c.x + 9, c.y + c.h, 4, 3);
+      }
+      if (c.flameL > 0){ ctx.fillStyle = "#ffe9b0"; ctx.fillRect(c.x + c.w, c.y + 6, 6, 4); }
+      if (c.flameR > 0){ ctx.fillStyle = "#ffe9b0"; ctx.fillRect(c.x - 6, c.y + 6, 6, 4); }
+      // frame and legs
+      ctx.fillStyle = "#9aa6b8"; ctx.fillRect(c.x + 1, c.y + 12, 4, 8); ctx.fillRect(c.x + c.w - 5, c.y + 12, 4, 8);
+      ctx.fillStyle = "#cfd8e0"; ctx.fillRect(c.x + 4, c.y, c.w - 8, 14);   // thruster body
+      ctx.fillStyle = "#7fb2e5"; ctx.fillRect(c.x + 6, c.y + 2, c.w - 12, 5); // canopy
+      // the slung resource pod
+      ctx.fillStyle = "#e8b04b"; ctx.fillRect(c.x + 6, c.y + 13, c.w - 12, 7);
+      ctx.fillStyle = "#caa23f"; ctx.fillRect(c.x + 6, c.y + 13, c.w - 12, 2);
+      ctx.fillStyle = "#78e9e0"; ctx.fillRect(c.x + c.w/2 - 1, c.y + 14, 2, 5);
+    }
+  }
+
+  // floating feedback
+  E.fx.forEach(function(fx){
+    ctx.fillStyle = fx.bad ? "#e25549" : "#7fe5b0";
+    ctx.font = "9px 'Press Start 2P', monospace"; ctx.textAlign = "center";
+    ctx.globalAlpha = Math.max(0, Math.min(1, fx.t/1000));
+    ctx.fillText(fx.text, fx.x, fx.y); ctx.globalAlpha = 1;
+  });
+
+  // HUD: score, sector, streak, and the fuel and speed gauges
+  ctx.fillStyle = "rgba(13,16,26,.72)"; ctx.fillRect(0, 0, VIEW_W, 30);
+  ctx.fillStyle = "#cfe2ef"; ctx.font = "8px 'Press Start 2P', monospace"; ctx.textAlign = "left";
+  ctx.fillText("DELIVERED " + (E.damagePts + E.comboPts), 10, 12);
+  ctx.fillText("PODS " + E.hits, 10, 23);
+  ctx.textAlign = "center"; ctx.fillStyle = "#78e9e0";
+  ctx.fillText("SECTOR " + (E.level + 1) + " / " + E.cfg.levels.length, VIEW_W/2, 12);
+  var dropsLeft = E.cfg.levels[E.level].drops - E.dropsThisLevel;
+  ctx.fillStyle = "#cfe2ef"; ctx.fillText("PODS LEFT " + dropsLeft, VIEW_W/2, 23);
+  if (E.combo >= 2){ ctx.fillStyle = "#7fe5b0"; ctx.fillText("STREAK x" + E.combo, VIEW_W/2, 30); }
+  // fuel gauge
+  if (c){
+    ctx.textAlign = "right"; ctx.fillStyle = "#cfe2ef"; ctx.fillText("FUEL", VIEW_W - 86, 12);
+    var fw = 70, ff = Math.round(fw * Math.max(0, c.fuel / E.cfg.levels[E.level].fuel));
+    ctx.fillStyle = "#2a2c33"; ctx.fillRect(VIEW_W - 80, 5, fw, 8);
+    ctx.fillStyle = c.fuel < E.cfg.levels[E.level].fuel * 0.25 ? "#e25549" : "#43d17c"; ctx.fillRect(VIEW_W - 80, 5, ff, 8);
+    // descent speed gauge, green when gentle enough to land
+    var L = E.cfg.levels[E.level];
+    var safe = (c.vy <= L.maxLandV && Math.abs(c.vx) <= L.maxLandVx);
+    ctx.fillStyle = "#cfe2ef"; ctx.fillText("V", VIEW_W - 86, 24);
+    var vw = 70, vf = Math.round(vw * Math.min(1, Math.max(0, c.vy) / (L.maxLandV * 3)));
+    ctx.fillStyle = "#2a2c33"; ctx.fillRect(VIEW_W - 80, 17, vw, 8);
+    ctx.fillStyle = safe ? "#43d17c" : "#e8b04b"; ctx.fillRect(VIEW_W - 80, 17, vf, 8);
+    // the safe-speed mark
+    ctx.fillStyle = "#bfe9ea"; ctx.fillRect(VIEW_W - 80 + Math.round(vw / 3), 16, 2, 10);
+  }
+}
+
+var CHV_ARCADE = {
+  engine: "lander",
+  title: "SOFT LANDING",
+  skin: "lander",
+  startLabel: "BEGIN DESCENT",
+  endTitle: "EVERY POD ACCOUNTED FOR",
+  hitVerb: "LAND A POD",
+  sumLabel: "Pods landed",
+  sumUnit: "landed",
+  spoilUnit: "pods lost",
+  intro: "The city's pads are lit and the pods are yours to set down. Thrust up against gravity, nudge left and right against the wind, and bring each pod onto the pad slow and square. Your tanks are finite, so every burn counts. Descend too fast, drift off the pad, or run dry, and the pod is lost. Three sectors, each with a heavier pull, a narrower pad, and a stronger crosswind than the last. Allocate carefully. Abundance still obeys gravity.",
+  cleanLine: "Every pod set down soft and square, not one lost, fuel to spare. The hardest cabinet in the city, flown clean.",
+  hitLine: "Some pods went down hard and some drifted wide, but the rest rode their thrust onto the pad and the city has its supply. That is a run.",
+  lines: { offpad: "DRIFTED OFF THE PAD", fast: "DOWN TOO HARD" },
+  rulesHtml: "<b>LAND A POD</b> +20 onto the lit pad, slow and square<br>"
+    + "<b>FUEL SAVED</b> up to +16 more for landing with tanks to spare<br>"
+    + "<b>FEATHER IT</b> +8 for an especially gentle touchdown<br>"
+    + "<b>STREAK OF 3</b> +18 each time, keep landing without losing a pod<br>"
+    + "<b>POD LOST</b> too fast, off the pad, or out of fuel, and it is gone<br>"
+    + "<b>ALL CLEAN</b> +40 if not a single pod is lost across all three sectors<br>"
+    + "<b>THE CLOCK</b> up to +24 for a brisk run<br>"
+    + "THRUST: UP or W \\u2022 STEER: LEFT and RIGHT \\u2022 PUFF: SPACE or A",
+  par: 80,
+  speedCap: 24,
+  noHitBonus: 40,
+  landPts: 20,
+  fuelBonus: 16,
+  gentleBonus: 8,
+  comboEvery: 3,
+  comboBonus: 18,
+  levels: [
+    { drops: 3, gravity: 62,  thrust: 170, sideThrust: 124, burnUp: 22, burnSide: 15, fuel: 130, padW: 96, maxLandV: 58, maxLandVx: 32, wind: 0,  entryDrift: 26 },
+    { drops: 3, gravity: 80,  thrust: 188, sideThrust: 134, burnUp: 25, burnSide: 17, fuel: 112, padW: 74, maxLandV: 48, maxLandVx: 26, wind: 18, entryDrift: 44 },
+    { drops: 4, gravity: 100, thrust: 208, sideThrust: 146, burnUp: 28, burnSide: 19, fuel: 98,  padW: 58, maxLandV: 42, maxLandVx: 22, wind: 28, entryDrift: 58 }
+  ]
 };
 var CHV_FREEPLAY = {         /* S5 */
   chapter: "CHAPTER 6: THE VENUS PROJECT",
@@ -12524,7 +12831,7 @@ refreshTitle();
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M20.S3",
+  version: "M20.S4",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
