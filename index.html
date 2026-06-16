@@ -276,7 +276,7 @@
   .bf-crawl{width:100%;color:var(--paper);will-change:transform}
   .bf-crawl.bf-scroll{animation:bfCrawl var(--bf-dur,64s) linear forwards}
   .bf-crawl.bf-paused{animation-play-state:paused}
-  @keyframes bfCrawl{0%{transform:translateY(72vh)}100%{transform:translateY(-165%)}}
+  @keyframes bfCrawl{0%{transform:translateY(24vh)}100%{transform:translateY(-165%)}}
   .bf-eyebrow{font-family:var(--display);font-size:9px;letter-spacing:1px;color:var(--bf-accent);
     line-height:1.7;margin-bottom:12px}
   .bf-title{font-family:var(--display);font-size:clamp(15px,4vw,24px);line-height:1.5;color:var(--bf-title);
@@ -7659,6 +7659,30 @@ function galDrawHall(c){
   c.font = "700 120px 'Press Start 2P', monospace";
   c.textAlign = "center";
   c.fillText("THE LONG VIEW", GAL_W/2, fy*0.62);
+
+  // the dedication at the far end of the hall: the studio and the maker.
+  // placed and sized to sit fully within the view once the visitor walks to the end.
+  var dcx = GAL_W - 140, dcy = GAL_H * 0.20;
+  c.globalCompositeOperation = "lighter";
+  var dglow = c.createRadialGradient(dcx, dcy + 30, 8, dcx, dcy + 30, 230);
+  dglow.addColorStop(0, "rgba(232,176,75,0.10)");
+  dglow.addColorStop(1, "rgba(232,176,75,0)");
+  c.fillStyle = dglow; c.fillRect(dcx - 230, dcy - 110, 460, 320);
+  c.globalCompositeOperation = "source-over";
+  c.textAlign = "center";
+  c.fillStyle = hexA("#3fb8af", 0.66);
+  c.font = "8px 'Press Start 2P', monospace";
+  c.fillText("A BELLA VITA LABS GAME", dcx, dcy);
+  c.fillStyle = hexA("#e8b04b", 0.40);
+  c.font = "7px 'Press Start 2P', monospace";
+  c.fillText("CREATED BY", dcx, dcy + 30);
+  c.fillStyle = hexA("#e8b04b", 0.82);
+  c.font = "18px 'Press Start 2P', monospace";
+  c.fillText("KELLY SPAIN", dcx, dcy + 58);
+  c.fillStyle = hexA("#d8d2e2", 0.52);
+  c.font = "8px 'Press Start 2P', monospace";
+  c.fillText("SEVEN WORLDS, ONE LIGHT.", dcx, dcy + 92);
+  c.fillText("THANK YOU FOR PLAYING.", dcx, dcy + 110);
 }
 
 function galZoneGlow(c, g){
@@ -14951,7 +14975,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M27.S3",
+  version: "M28.S1",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
