@@ -276,7 +276,7 @@
   .bf-crawl{width:100%;color:var(--paper);will-change:transform}
   .bf-crawl.bf-scroll{animation:bfCrawl var(--bf-dur,64s) linear forwards}
   .bf-crawl.bf-paused{animation-play-state:paused}
-  @keyframes bfCrawl{0%{transform:translateY(24vh)}100%{transform:translateY(-165%)}}
+  @keyframes bfCrawl{0%{transform:translateY(36vh)}100%{transform:translateY(-165%)}}
   .bf-eyebrow{font-family:var(--display);font-size:9px;letter-spacing:1px;color:var(--bf-accent);
     line-height:1.7;margin-bottom:12px}
   .bf-title{font-family:var(--display);font-size:clamp(15px,4vw,24px);line-height:1.5;color:var(--bf-title);
@@ -352,15 +352,15 @@
   #gallery-intro{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;pointer-events:none;opacity:0;
     background:radial-gradient(ellipse at 50% 42%, #0b0a16 0%, #050409 82%)}
-  #gallery-intro.run{animation:galIntro 3.4s ease forwards}
+  #gallery-intro.run{animation:galIntro 4.6s ease forwards}
   .gi-kicker{font-family:var(--display);font-size:8px;letter-spacing:3px;color:var(--teal);
-    margin-bottom:18px;opacity:0;animation:giUp .9s ease .2s forwards}
+    margin-bottom:18px;opacity:0;animation:giUp .8s ease .1s forwards}
   .gi-title{font-family:var(--display);font-size:clamp(20px,6vw,40px);color:var(--brass);
     text-shadow:0 4px 0 var(--shadow);letter-spacing:2px;margin-bottom:18px;opacity:0;
-    animation:giUp 1s ease .5s forwards}
+    animation:giUp .9s ease .3s forwards}
   .gi-sub{font-family:var(--display);font-size:9px;line-height:2;color:#cdbfe0;opacity:0;
-    animation:giUp 1s ease 1s forwards}
-  @keyframes galIntro{0%{opacity:1}66%{opacity:1}100%{opacity:0}}
+    animation:giUp .9s ease .6s forwards}
+  @keyframes galIntro{0%{opacity:1}80%{opacity:1}100%{opacity:0}}
   @keyframes giUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
   #gallery-card{cursor:pointer}
   @media (prefers-reduced-motion: reduce){ #gallery-intro{display:none} }
@@ -7186,7 +7186,7 @@ function galUpdate(dt){
   if (!gal) return;
   var s = Math.min(50, dt) / 1000;
   gal.t += s;
-  if (gal.introT < 3.2) gal.introT += s;
+  if (gal.introT < 5) gal.introT += s;
   var p = gal.player;
 
   // motes drift
@@ -7205,7 +7205,7 @@ function galUpdate(dt){
   }
   p.blink -= s; if (p.blink < 0) p.blink = 2.6 + Math.random()*3.2;
 
-  var locked = (gal.introT < 2.2) && !gal.reduceMotion;
+  var locked = (gal.introT < 3.7) && !gal.reduceMotion;
   if (gal.talking || locked){
     // hold still while the reveal plays or a card is open
     p.vx *= 0.7; p.vy *= 0.7;
@@ -7530,6 +7530,89 @@ function galRender(){
   var vg = c.createRadialGradient(cssW/2, cssH/2, cssH*0.35, cssW/2, cssH/2, cssH*0.85);
   vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)");
   c.fillStyle = vg; c.fillRect(0,0,cssW,cssH);
+
+  // the entrance guide: a flashing credit on the left and an arrow pointing the way in
+  galEntranceGuide(c, cssW, cssH);
+}
+
+/* The entrance guide for THE LONG VIEW. On first arrival it sits on the left,
+   a fun flashing credit to the studio and the maker, with a right pointing
+   arrow that nudges the visitor to push the light toward the seven guests.
+   It eases in as the reveal settles and fades out as the light moves right,
+   so it guides without ever getting in the way. Drawn in screen space. */
+function galEntranceGuide(c, cssW, cssH){
+  if (!gal) return;
+  var p = gal.player;
+  var appear = gal.reduceMotion ? 1 : Math.max(0, Math.min(1, (gal.introT - 3.0) / 0.8));
+  var progress = Math.max(0, Math.min(1, (560 - p.x) / 260));   // full at the start, gone past the first guest
+  var a = appear * progress;
+  if (a <= 0.01) return;
+
+  var x0 = Math.max(20, cssW * 0.045);
+  var big = Math.min(30, cssW * 0.052);
+  var med = big * 0.56;
+  var small = Math.max(8, big * 0.30);
+  var cy = cssH * 0.30;
+
+  c.save();
+
+  // a soft warm wash behind the credit so it reads over the hall
+  c.globalCompositeOperation = "lighter";
+  var pg = c.createLinearGradient(0, 0, cssW * 0.5, 0);
+  pg.addColorStop(0, "rgba(24,18,44," + (0.55 * a).toFixed(3) + ")");
+  pg.addColorStop(1, "rgba(24,18,44,0)");
+  c.fillStyle = pg; c.fillRect(0, cy - big * 1.7, cssW * 0.52, big * 6.2);
+  c.globalCompositeOperation = "source-over";
+
+  c.textAlign = "left"; c.textBaseline = "alphabetic";
+
+  // CREATED BY
+  c.globalAlpha = a * 0.9;
+  c.fillStyle = "#3fb8af";
+  c.font = small + "px 'Press Start 2P', monospace";
+  c.fillText("CREATED BY", x0, cy);
+
+  // BELLA VITA LABS, the fun flashing line
+  var flash = 0.78 + 0.22 * Math.sin(gal.t * 4.2);
+  var pop = (Math.sin(gal.t * 1.6) > 0.93);     // an occasional bright pop
+  c.globalAlpha = a;
+  c.shadowColor = "#e8b04b"; c.shadowBlur = 16 * flash;
+  c.fillStyle = pop ? "#fff3d6" : (Math.sin(gal.t * 3) > 0 ? "#e8b04b" : "#f0c463");
+  c.font = big + "px 'Press Start 2P', monospace";
+  c.fillText("BELLA VITA LABS", x0, cy + big * 1.5);
+  c.shadowBlur = 0;
+
+  // BY KELLY SPAIN
+  c.globalAlpha = a;
+  c.fillStyle = "#efe6d2";
+  c.font = med + "px 'Press Start 2P', monospace";
+  c.fillText("BY KELLY SPAIN", x0, cy + big * 1.5 + med * 1.6);
+
+  // the guiding arrow, bobbing to the right
+  var ay = cy + big * 1.5 + med * 1.6 + big * 1.7;
+  var bob = Math.max(0, Math.sin(gal.t * 3.4) * 7);
+  var apx = x0 + 4 + bob;
+  var arrowFlash = 0.7 + 0.3 * Math.abs(Math.sin(gal.t * 4.2));
+  c.globalAlpha = a * arrowFlash;
+  c.fillStyle = "#e8b04b";
+  c.shadowColor = "#e8b04b"; c.shadowBlur = 12 * arrowFlash;
+  c.fillRect(apx, ay - 3, big * 1.2, 6);                 // shaft
+  c.beginPath();                                          // head
+  c.moveTo(apx + big * 1.2, ay - 11);
+  c.lineTo(apx + big * 1.2 + 16, ay);
+  c.lineTo(apx + big * 1.2, ay + 11);
+  c.closePath(); c.fill();
+  c.shadowBlur = 0;
+
+  // the label under the arrow
+  c.globalAlpha = a * 0.92;
+  c.fillStyle = "#d8d2e2";
+  c.font = small + "px 'Press Start 2P', monospace";
+  c.fillText("PUSH THE LIGHT RIGHT", x0, ay + big * 0.95);
+  c.fillText("TO MEET OUR MAIN CHARACTERS", x0, ay + big * 0.95 + small * 1.7);
+
+  c.restore();
+  c.globalAlpha = 1;
 }
 
 function galBloom(c, pl){
@@ -7659,30 +7742,6 @@ function galDrawHall(c){
   c.font = "700 120px 'Press Start 2P', monospace";
   c.textAlign = "center";
   c.fillText("THE LONG VIEW", GAL_W/2, fy*0.62);
-
-  // the dedication at the far end of the hall: the studio and the maker.
-  // placed and sized to sit fully within the view once the visitor walks to the end.
-  var dcx = GAL_W - 140, dcy = GAL_H * 0.20;
-  c.globalCompositeOperation = "lighter";
-  var dglow = c.createRadialGradient(dcx, dcy + 30, 8, dcx, dcy + 30, 230);
-  dglow.addColorStop(0, "rgba(232,176,75,0.10)");
-  dglow.addColorStop(1, "rgba(232,176,75,0)");
-  c.fillStyle = dglow; c.fillRect(dcx - 230, dcy - 110, 460, 320);
-  c.globalCompositeOperation = "source-over";
-  c.textAlign = "center";
-  c.fillStyle = hexA("#3fb8af", 0.66);
-  c.font = "8px 'Press Start 2P', monospace";
-  c.fillText("A BELLA VITA LABS GAME", dcx, dcy);
-  c.fillStyle = hexA("#e8b04b", 0.40);
-  c.font = "7px 'Press Start 2P', monospace";
-  c.fillText("CREATED BY", dcx, dcy + 30);
-  c.fillStyle = hexA("#e8b04b", 0.82);
-  c.font = "18px 'Press Start 2P', monospace";
-  c.fillText("KELLY SPAIN", dcx, dcy + 58);
-  c.fillStyle = hexA("#d8d2e2", 0.52);
-  c.font = "8px 'Press Start 2P', monospace";
-  c.fillText("SEVEN WORLDS, ONE LIGHT.", dcx, dcy + 92);
-  c.fillText("THANK YOU FOR PLAYING.", dcx, dcy + 110);
 }
 
 function galZoneGlow(c, g){
@@ -7799,7 +7858,7 @@ function openGallery(opts){
     introEl.classList.remove("run"); void introEl.offsetWidth; introEl.classList.add("run");
     introEl.addEventListener("animationend", function h(){ introEl.classList.remove("run"); introEl.removeEventListener("animationend", h); });
   }
-  if (gal.reduceMotion) gal.introT = 3.4;
+  if (gal.reduceMotion) gal.introT = 5;
   G.keys = {};
   G.scene = "GALLERY";
   galHideCard();
@@ -14975,7 +15034,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M28.S1",
+  version: "M28.S2",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
