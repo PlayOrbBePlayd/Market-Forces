@@ -5891,12 +5891,211 @@ function drawAimLance(x, y, lane, lanes){
 }
 
 
+/* MUTUAL AID, the Chapter 2 (Socialism) arcade, a distinct engine.
+   Not a catcher and not a shooter: four public houses stand around a
+   Red Vienna courtyard, the kitchen, the clinic, the school, and the
+   housing block. Each one drains on its own clock. The organizer walks
+   the rounds and pours into whichever house is nearest, RALLY is a short
+   burst of pace and pour on a cooldown, and a passing volunteer can be
+   recruited to keep one house tended hands free for a while. Surges spike
+   one house at a time. You score by topping a house to full (a need met),
+   you lose the clean sheet when a house empties (a service goes dark), and
+   the shift ends when the round's target of needs is met. Pure state,
+   seedable rng, time stepped, so it runs headless in jsdom exactly like the
+   others, and the engine API mirrors them so makeArcade and the flow code
+   never learn which engine they are holding. The lesson is in the verb:
+   collective provision is not a gift given once but a round walked forever. */
+function MutualEngine(cfg){
+  var W = VIEW_W, H = VIEW_H;
+  var baseY = H - 64;
+  var margin = 70, span = W - margin * 2;
+  var n = cfg.pillars.length;
+  var pillars = cfg.pillars.map(function(p, i){
+    var cx = margin + (n === 1 ? span / 2 : span * i / (n - 1));
+    return {
+      id: p.id, name: p.name, glyph: p.glyph, color: p.color, cx: cx,
+      level: (p.start != null ? p.start : 70),
+      armed: true, down: false, surge: 0, flash: 0, helper: 0, empties: 0
+    };
+  });
+  var E = {
+    kind: "mutual",
+    cfg: cfg, W: W, H: H, baseY: baseY, margin: margin,
+    pillars: pillars,
+    org: { x: W / 2, w: 26, speed: cfg.org.speed, boostUntil: 0, cooldown: 0, flash: 0, tending: -1 },
+    vols: [], fx: [],
+    wave: 0, waveElapsed: 0, waveHits: 0,
+    surgeTimer: cfg.waves[0].surgeEvery, volTimer: cfg.waves[0].volEvery,
+    input: { left: false, right: false, up: false, down: false },
+    elapsed: 0,
+    hits: 0, damagePts: 0,
+    combo: 0, bestCombo: 0, comboPts: 0,
+    playerHits: 0,
+    over: false, banked: false
+  };
+
+  function waveCfg(){ return cfg.waves[E.wave]; }
+  function addFx(text, x, y, bad){ E.fx.push({ text: text, x: x, y: y, t: 950, bad: !!bad }); }
+  function nearestPillar(x){
+    var best = -1, bd = 1e9;
+    for (var i = 0; i < pillars.length; i++){
+      var d = Math.abs(pillars[i].cx - x);
+      if (d < bd){ bd = d; best = i; }
+    }
+    return bd <= cfg.org.reach ? best : -1;
+  }
+
+  // RALLY is the burst: faster rounds and a heavier pour, on a cooldown
+  E.fire = function(){
+    if (E.over) return false;
+    if (E.org.cooldown > 0) return false;
+    E.org.cooldown = cfg.rally.cooldown;
+    E.org.boostUntil = E.elapsed + cfg.rally.duration;
+    addFx("RALLY", E.org.x, baseY - 42, false);
+    return true;
+  };
+
+  E.update = function(dt){
+    if (E.over) return;
+    E.elapsed += dt; E.waveElapsed += dt;
+    var s = dt / 1000;
+    var wc = waveCfg();
+
+    // the organizer slides along the rounds, quicker on a rally
+    var boosting = E.elapsed < E.org.boostUntil;
+    var sp = cfg.org.speed * (boosting ? cfg.rally.moveMult : 1);
+    if (E.input.left)  E.org.x -= sp * s;
+    if (E.input.right) E.org.x += sp * s;
+    E.org.x = Math.max(margin * 0.5, Math.min(E.org.x, W - margin * 0.5));
+    if (E.org.cooldown > 0) E.org.cooldown -= dt;
+    if (E.org.flash > 0) E.org.flash -= dt;
+
+    var tend = nearestPillar(E.org.x);
+    E.org.tending = tend;
+
+    // surges spike one house at a time
+    if (wc.surgeEvery > 0){
+      E.surgeTimer -= dt;
+      if (E.surgeTimer <= 0){
+        E.surgeTimer = wc.surgeEvery;
+        var pool = [];
+        for (var si = 0; si < pillars.length; si++) if (pillars[si].surge <= 0) pool.push(si);
+        if (pool.length){
+          var pick = pool[Math.floor(rng() * pool.length)];
+          pillars[pick].surge = cfg.surge.duration;
+          addFx("SURGE", pillars[pick].cx, 150, true);
+        }
+      }
+    }
+
+    // volunteers cross the lane and are recruited on contact
+    if (wc.volEvery > 0){
+      E.volTimer -= dt;
+      if (E.volTimer <= 0){
+        E.volTimer = wc.volEvery;
+        var fromLeft = rng() < 0.5;
+        E.vols.push({ x: fromLeft ? -16 : W + 16, dir: fromLeft ? 1 : -1, w: 16, h: 24, speed: cfg.vol.speed, phase: rng() * 6.28 });
+      }
+    }
+    for (var v = E.vols.length - 1; v >= 0; v--){
+      var vo = E.vols[v];
+      vo.x += vo.dir * vo.speed * s;
+      if (rectsOverlap(vo.x, baseY - 10, vo.w, vo.h, E.org.x - E.org.w / 2, baseY - 10, E.org.w, 28)){
+        E.vols.splice(v, 1);
+        var low = -1, lv = 1e9;
+        for (var li = 0; li < pillars.length; li++){ if (pillars[li].level < lv){ lv = pillars[li].level; low = li; } }
+        if (low >= 0){ pillars[low].helper = cfg.vol.helpDuration; addFx("VOLUNTEER", pillars[low].cx, 150, false); }
+        continue;
+      }
+      if (vo.x < -30 || vo.x > W + 30) E.vols.splice(v, 1);
+    }
+
+    // each house drains, takes the pour, scores on full, goes dark on empty
+    for (var i = 0; i < pillars.length; i++){
+      var pl = pillars[i];
+      if (pl.surge > 0) pl.surge -= dt;
+      if (pl.flash > 0) pl.flash -= dt;
+      var drain = wc.drain * (pl.surge > 0 ? cfg.surge.mult : 1);
+      pl.level -= drain * s;
+      if (i === tend) pl.level += cfg.org.pour * (boosting ? cfg.rally.pourMult : 1) * s;
+      if (pl.helper > 0){ pl.helper -= dt; pl.level += cfg.vol.pour * s; }
+
+      if (pl.level >= 100){
+        pl.level = 100;
+        pl.down = false;
+        if (pl.armed){
+          pl.armed = false;
+          var urg = pl.surge > 0;
+          var pts = cfg.hitPts * (urg ? 2 : 1);
+          E.hits++; E.waveHits++; E.damagePts += pts;
+          E.combo++; if (E.combo > E.bestCombo) E.bestCombo = E.combo;
+          var line = (urg ? "URGENT MET +" : "NEED MET +") + pts;
+          if (E.combo % cfg.comboEvery === 0){ E.comboPts += cfg.comboBonus; line = "STREAK x" + E.combo + " +" + cfg.comboBonus; }
+          addFx(line, pl.cx, 150, false);
+        }
+      } else if (pl.level <= cfg.rearm){
+        pl.armed = true;
+        if (pl.level > 0) pl.down = false;
+      }
+
+      if (pl.level <= 0){
+        pl.level = 0;
+        if (!pl.down){
+          pl.down = true;
+          pl.empties++;
+          E.playerHits++;
+          E.combo = 0;
+          pl.flash = 800;
+          addFx((cfg.lines && cfg.lines.collapse) || "A SERVICE WENT DARK", pl.cx, baseY - 30, true);
+        }
+      }
+    }
+
+    // floating feedback decays
+    for (var f = E.fx.length - 1; f >= 0; f--){
+      E.fx[f].t -= dt; E.fx[f].y -= 20 * s;
+      if (E.fx[f].t <= 0) E.fx.splice(f, 1);
+    }
+
+    // the shift advances when the round's needs are met, with a time backstop
+    if (E.waveHits >= wc.target || E.waveElapsed >= (wc.maxMs || 60000)){
+      if (E.wave < cfg.waves.length - 1){
+        E.wave++; E.waveElapsed = 0; E.waveHits = 0;
+        E.surgeTimer = waveCfg().surgeEvery; E.volTimer = waveCfg().volEvery;
+        for (var ci = 0; ci < pillars.length; ci++){ pillars[ci].surge = 0; }
+        E.vols.length = 0;
+        addFx("SHIFT " + (E.wave + 1), W / 2, H / 2 - 40, false);
+      } else {
+        E.over = true;
+      }
+    }
+  };
+
+  E.score = function(){
+    var noHit = (E.playerHits === 0) ? cfg.noHitBonus : 0;
+    var speed = E.over
+      ? Math.max(0, Math.min(cfg.speedCap, Math.round(cfg.par - E.elapsed / 1000)))
+      : 0;
+    return {
+      damage: E.damagePts,
+      comboPts: E.comboPts,
+      bestCombo: E.bestCombo,
+      noHit: noHit,
+      speed: speed,
+      total: E.damagePts + E.comboPts + noHit + speed
+    };
+  };
+
+  return E;
+}
+
 function makeArcade(cfg){
   if (cfg.engine === "catch") return CatchEngine(cfg);
   if (cfg.engine === "stack") return StackEngine(cfg);
   if (cfg.engine === "joust") return JoustEngine(cfg);
   if (cfg.engine === "sea") return SeaEngine(cfg);
   if (cfg.engine === "lander") return LanderEngine(cfg);
+  if (cfg.engine === "mutual") return MutualEngine(cfg);
   return ArcadeEngine(cfg);
 }
 
@@ -8544,11 +8743,151 @@ function renderStack(){
   ctx.fillText(Math.floor(A.elapsed / 1000) + "s", W - 14, 40);
 }
 
+function renderMutual(){
+  if (!ctx || !arcade) return;
+  var A = arcade, W = A.W, H = A.H, baseY = A.baseY;
+  // dusk air over the courtyard
+  ctx.fillStyle = "#241b14"; ctx.fillRect(0, 0, W, H);
+  // the courtyard wall and its lit window rows
+  ctx.fillStyle = "#3a241c"; ctx.fillRect(0, 0, W, 120);
+  ctx.fillStyle = "#6e3231"; ctx.fillRect(0, 116, W, 6);
+  for (var wx = 24; wx < W - 30; wx += 58){
+    for (var wy = 16; wy < 104; wy += 44){
+      var lit = tileHash(wx, wy) % 4 !== 0;
+      ctx.fillStyle = lit ? "rgba(255,225,170,.55)" : "rgba(20,14,10,.8)";
+      ctx.fillRect(wx, wy, 22, 26);
+      ctx.fillStyle = "rgba(20,14,10,.5)";
+      ctx.fillRect(wx + 10, wy, 2, 26); ctx.fillRect(wx, wy + 12, 22, 2);
+    }
+  }
+  // a string of solidarity pennants, gently swaying
+  ctx.strokeStyle = "rgba(220,215,200,.35)";
+  ctx.beginPath(); ctx.moveTo(0, 138); ctx.lineTo(W, 132); ctx.stroke();
+  var swy = Math.round(Math.sin(G.time / 420) * 2);
+  var pcols = ["#a3504f", "#e8b04b", "#3fb8af", "#efe6d2"];
+  for (var pf = 0; pf < 12; pf++){
+    var fxx = 30 + pf * (W - 60) / 12;
+    var fy = 136 + (pf % 2 === 0 ? swy : -swy);
+    ctx.fillStyle = pcols[pf % 4];
+    ctx.beginPath();
+    ctx.moveTo(fxx, fy); ctx.lineTo(fxx + 16, fy); ctx.lineTo(fxx + 8, fy + 12); ctx.closePath(); ctx.fill();
+  }
+  // the cobbled courtyard floor
+  ctx.fillStyle = "#2c211a"; ctx.fillRect(0, baseY + 6, W, H - baseY - 6);
+  ctx.fillStyle = "rgba(255,255,255,.05)";
+  for (var cb = 0; cb < W; cb += 26){ ctx.fillRect(cb, baseY + 16, 13, 2); }
+
+  function glyph(kind, gx, gy, col){
+    ctx.fillStyle = col;
+    if (kind === "loaf"){
+      ctx.fillRect(gx - 8, gy - 3, 16, 9); ctx.fillRect(gx - 6, gy - 6, 12, 4);
+      ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(gx - 4, gy - 1, 2, 5); ctx.fillRect(gx + 2, gy - 1, 2, 5);
+    } else if (kind === "cross"){
+      ctx.fillRect(gx - 2, gy - 8, 4, 16); ctx.fillRect(gx - 8, gy - 2, 16, 4);
+    } else if (kind === "book"){
+      ctx.fillStyle = "#efe6d2"; ctx.fillRect(gx - 9, gy - 7, 8, 14); ctx.fillRect(gx + 1, gy - 7, 8, 14);
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(gx - 1, gy - 7, 2, 14);
+    } else if (kind === "house"){
+      ctx.fillRect(gx - 7, gy - 1, 14, 9);
+      ctx.beginPath(); ctx.moveTo(gx - 9, gy - 1); ctx.lineTo(gx, gy - 9); ctx.lineTo(gx + 9, gy - 1); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // the four public houses, each a standpipe with a fill gauge
+  var topY = 168, gW = 40, innerPad = 6;
+  for (var i = 0; i < A.pillars.length; i++){
+    var pl = A.pillars[i];
+    var cx = pl.cx;
+    var collapsing = pl.flash > 0 && Math.floor(pl.flash / 90) % 2 === 0;
+    var surging = pl.surge > 0;
+    // casing
+    ctx.fillStyle = collapsing ? "#e25549" : "#4a2a26";
+    ctx.fillRect(cx - gW / 2, topY, gW, baseY - topY);
+    ctx.fillStyle = "#3a201c";
+    ctx.fillRect(cx - gW / 2, topY, 3, baseY - topY); ctx.fillRect(cx + gW / 2 - 3, topY, 3, baseY - topY);
+    // inner gauge track
+    var gx0 = cx - gW / 2 + innerPad, gx1 = cx + gW / 2 - innerPad;
+    var gTop = topY + 26, gBot = baseY - 8, gH = gBot - gTop;
+    ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(gx0, gTop, gx1 - gx0, gH);
+    // fill from the bottom up
+    var lvl = Math.max(0, Math.min(100, pl.level));
+    var fh = Math.round(gH * lvl / 100);
+    var fill = collapsing ? "#e25549" : (surging ? (Math.floor(A.elapsed / 160) % 2 === 0 ? "#e2773f" : pl.color) : pl.color);
+    ctx.fillStyle = fill;
+    ctx.fillRect(gx0, gBot - fh, gx1 - gx0, fh);
+    // a low water warning band
+    if (lvl <= 28 && !collapsing){
+      ctx.fillStyle = "rgba(226,85,73,.30)"; ctx.fillRect(gx0, gBot - Math.round(gH * 0.28), gx1 - gx0, Math.round(gH * 0.28));
+    }
+    // helper tending mark
+    if (pl.helper > 0){
+      ctx.fillStyle = "#7fe5b0"; ctx.fillRect(cx - 3, gTop - 8, 6, 6);
+    }
+    // glyph plate on top
+    ctx.fillStyle = "#1d1410"; ctx.fillRect(cx - 16, topY + 4, 32, 18);
+    glyph(pl.glyph, cx, topY + 13, surging ? "#e2773f" : pl.color);
+    // name and level
+    ctx.textAlign = "center"; ctx.font = "7px 'Press Start 2P', monospace";
+    ctx.fillStyle = "#cfc2ad"; ctx.fillText(pl.name, cx, baseY + 30);
+    ctx.fillStyle = surging ? "#e2773f" : "#e8d8bc"; ctx.fillText(Math.round(lvl), cx, gTop - 12);
+    if (surging){ ctx.fillStyle = "#e25549"; ctx.fillText("URGENT", cx, topY - 4); }
+    // the tended house gets a base arrow
+    if (i === A.org.tending){
+      ctx.fillStyle = "#e8b04b";
+      ctx.beginPath(); ctx.moveTo(cx - 6, baseY + 2); ctx.lineTo(cx + 6, baseY + 2); ctx.lineTo(cx, baseY - 4); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // recruited volunteers crossing the lane
+  for (var vv = 0; vv < A.vols.length; vv++){
+    var vo = A.vols[vv];
+    var bob = Math.round(Math.sin(A.elapsed / 150 + vo.phase) * 2);
+    ctx.fillStyle = "#cda6e0"; ctx.fillRect(vo.x, baseY - 6 + bob, vo.w, 14);
+    ctx.fillStyle = "#e8c39e"; ctx.fillRect(vo.x + 3, baseY - 14 + bob, 10, 8);
+  }
+
+  // the organizer with a jug, an aura while rallying
+  var O = A.org;
+  var boosting = A.elapsed < O.boostUntil;
+  if (boosting){
+    ctx.fillStyle = "rgba(232,176,75,.18)";
+    ctx.beginPath(); ctx.arc(O.x, baseY, 26, 0, 6.283); ctx.fill();
+  }
+  ctx.fillStyle = "#3fb8af"; ctx.fillRect(O.x - O.w / 2, baseY - 8, O.w, 18);
+  ctx.fillStyle = "#e8c39e"; ctx.fillRect(O.x - 6, baseY - 20, 12, 11);
+  ctx.fillStyle = "#2a4a3c"; ctx.fillRect(O.x - 7, baseY - 23, 14, 4);
+  // the jug, leaning toward the tended house
+  ctx.fillStyle = "#caa06a";
+  var jx = O.x + (O.tending >= 0 && A.pillars[O.tending] && A.pillars[O.tending].cx >= O.x ? 8 : -14);
+  ctx.fillRect(jx, baseY - 14, 8, 9);
+  // rally readiness pip
+  ctx.fillStyle = O.cooldown <= 0 ? "#3fb8af" : "rgba(63,184,175,.25)";
+  ctx.fillRect(O.x - 2, baseY - 30, 4, 4);
+
+  // floating feedback
+  ctx.textAlign = "center"; ctx.font = "8px 'Press Start 2P', monospace";
+  for (var f = 0; f < A.fx.length; f++){
+    var x = A.fx[f];
+    ctx.fillStyle = x.bad ? "#e25549" : "#7fe5b0";
+    ctx.globalAlpha = Math.min(1, x.t / 500);
+    ctx.fillText(x.text, x.x, x.y);
+    ctx.globalAlpha = 1;
+  }
+  // the shift HUD
+  ctx.textAlign = "left"; ctx.fillStyle = "#e8d8bc";
+  ctx.fillText("MET " + A.hits, 14, 18);
+  ctx.fillText("STREAK x" + A.combo, 14, 34);
+  ctx.textAlign = "right";
+  ctx.fillText("SHIFT " + (A.wave + 1) + "/" + A.cfg.waves.length, W - 14, 18);
+  ctx.fillText(Math.floor(A.elapsed / 1000) + "s", W - 14, 34);
+}
+
 function renderArcade(){
   if (arcade && arcade.kind === "stack"){ renderStack(); return; }
   if (arcade && arcade.kind === "joust"){ renderJoust(); return; }
   if (arcade && arcade.kind === "sea"){ renderSea(); return; }
   if (arcade && arcade.kind === "lander"){ renderLander(); return; }
+  if (arcade && arcade.kind === "mutual"){ renderMutual(); return; }
   if (arcade && arcade.kind === "catch"){ if (arcade.cfg.skin === "gather") renderCatchGather(); else renderCatchNet(); return; }
   if (arcade && arcade.cfg.skin === "dispatch") renderArcadeDispatch();
   else renderArcadeTerminal();
@@ -8839,36 +9178,45 @@ var CH2_DESK = {
    Same pure engine, the difficulty dialed up: four waves,
    faster falls, heavier grievance weather. */
 var CH2_ARCADE = {
-  engine: "catch",
-  title: "THE SAFETY NET",
-  skin: "courtyard",
-  startLabel: "TAKE THE NET",
+  engine: "mutual",
+  title: "MUTUAL AID",
+  skin: "commons",
+  startLabel: "TAKE THE ROUNDS",
   endTitle: "END OF SHIFT",
-  hitVerb: "CATCH A NEED",
-  sumLabel: "Needs caught",
-  sumUnit: "catches",
-  spoilUnit: "slipped or stuck",
-  intro: "The courtyard windows are open and the needs are coming down: bread, medicine, parcels, and the urgent cases that cannot wait. You hold the net the whole town wove together. Catch every need before it hits the cobbles, let the grievance forms flutter past, and remember that the urgent ones fall fastest. The commons is only as strong as its net.",
-  cleanLine: "Every need caught, every grievance dodged. The courtyard sleeps fed, and the net goes up dry.",
-  hitLine: "A few slipped and some paperwork stuck, and the courtyard got fed anyway. That is the shift.",
-  lines: { through: "A NEED HIT THE COBBLES", drop: "A GRIEVANCE STUCK TO THE NET" },
-  rulesHtml: "<b>CATCH A NEED</b> +2, urgent cases +4 and they fall fastest<br>"
-    + "<b>STREAK OF 5</b> +5 each time, miss nothing and catch no paperwork to keep it alive<br>"
-    + "<b>CLEAN SHEET</b> +25 if no need hits the cobbles and no grievance sticks<br>"
-    + "<b>THE CLOCK</b> up to +25 for finishing fast<br>"
-    + "MOVE: LEFT and RIGHT \u2022 HUSTLE: SPACE or A, a burst of speed on a cooldown",
-  par: 80,
+  hitVerb: "MEET A NEED",
+  sumLabel: "Needs met",
+  sumUnit: "met",
+  spoilUnit: "services let go dark",
+  intro: "Four public houses stand around the courtyard: the kitchen, the clinic, the school, and the housing block. Each one drains as the day wears on, and none of them runs itself. Walk the rounds, top up whichever house is running low, and never let one empty out. Call a rally when you fall behind, and recruit a volunteer when one crosses the yard so a house stays tended while you move. Shared provision is not a gift you give once. It is a round you walk forever.",
+  cleanLine: "Every house stayed open and every need was met, and not one service went dark all shift. The commons held.",
+  hitLine: "A house or two ran dry before you reached it, and the courtyard carried on anyway. That is the work, and the work is never finished.",
+  lines: { met: "NEED MET", collapse: "A SERVICE WENT DARK" },
+  rulesHtml: "<b>MEET A NEED</b> +3 each time a house fills, urgent surges +6<br>"
+    + "<b>STREAK OF 4</b> +6 each time, let no house go dark to keep it alive<br>"
+    + "<b>CLEAN SHEET</b> +25 if no service goes dark all shift<br>"
+    + "<b>THE CLOCK</b> up to +25 for walking the rounds quickly<br>"
+    + "MOVE: LEFT and RIGHT \u2022 RALLY: SPACE or A, a burst of pace and pour on a cooldown",
+  par: 90,
   speedCap: 25,
   noHitBonus: 25,
-  hitPts: 2,
-  comboEvery: 5,
-  comboBonus: 5,
-  net: { w: 64, h: 14, speed: 250 },
-  hustle: { mult: 1.9, duration: 700, cooldown: 2200 },
+  hitPts: 3,
+  comboEvery: 4,
+  comboBonus: 6,
+  rearm: 80,
+  org: { speed: 230, pour: 46, reach: 90 },
+  rally: { duration: 1200, cooldown: 4200, moveMult: 1.6, pourMult: 1.9 },
+  surge: { duration: 4200, mult: 2.2 },
+  vol: { speed: 90, pour: 16, helpDuration: 5200 },
+  pillars: [
+    { id: "kitchen", name: "KITCHEN", glyph: "loaf",  color: "#e8b04b", start: 72 },
+    { id: "clinic",  name: "CLINIC",  glyph: "cross", color: "#3fb8af", start: 66 },
+    { id: "school",  name: "SCHOOL",  glyph: "book",  color: "#cda6e0", start: 70 },
+    { id: "housing", name: "HOUSING", glyph: "house", color: "#a3504f", start: 64 }
+  ],
   waves: [
-    { count: 10, fall: 50, sway: 14, spawnGap: 950, griefShare: 0.14, urgentEvery: 5 },
-    { count: 12, fall: 62, sway: 18, spawnGap: 800, griefShare: 0.20, urgentEvery: 4 },
-    { count: 14, fall: 74, sway: 22, spawnGap: 660, griefShare: 0.26, urgentEvery: 4 }
+    { target: 8,  drain: 7.5,  surgeEvery: 9000, volEvery: 7000, maxMs: 52000 },
+    { target: 10, drain: 9.5,  surgeEvery: 7000, volEvery: 7000, maxMs: 52000 },
+    { target: 12, drain: 11.5, surgeEvery: 5600, volEvery: 7500, maxMs: 56000 }
   ]
 };
 
@@ -14603,7 +14951,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M27.S1",
+  version: "M27.S3",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -14683,6 +15031,7 @@ window.MF = {
   },
   arcade: function(){ return arcade; },
   CatchEngine: CatchEngine,
+  MutualEngine: MutualEngine,
   makeArcade: makeArcade,
   nextChapterId: nextChapterId,
   startChapter: startChapter,
