@@ -352,18 +352,59 @@
   #gallery-intro{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;pointer-events:none;opacity:0;
     background:radial-gradient(ellipse at 50% 42%, #0b0a16 0%, #050409 82%)}
-  #gallery-intro.run{animation:galIntro 4.6s ease forwards}
+  #gallery-intro.run{animation:galIntro 7.5s ease forwards}
   .gi-kicker{font-family:var(--display);font-size:8px;letter-spacing:3px;color:var(--teal);
-    margin-bottom:18px;opacity:0;animation:giUp .8s ease .1s forwards}
+    margin-bottom:18px;opacity:0;animation:giUp .65s ease .12s forwards}
   .gi-title{font-family:var(--display);font-size:clamp(20px,6vw,40px);color:var(--brass);
     text-shadow:0 4px 0 var(--shadow);letter-spacing:2px;margin-bottom:18px;opacity:0;
-    animation:giUp .9s ease .3s forwards}
+    animation:giUp .7s ease .3s forwards}
   .gi-sub{font-family:var(--display);font-size:9px;line-height:2;color:#cdbfe0;opacity:0;
-    animation:giUp .9s ease .6s forwards}
+    animation:giUp .7s ease .55s forwards}
   @keyframes galIntro{0%{opacity:1}80%{opacity:1}100%{opacity:0}}
   @keyframes giUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
   #gallery-card{cursor:pointer}
   @media (prefers-reduced-motion: reduce){ #gallery-intro{display:none} }
+  /* ---------- THE LONG RUN: the hidden bonus (M29.S1 boot, M30.S1 engine) ---------- */
+  #panel-platformer{position:absolute;inset:0;z-index:26;display:none;background:#05060f}
+  #panel-platformer.on{display:block}
+  #plat-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:auto}
+  #plat-touch{position:absolute;inset:0;z-index:2;display:none;pointer-events:none;
+    justify-content:space-between;align-items:flex-end;padding:0 16px 22px}
+  body.touch #panel-platformer.on #plat-touch{display:flex}
+  .pt-pad{display:flex;gap:12px;pointer-events:auto}
+  .pt-act{display:flex;gap:12px;pointer-events:auto}
+  .pt-b{font-family:var(--display);font-size:11px;color:#eaf2ff;cursor:pointer;
+    width:62px;height:62px;border-radius:14px;border:2px solid rgba(127,176,255,0.4);
+    background:rgba(20,26,48,0.7);user-select:none;touch-action:none}
+  .pt-b:active{background:rgba(63,184,175,0.5)}
+  .pt-wide{width:80px;font-size:9px}
+  #plat-boot{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(ellipse at 50% 38%, rgba(16,22,46,0.92) 0%, rgba(5,6,15,0.95) 84%)}
+  #plat-boot.hide{display:none}
+  .plat-boot{text-align:center;padding:24px;max-width:560px}
+  .pb-orb{width:46px;height:46px;margin:0 auto 22px;border-radius:50%;
+    background:radial-gradient(circle at 50% 40%, #fff7e2 0%, #7fc8ff 45%, rgba(127,176,255,0) 72%);
+    box-shadow:0 0 30px 6px rgba(127,176,255,0.5);animation:pbPulse 1.6s ease-in-out infinite}
+  .pb-kicker{font-family:var(--display);font-size:8px;letter-spacing:3px;color:var(--teal);margin-bottom:16px}
+  .pb-title{font-family:var(--display);font-size:clamp(22px,7vw,46px);color:var(--brass);
+    text-shadow:0 4px 0 var(--shadow);letter-spacing:2px;margin-bottom:16px}
+  .pb-sub{font-family:var(--display);font-size:9px;line-height:2;color:#cdbfe0;margin-bottom:22px}
+  .pb-btn{pointer-events:auto;font-family:var(--display);font-size:9px;color:#06121a;cursor:pointer;
+    background:var(--teal);border:none;border-radius:8px;padding:12px 18px;box-shadow:0 4px 0 #1f6e69;margin:6px}
+  .pb-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #1f6e69}
+  .pb-ghost{background:transparent;color:var(--teal);box-shadow:0 0 0 2px #1f6e69 inset}
+  .pb-ghost:active{transform:translateY(2px);box-shadow:0 0 0 2px #1f6e69 inset}
+  .pb-hint{font-family:var(--display);font-size:7px;color:#8d83a5;margin-top:18px;line-height:1.8}
+  .pb-flag{display:block;font-family:var(--display);font-size:8px;letter-spacing:1px;color:var(--teal);margin-bottom:14px;line-height:1.8}
+  .pb-tally{display:inline-block;text-align:left;min-width:260px}
+  .pb-row{display:flex;justify-content:space-between;gap:24px;font-family:var(--display);font-size:8px;
+    line-height:2.2;color:#cdbfe0;border-bottom:1px solid rgba(127,176,255,0.12);padding:1px 0}
+  .pb-rk{color:#8d83a5}
+  .pb-rv{color:var(--brass)}
+  #plat-boot.pb-won .pb-title{color:var(--teal)}
+  #plat-boot.pb-over .pb-title{color:#d98a7a}
+  @keyframes pbPulse{0%,100%{transform:scale(1);opacity:0.9}50%{transform:scale(1.12);opacity:1}}
 </style>
 </head>
 <body>
@@ -432,6 +473,32 @@
           <div class="gal-reveal">We built it in eight bits on purpose.<br>This is where it was always headed.<br><b>One light. Seven worlds.</b></div>
         </div>
         <div id="gallery-card"></div>
+      </div>
+    </div>
+
+    <div id="panel-platformer">
+      <canvas id="plat-canvas"></canvas>
+      <div id="plat-touch">
+        <div class="pt-pad">
+          <button id="pt-left" class="pt-b" aria-label="run left">&#9664;</button>
+          <button id="pt-right" class="pt-b" aria-label="run right">&#9654;</button>
+        </div>
+        <div class="pt-act">
+          <button id="pt-roll" class="pt-b pt-wide">ROLL</button>
+          <button id="pt-jump" class="pt-b pt-wide">JUMP</button>
+        </div>
+      </div>
+      <div id="plat-boot">
+        <div class="plat-boot">
+          <div class="pb-orb"></div>
+          <div class="pb-kicker" id="plat-kicker">A HIDDEN BONUS / THE LONG VIEW</div>
+          <div class="pb-title" id="plat-title">THE LONG RUN</div>
+          <div class="pb-sub" id="plat-sub">The light breaks into a run.<br>Move to run. Up to jump. Down to roll.</div>
+          <button id="plat-start" class="pb-btn">START THE RUN</button>
+          <button id="plat-back" class="pb-btn pb-ghost">BACK TO THE HALL</button>
+          <button id="plat-sound" class="pb-btn pb-ghost">SOUND: OFF</button>
+          <div class="pb-hint" id="plat-hint">A short test stage. Reach the glowing goal.</div>
+        </div>
       </div>
     </div>
 
@@ -3666,11 +3733,21 @@ var KEYMAP = {
   ArrowLeft:"left", KeyA:"left", ArrowRight:"right", KeyD:"right"
 };
 function onKeyDown(e){
+  if (e.code==="Escape" && G.scene==="PLATFORMER"){ closePlatformer(); e.preventDefault(); return; }
   if (e.code==="Escape" && G.scene==="GALLERY"){ closeGallery(); e.preventDefault(); return; }
+  if (G.scene==="PLATFORMER"){
+    if (e.code==="KeyM"){ platToggleSound(); e.preventDefault(); return; }
+    if (KEYMAP[e.code]){ G.keys[KEYMAP[e.code]] = true; e.preventDefault(); return; }
+    if (e.code==="Space" || e.code==="Enter"){ platKeyAct(); e.preventDefault(); return; }
+    return;
+  }
   if (KEYMAP[e.code]) { G.keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code==="Space" || e.code==="Enter") { action(); e.preventDefault(); }
 }
-function onKeyUp(e){ if (KEYMAP[e.code]) G.keys[KEYMAP[e.code]] = false; }
+function onKeyUp(e){
+  if (G.scene==="PLATFORMER" && (e.code==="Space" || e.code==="Enter")){ G.keys.up = false; e.preventDefault(); return; }
+  if (KEYMAP[e.code]) G.keys[KEYMAP[e.code]] = false;
+}
 window.addEventListener("keydown", onKeyDown);
 window.addEventListener("keyup", onKeyUp);
 
@@ -3693,9 +3770,17 @@ var briefBtn = document.getElementById("briefing-btn");
 if (briefBtn) briefBtn.addEventListener("click", function(e){ reviewBriefing(); e.preventDefault(); });
 var galLeaveBtn = document.getElementById("gallery-leave");
 if (galLeaveBtn) galLeaveBtn.addEventListener("click", function(e){ closeGallery(); e.preventDefault(); });
+var platBackBtn = document.getElementById("plat-back");
+if (platBackBtn) platBackBtn.addEventListener("click", function(e){ closePlatformer(); e.preventDefault(); });
+var platStartBtn = document.getElementById("plat-start");
+if (platStartBtn) platStartBtn.addEventListener("click", function(e){ platBegin(); e.preventDefault(); });
+var platSoundBtn = document.getElementById("plat-sound");
+if (platSoundBtn) platSoundBtn.addEventListener("click", function(e){ platToggleSound(); e.preventDefault(); });
+bindHold("pt-left","left"); bindHold("pt-right","right");
+bindHold("pt-jump","up"); bindHold("pt-roll","down");
 var galCardClick = document.getElementById("gallery-card");
 if (galCardClick) galCardClick.addEventListener("click", function(){ if (gal && gal.talking) galAdvance(); });
-window.addEventListener("resize", function(){ if (G.scene==="GALLERY") galSizeCanvas(); });
+window.addEventListener("resize", function(){ if (G.scene==="GALLERY") galSizeCanvas(); else if (G.scene==="PLATFORMER") platSizeCanvas(); });
 if (typeof window.ontouchstart !== "undefined") document.body.classList.add("touch");
 
 /* ---------- Action button ---------- */
@@ -7048,6 +7133,7 @@ var GAL_W = 3200, GAL_H = 600;          // world units (the hall)
 var GAL_VIEW_H = 600;                   // world units that fill the height
 var GAL_ACC = 2600, GAL_FRIC = 0.0018, GAL_MAX = 268;  // movement feel
 var GAL_TALK_R = 132;                   // proximity to a guest
+var GAL_LAUNCH_X = 3030;                // the hidden launcher, well past the last guest at 2640
 
 var GALLERY_GUESTS = [
   { id:"oro", chId:"ch0", name:"ORO THE FORAGER", sys:"THE FIRST TRADE",
@@ -7146,7 +7232,9 @@ function galInit(){
     near: null,
     talking: null,
     motes: galMakeMotes(46),
-    introT: 0
+    introT: 0,
+    nearLaunch: false,
+    launchGlow: 0
   };
 }
 
@@ -7186,7 +7274,7 @@ function galUpdate(dt){
   if (!gal) return;
   var s = Math.min(50, dt) / 1000;
   gal.t += s;
-  if (gal.introT < 5) gal.introT += s;
+  if (gal.introT < 8) gal.introT += s;
   var p = gal.player;
 
   // motes drift
@@ -7205,7 +7293,7 @@ function galUpdate(dt){
   }
   p.blink -= s; if (p.blink < 0) p.blink = 2.6 + Math.random()*3.2;
 
-  var locked = (gal.introT < 3.7) && !gal.reduceMotion;
+  var locked = (gal.introT < 6.8) && !gal.reduceMotion;
   if (gal.talking || locked){
     // hold still while the reveal plays or a card is open
     p.vx *= 0.7; p.vy *= 0.7;
@@ -7236,10 +7324,20 @@ function galUpdate(dt){
   if (Math.abs(p.vx) > 6) p.dir = p.vx > 0 ? 1 : -1;
   p.anim += (p.moving ? sp : 0) * s * 0.02;
 
+  // the hidden launcher at the far right of the hall: brighten and arm as the light nears
+  var ldx = Math.abs(p.x - GAL_LAUNCH_X);
+  gal.launchGlow += (Math.max(0, 1 - ldx/240) - gal.launchGlow) * Math.min(1, s*6);
+  gal.nearLaunch = ldx < 120;
+
   // camera follows x, clamped to the hall
   var viewW = (gal.cssW || 640) * (GAL_VIEW_H / (gal.cssH || 480));
   var tx = p.x - viewW/2;
   tx = Math.max(0, Math.min(tx, GAL_W - viewW));
+  // a gentle settle that frames the launcher when the light draws near
+  if (gal.launchGlow > 0.01){
+    var focus = Math.max(0, Math.min(GAL_LAUNCH_X - viewW*0.5, GAL_W - viewW));
+    tx = tx + (focus - tx) * (gal.launchGlow * 0.5);
+  }
   gal.cam.x += (tx - gal.cam.x) * Math.min(1, s*5.5);
   gal.cam.y = 0;
 
@@ -7497,6 +7595,9 @@ function galRender(){
   // guest glow zones (behind characters)
   for (var i=0;i<gal.guests.length;i++) galZoneGlow(c, gal.guests[i]);
 
+  // the hidden launcher for THE LONG RUN, far to the right
+  galLauncher(c);
+
   // depth sort by y, then paint
   var actors = gal.guests.map(function(g){ return { y:g.y, draw:function(){ galHero(c, g, gal.t, false); galGuestPlate(c, g); } }; });
   var pl = gal.player;
@@ -7543,7 +7644,7 @@ function galRender(){
 function galEntranceGuide(c, cssW, cssH){
   if (!gal) return;
   var p = gal.player;
-  var appear = gal.reduceMotion ? 1 : Math.max(0, Math.min(1, (gal.introT - 3.0) / 0.8));
+  var appear = gal.reduceMotion ? 1 : Math.max(0, Math.min(1, (gal.introT - 5.0) / 1.0));
   var progress = Math.max(0, Math.min(1, (560 - p.x) / 260));   // full at the start, gone past the first guest
   var a = appear * progress;
   if (a <= 0.01) return;
@@ -7613,6 +7714,81 @@ function galEntranceGuide(c, cssW, cssH){
 
   c.restore();
   c.globalAlpha = 1;
+}
+
+/* The hidden launcher for THE LONG RUN. A glowing gateway of light far to the
+   right of the seven guests, with a pulsing core that hints at the running hero
+   within. It glows at rest so the visitor notices it, and brightens and frames
+   itself as the light draws near, then shows an enter prompt within reach.
+   Drawn in world space, behind the actors. */
+function galLauncher(c){
+  if (!gal) return;
+  var x = GAL_LAUNCH_X;
+  var fy = GAL_H*0.46;
+  var baseY = GAL_H*0.62;
+  var pulse = gal.reduceMotion ? 0.6 : (0.6 + 0.4*Math.abs(Math.sin(gal.t*2)));
+  var glow = 0.45 + 0.55*gal.launchGlow;      // brighter as the light nears
+  var lit = pulse * glow;
+
+  c.save();
+  c.globalCompositeOperation = "lighter";
+
+  // ground halo
+  var halo = c.createRadialGradient(x, baseY+6, 8, x, baseY+6, 180);
+  halo.addColorStop(0, "rgba(127,176,255,"+(0.28*lit).toFixed(3)+")");
+  halo.addColorStop(1, "rgba(127,176,255,0)");
+  c.fillStyle = halo; c.beginPath(); c.ellipse(x, baseY+12, 150, 56, 0, 0, Math.PI*2); c.fill();
+
+  // the gateway: two posts of light and a top bar
+  c.shadowColor = "#7fb0ff"; c.shadowBlur = 22*lit;
+  c.fillStyle = "rgba(127,176,255,"+(0.5*lit).toFixed(3)+")";
+  c.fillRect(x-60, fy-6, 8, baseY-(fy-6));
+  c.fillRect(x+52, fy-6, 8, baseY-(fy-6));
+  c.fillRect(x-60, fy-14, 120, 9);
+  c.shadowBlur = 0;
+
+  // the core orb, the promise of the running hero
+  var coreY = baseY - 64;
+  var cg = c.createRadialGradient(x, coreY, 2, x, coreY, 30);
+  cg.addColorStop(0, "rgba(255,253,245,"+(0.95*lit).toFixed(3)+")");
+  cg.addColorStop(0.4, "rgba(127,200,255,"+(0.8*lit).toFixed(3)+")");
+  cg.addColorStop(1, "rgba(127,176,255,0)");
+  c.fillStyle = cg; c.beginPath(); c.arc(x, coreY, 30, 0, Math.PI*2); c.fill();
+
+  // a pair of forward facing eyes that sharpen as the light approaches
+  c.globalCompositeOperation = "source-over";
+  c.fillStyle = "rgba(10,14,26,"+(0.45+0.45*gal.launchGlow).toFixed(3)+")";
+  c.beginPath(); c.arc(x-6, coreY-2, 2.4, 0, Math.PI*2); c.fill();
+  c.beginPath(); c.arc(x+6, coreY-2, 2.4, 0, Math.PI*2); c.fill();
+
+  // floating label
+  c.textAlign = "center";
+  var ly = fy - 34 - (gal.reduceMotion ? 0 : Math.sin(gal.t*2.4)*4);
+  c.globalAlpha = 0.7 + 0.3*pulse;
+  c.fillStyle = "#7fb0ff";
+  c.font = "11px 'Press Start 2P', monospace";
+  c.shadowColor = "#7fb0ff"; c.shadowBlur = 12*lit;
+  c.fillText("PLAY THIS GAME", x, ly);
+  c.shadowBlur = 0;
+  c.globalAlpha = 0.6 + 0.4*pulse;
+  c.fillStyle = "#cfe0ff";
+  c.font = "7px 'Press Start 2P', monospace";
+  c.fillText("A HIDDEN BONUS", x, ly+16);
+  c.globalAlpha = 1;
+
+  // the enter prompt, only within reach
+  if (gal.nearLaunch){
+    var py = coreY - 72 - (gal.reduceMotion ? 0 : Math.sin(gal.t*3)*3);
+    c.fillStyle = "rgba(8,10,22,0.85)";
+    roundRect(c, x-86, py-16, 172, 28, 8);
+    c.fillStyle = "#fff3d6"; c.textAlign = "center";
+    c.font = "8px 'Press Start 2P', monospace";
+    c.fillText("\u25B8 ENTER  THE LONG RUN", x, py+2);
+  }
+
+  c.restore();
+  c.globalAlpha = 1;
+  c.globalCompositeOperation = "source-over";
 }
 
 function galBloom(c, pl){
@@ -7792,6 +7968,7 @@ function hexA(hex, a){
 function galAct(){
   if (!gal) return;
   if (gal.talking){ galAdvance(); return; }
+  if (gal.nearLaunch){ openPlatformer(); return; }
   if (gal.near){ galTalk(gal.near); }
 }
 
@@ -7874,6 +8051,1471 @@ function closeGallery(){
   else { panelTitle.classList.add("open"); G.scene = "TITLE"; refreshTitle(); }
 }
 
+/* ==================================================================
+   THE LONG RUN: the hidden bonus, an original momentum platformer.
+   M30.S1 (Phase 2) is the engine core: running with acceleration and a
+   high top speed, gravity and a weighted jump, slopes that carry
+   momentum, a roll into a ball that keeps speed, basic air control, a
+   following camera, the light hero with forward facing eyes and a run
+   and roll animation, and one short flat and sloped test stage with a
+   start, a goal, and a clean way back to the hall. Pure state, time
+   stepped, seedable. Art is kept clean and simple here; the full visual
+   pass is Phase 4. Enemies and the spark collectible arrive in Phase 3.
+   ================================================================== */
+var PLAT_VIEW_H = 540;                               // world units that fill the canvas height
+var PLAT_GRAV = 2200, PLAT_FALL_CAP = 1350;          // gravity and terminal fall
+var PLAT_ACC = 1700, PLAT_AIR_ACC = 1100;            // run accel and air control
+var PLAT_TOP = 560, PLAT_ROLL_TOP = 920;             // top speeds: running and rolling
+var PLAT_DECEL = 1300, PLAT_ROLL_DECEL = 210, PLAT_AIR_DECEL = 130;  // drag
+var PLAT_JUMP_V = 760, PLAT_JUMP_CUT = 0.5;          // weighted, variable height jump
+var PLAT_SLOPE_ACC = 1750;                           // gravity carried along a slope
+var PLAT_R = 18;                                     // hero radius (world units)
+var PLAT_ENEMY_R = 16;                               // enemy radius
+var PLAT_SPARK_PTS = 25, PLAT_KILL_PTS = 50, PLAT_GOAL_PTS = 200, PLAT_NOHIT_PTS = 300;
+var PLAT_INVULN = 1.1;                               // seconds of mercy after a contact hit
+
+var platCanvas = null, pctx = null, platDpr = 1;
+var plat = null;
+
+/* ---------- THE LONG RUN: optional original chiptune (M32.S1) ----------
+   Off by default. The AudioContext is created only inside platToggleSound,
+   which fires from a user click, so there is never any autoplay. In a headless
+   or audio free environment every call is a safe no op. */
+var platAudio = { on:false, ctx:null, master:null, loop:null, step:0 };
+
+function platAudioCtx(){
+  if (platAudio.ctx) return platAudio.ctx;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  try {
+    platAudio.ctx = new AC();
+    platAudio.master = platAudio.ctx.createGain();
+    platAudio.master.gain.value = 0.12;
+    platAudio.master.connect(platAudio.ctx.destination);
+  } catch(e){ platAudio.ctx = null; }
+  return platAudio.ctx;
+}
+function platBlip(freq, dur, type, vol){
+  var ctx = platAudio.ctx; if (!ctx || !platAudio.on) return;
+  try {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || "square"; o.frequency.value = freq;
+    var now = ctx.currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(vol||0.2, now+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+(dur||0.12));
+    o.connect(g); g.connect(platAudio.master);
+    o.start(now); o.stop(now+(dur||0.12)+0.03);
+  } catch(e){}
+}
+function platSfx(kind){
+  if (!platAudio.on || !platAudio.ctx) return;
+  if (kind==="jump") platBlip(540, 0.12, "square", 0.16);
+  else if (kind==="spark"){ platBlip(880,0.08,"triangle",0.18); platBlip(1320,0.10,"triangle",0.14); }
+  else if (kind==="defeat") platBlip(210,0.16,"sawtooth",0.16);
+  else if (kind==="hit") platBlip(150,0.22,"sawtooth",0.2);
+  else if (kind==="win"){ [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){ platBlip(f,0.16,"square",0.18); }, i*120); }); }
+  else if (kind==="over"){ [330,247,196].forEach(function(f,i){ setTimeout(function(){ platBlip(f,0.22,"triangle",0.18); }, i*150); }); }
+}
+var PLAT_TUNE = [262,330,392,330, 294,349,440,349, 247,311,392,311, 220,277,349,277];
+function platStartLoop(){
+  if (platAudio.loop) return;
+  platAudio.step = 0;
+  platAudio.loop = setInterval(function(){
+    if (!platAudio.on || !platAudio.ctx || G.scene !== "PLATFORMER") return;
+    var f = PLAT_TUNE[platAudio.step % PLAT_TUNE.length];
+    platBlip(f, 0.14, "triangle", 0.05);
+    if (platAudio.step % 4 === 0) platBlip(f/2, 0.20, "sine", 0.06);   // a soft bass pulse
+    platAudio.step++;
+  }, 200);
+}
+function platStopLoop(){ if (platAudio.loop){ clearInterval(platAudio.loop); platAudio.loop = null; } }
+function platUpdateSoundBtn(){
+  var b = document.getElementById("plat-sound");
+  if (b) b.textContent = platAudio.on ? "SOUND: ON" : "SOUND: OFF";
+}
+function platToggleSound(){
+  if (!platAudio.on){
+    var ctx = platAudioCtx();
+    if (!ctx) return false;                                   // no audio support
+    if (ctx.state === "suspended" && ctx.resume){ try { ctx.resume(); } catch(e){} }
+    platAudio.on = true; platStartLoop();
+  } else {
+    platAudio.on = false; platStopLoop();
+  }
+  platUpdateSoundBtn();
+  return platAudio.on;
+}
+function platStopAudio(){ platAudio.on = false; platStopLoop(); platUpdateSoundBtn(); }
+
+function platStage(){
+  // a continuous run that threads back through all seven worlds, in order,
+  // with three pits, ramps and plateaus, period enemies, spikes, and sparks
+  var spans = [
+    { x0:0,    x1:700,  y0:440, y1:440 },
+    { x0:700,  x1:950,  y0:440, y1:360 },
+    { x0:950,  x1:1300, y0:360, y1:360 },
+    { x0:1300, x1:1500, y0:360, y1:440 },
+    { x0:1500, x1:2000, y0:440, y1:440 },
+    // pit 2000..2150
+    { x0:2150, x1:2700, y0:440, y1:440 },
+    { x0:2700, x1:2950, y0:440, y1:360 },
+    { x0:2950, x1:3300, y0:360, y1:360 },
+    { x0:3300, x1:3500, y0:360, y1:440 },
+    { x0:3500, x1:4100, y0:440, y1:440 },
+    // pit 4100..4250
+    { x0:4250, x1:4900, y0:440, y1:440 },
+    { x0:4900, x1:5150, y0:440, y1:360 },
+    { x0:5150, x1:5500, y0:360, y1:360 },
+    { x0:5500, x1:5700, y0:360, y1:440 },
+    { x0:5700, x1:6300, y0:440, y1:440 },
+    // pit 6300..6480
+    { x0:6480, x1:7100, y0:440, y1:440 },
+    { x0:7100, x1:7350, y0:440, y1:360 },
+    { x0:7350, x1:7700, y0:360, y1:360 },
+    { x0:7700, x1:7900, y0:360, y1:440 },
+    { x0:7900, x1:8400, y0:440, y1:440 }
+  ];
+  var zones = [
+    { id:"ch0", name:"THE FIRST TRADE",   x0:0,    x1:1200, sky:"#241a12", edge:"#c79a5e", glow:"#e8b04b", enemy:"predator" },
+    { id:"chF", name:"FEUDALISM",         x0:1200, x1:2400, sky:"#14180f", edge:"#86a25e", glow:"#cdd98a", enemy:"bailiff"  },
+    { id:"ch1", name:"CAPITALISM",        x0:2400, x1:3600, sky:"#0c1f18", edge:"#43d17c", glow:"#43d17c", enemy:"bear"     },
+    { id:"ch2", name:"SOCIALISM",         x0:3600, x1:4800, sky:"#0a1c1e", edge:"#3fb8af", glow:"#3fb8af", enemy:"form"     },
+    { id:"ch3", name:"COMMAND ECONOMY",   x0:4800, x1:6000, sky:"#1a1012", edge:"#e25549", glow:"#e25549", enemy:"warden"   },
+    { id:"chP", name:"PIRACY",            x0:6000, x1:7200, sky:"#0a1422", edge:"#5b9ad6", glow:"#7fc8ff", enemy:"navy"     },
+    { id:"chV", name:"THE VENUS PROJECT", x0:7200, x1:8400, sky:"#120a22", edge:"#7fb0ff", glow:"#9fd0ff", enemy:"drone"    }
+  ];
+  // each world's period antagonist as a dodge-or-defeat obstacle, never a verdict on the system
+  var enemies = [
+    { kind:"predator", behavior:"walker",  x0:380,  x1:640,  speed:80,  zone:"ch0" },
+    { kind:"predator", behavior:"walker",  x0:1000, x1:1280, speed:95,  zone:"ch0" },
+    { kind:"bailiff",  behavior:"walker",  x0:1560, x1:1960, speed:90,  zone:"chF" },
+    { kind:"bailiff",  behavior:"walker",  x0:2200, x1:2640, speed:100, zone:"chF" },
+    { kind:"bear",     behavior:"drifter", x0:2760, x1:3260, speed:130, baseY:300, amp:34, zone:"ch1" },
+    { kind:"bear",     behavior:"walker",  x0:3560, x1:4040, speed:120, zone:"ch1" },
+    { kind:"form",     behavior:"drifter", x0:3700, x1:4760, speed:90,  baseY:330, amp:46, zone:"ch2" },
+    { kind:"form",     behavior:"drifter", x0:4300, x1:4760, speed:70,  baseY:300, amp:40, zone:"ch2" },
+    { kind:"warden",   behavior:"walker",  x0:4960, x1:5460, speed:110, zone:"ch3" },
+    { kind:"warden",   behavior:"walker",  x0:5760, x1:6260, speed:120, zone:"ch3" },
+    { kind:"navy",     behavior:"drifter", x0:6520, x1:7060, speed:160, baseY:320, amp:30, zone:"chP" },
+    { kind:"navy",     behavior:"walker",  x0:6520, x1:7040, speed:130, zone:"chP" },
+    { kind:"drone",    behavior:"drifter", x0:7150, x1:7660, speed:120, baseY:300, amp:50, zone:"chV" },
+    { kind:"drone",    behavior:"drifter", x0:7950, x1:8260, speed:140, baseY:330, amp:44, zone:"chV" }
+  ];
+  var spikes = [ { x:1180, w:90 }, { x:3120, w:110 }, { x:5300, w:120 }, { x:6900, w:100 } ];
+  // sparks reward jumps and rolls: some hover over the three pits, some sit high above the plateaus
+  var sparks = [
+    {x:300,y:404},{x:520,y:360},{x:1120,y:300},{x:1400,y:340},
+    {x:2075,y:360},{x:2075,y:300},
+    {x:2500,y:404},{x:2850,y:320},{x:3120,y:280},{x:3700,y:404},
+    {x:4175,y:360},{x:4175,y:300},
+    {x:4600,y:404},{x:5050,y:320},{x:5300,y:280},{x:5800,y:404},
+    {x:6390,y:360},{x:6390,y:300},
+    {x:6800,y:404},{x:7200,y:404},{x:7500,y:300},{x:7950,y:360},{x:8150,y:404}
+  ];
+  return { spans:spans, zones:zones, enemies:enemies, spikes:spikes, sparks:sparks,
+           startX:80, goalX:8300, w:8400, deathY:700 };
+}
+
+function platGroundAt(x){
+  if (!plat) return { has:false, y:0, slope:0 };
+  var sp = plat.stage.spans;
+  for (var i=0;i<sp.length;i++){
+    var s = sp[i];
+    if (x >= s.x0 && x <= s.x1){
+      var t = (s.x1===s.x0) ? 0 : (x - s.x0)/(s.x1 - s.x0);
+      return { has:true, y: s.y0 + (s.y1 - s.y0)*t, slope: (s.y1 - s.y0)/(s.x1 - s.x0) };
+    }
+  }
+  return { has:false, y:0, slope:0 };
+}
+
+function platMakeMotes(n){
+  var W = (plat && plat.stage) ? plat.stage.w : 8400;
+  var m = [];
+  for (var i=0;i<n;i++){
+    m.push({ x: rng()*W, y: rng()*400, r: 0.6+rng()*2.0, sp: 4+rng()*12, ph: rng()*Math.PI*2 });
+  }
+  return m;
+}
+
+function platZoneAt(x){
+  var zs = plat.stage.zones;
+  for (var i=0;i<zs.length;i++){ if (x >= zs[i].x0 && x < zs[i].x1) return zs[i]; }
+  return zs[x < 0 ? 0 : zs.length-1];
+}
+
+function platCloneEnemies(){
+  return plat.stage.enemies.map(function(e){
+    var midX = (e.x0 + e.x1)/2;
+    var en = { kind:e.kind, behavior:e.behavior, x0:e.x0, x1:e.x1, speed:e.speed||90,
+               baseY:e.baseY||0, amp:e.amp||0, zone:e.zone,
+               x:midX, y:0, dir:(rng()<0.5?-1:1), ph:rng()*Math.PI*2, alive:true };
+    if (en.behavior === "walker"){ var g = platGroundAt(midX); en.y = (g.has?g.y:440) - PLAT_ENEMY_R; }
+    else { en.y = en.baseY; }
+    return en;
+  });
+}
+
+function platResetRuntime(){
+  plat.enemies = platCloneEnemies();
+  plat.sparks = plat.stage.sparks.map(function(s){ return { x:s.x, y:s.y, got:false }; });
+  plat.score = 0; plat.sparkCount = 0; plat.kills = 0; plat.hits = 0;
+  plat.lives = plat.maxLives;
+  plat.invuln = 0;
+  plat.banked = false;
+  plat.checkpointX = plat.stage.startX;
+  plat.zoneIx = 0;
+  plat.zoneBanner = 0;
+  plat.puffs = [];                 // transient defeat bursts (visual only)
+}
+
+function platInit(){
+  var st = platStage();
+  plat = {
+    t: 0,
+    mode: "ready",                 // ready | playing | over | won
+    stage: st,
+    maxLives: 3,
+    cam: { x:0, y:0 },
+    motes: null,
+    trail: [],
+    player: {
+      x: st.startX, y: 0, vx:0, vy:0, dir:1,
+      grounded:false, rolling:false, jumping:false, jumpCut:false,
+      anim:0, rot:0
+    },
+    jumpPrev:false,
+    reduceMotion: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+  };
+  plat.motes = platMakeMotes(46);
+  platResetRuntime();
+  var gr = platGroundAt(plat.player.x);
+  plat.player.y = (gr.has ? gr.y : st.deathY) - PLAT_R;
+  plat.player.grounded = true;
+}
+
+function platSizeCanvas(){
+  if (!platCanvas) return;
+  var w = window.innerWidth||640, h = window.innerHeight||480;
+  platDpr = Math.min(2, window.devicePixelRatio||1);
+  platCanvas.width = Math.round(w*platDpr);
+  platCanvas.height = Math.round(h*platDpr);
+  platCanvas.style.width = w+"px"; platCanvas.style.height = h+"px";
+  plat && (plat.cssW = w, plat.cssH = h);
+}
+
+function startPlatformer(){
+  platCanvas = document.getElementById("plat-canvas");
+  pctx = platCanvas && platCanvas.getContext ? platCanvas.getContext("2d") : null;
+  platInit();
+  platSizeCanvas();
+  var pan = document.getElementById("panel-platformer");
+  if (pan) pan.classList.add("on");
+  if (typeof elHud !== "undefined" && elHud) elHud.style.display = "none";
+  platShowBoot("ready");
+  G.keys = {};
+  G.scene = "PLATFORMER";
+}
+
+function openPlatformer(){ startPlatformer(); }     // entered from the hall launcher
+
+function closePlatformer(){
+  platStopAudio();
+  var pan = document.getElementById("panel-platformer");
+  if (pan) pan.classList.remove("on");
+  plat = null; pctx = null;
+  G.keys = {};
+  if (typeof elHud !== "undefined" && elHud) elHud.style.display = "";
+  if (gal){ G.scene = "GALLERY"; }            // back to the hall, light still at the marker
+  else { openGallery({ from: galFrom }); }    // safety net if the hall was lost
+}
+
+function platShowBoot(mode){
+  var boot = document.getElementById("plat-boot");
+  if (!boot) return;
+  var title = document.getElementById("plat-title");
+  var sub = document.getElementById("plat-sub");
+  var hint = document.getElementById("plat-hint");
+  var start = document.getElementById("plat-start");
+  function row(label, val){
+    return '<span class="pb-row"><span class="pb-rk">' + label + '</span><span class="pb-rv">' + val + '</span></span>';
+  }
+  if (mode === "over"){
+    if (title) title.textContent = "RUN ENDED";
+    if (sub){
+      var html = '<span class="pb-tally">'
+        + row("Sparks gathered", plat.sparkCount)
+        + row("Foes beaten", plat.kills)
+        + row("Run score", plat.score)
+        + row("Banked", "+" + plat.score)
+        + row("Lifetime", G.lifetime)
+        + '</span>';
+      sub.innerHTML = html;
+    }
+    if (start) start.textContent = "RUN AGAIN";
+    if (hint) hint.textContent = "Roll through a foe, or leap it. Mind the gaps.";
+  } else if (mode === "won"){
+    if (title) title.textContent = "STAGE CLEAR";
+    if (sub){
+      var clean = (plat.hits === 0);
+      var h = '<span class="pb-flag">The light crossed all seven worlds.</span><span class="pb-tally">'
+        + row("Sparks gathered", plat.sparkCount)
+        + row("Foes beaten", plat.kills)
+        + row("Goal bonus", "+" + PLAT_GOAL_PTS)
+        + (clean ? row("Clean run bonus", "+" + PLAT_NOHIT_PTS) : "")
+        + row("Run score", plat.score)
+        + row("Banked", "+" + plat.score)
+        + row("Lifetime", G.lifetime)
+        + '</span>';
+      sub.innerHTML = h;
+    }
+    if (start) start.textContent = "RUN AGAIN";
+    if (hint) hint.textContent = plat.hits === 0 ? "A clean run, no hits. Nicely done." : "A clean run, with no hits, pays a bonus.";
+  } else {
+    if (title) title.textContent = "THE LONG RUN";
+    if (sub) sub.innerHTML = "Dash back through every world you crossed.<br>Move to run. Up to jump. Down to roll.";
+    if (start) start.textContent = "START THE RUN";
+    if (hint) hint.textContent = "Gather sparks. Roll through or leap the locals. Reach the goal.";
+  }
+  boot.classList.remove("hide", "pb-ready", "pb-won", "pb-over");
+  boot.classList.add(mode === "over" ? "pb-over" : mode === "won" ? "pb-won" : "pb-ready");
+  platUpdateSoundBtn();
+}
+function platHideBoot(){
+  var boot = document.getElementById("plat-boot");
+  if (boot) boot.classList.add("hide");
+}
+
+function platRespawn(){
+  var p = plat.player;
+  p.x = plat.checkpointX; p.vx = 0; p.vy = 0; p.dir = 1;
+  p.rolling = false; p.jumping = false; p.jumpCut = false; p.anim = 0; p.rot = 0;
+  var gr = platGroundAt(p.x);
+  p.y = (gr.has ? gr.y : plat.stage.deathY) - PLAT_R;
+  p.grounded = true;
+  plat.trail = [];
+  plat.invuln = PLAT_INVULN;
+  plat.cam.x = Math.max(0, p.x - 200);
+}
+
+function platBegin(){
+  if (!plat) startPlatformer();
+  platResetRuntime();
+  platRespawn();                    // places at the start (checkpoint is the start)
+  plat.mode = "playing";
+  plat.jumpPrev = !!G.keys.up;      // a held start key should not auto jump on frame one
+  platHideBoot();
+}
+
+// Space and the action button: start or restart from a card, jump during play.
+function platKeyAct(){
+  if (!plat) return;
+  if (plat.mode === "over" || plat.mode === "won"){ platBegin(); return; }
+  G.keys.up = true;                 // ready: starts the run; playing: jumps
+}
+
+function platBank(){
+  if (plat.banked) return;
+  plat.banked = true;
+  G.lifetime += plat.score;
+  Store.set("mf_lifetime", G.lifetime);
+  if (typeof refreshHUD === "function") refreshHUD();
+}
+
+function platGameOver(){
+  plat.mode = "over";
+  platBank();
+  platSfx("over");
+  platShowBoot("over");
+}
+
+function platWin(){
+  if (plat.mode === "won") return;
+  plat.score += PLAT_GOAL_PTS;
+  if (plat.hits === 0) plat.score += PLAT_NOHIT_PTS;   // a clean run pays a bonus
+  plat.mode = "won";
+  platBank();
+  platSfx("win");
+  platShowBoot("won");
+}
+
+// teleport true means a pit fall (always fatal); false means a contact hit (mercy applies)
+function platDamage(teleport){
+  if (!teleport && plat.invuln > 0) return;
+  plat.hits += 1;
+  plat.lives -= 1;
+  if (plat.lives <= 0){ plat.lives = 0; platGameOver(); return; }
+  platSfx("hit");
+  if (teleport){
+    platRespawn();
+  } else {
+    plat.invuln = PLAT_INVULN;
+    var p = plat.player; p.vx = -p.dir * 220; p.vy = -260; p.grounded = false; p.rolling = false;
+  }
+}
+
+function platPhysics(s){
+  var p = plat.player;
+  var wasGrounded = p.grounded;
+  var ax = (G.keys.right?1:0) - (G.keys.left?1:0);
+  if (ax !== 0) p.dir = ax>0 ? 1 : -1;
+
+  var gr = platGroundAt(p.x);
+  var onGround = p.grounded && gr.has;
+
+  // roll: hold down while grounded and moving; stand up when slow and released
+  if (onGround){
+    if (G.keys.down && Math.abs(p.vx) > 60) p.rolling = true;
+    else if (!G.keys.down && Math.abs(p.vx) < 120) p.rolling = false;
+  }
+
+  // horizontal accel and drag
+  if (onGround){
+    if (ax !== 0){
+      p.vx += ax * (p.rolling ? PLAT_ACC*0.35 : PLAT_ACC) * s;   // less steering while rolling
+    } else {
+      var dec = (p.rolling ? PLAT_ROLL_DECEL : PLAT_DECEL) * s;
+      if (Math.abs(p.vx) <= dec) p.vx = 0; else p.vx -= dec * Math.sign(p.vx);
+    }
+    p.vx += PLAT_SLOPE_ACC * gr.slope * s;     // momentum carried along the slope
+  } else {
+    if (ax !== 0) p.vx += ax * PLAT_AIR_ACC * s;
+    else { var ad = PLAT_AIR_DECEL*s; if (Math.abs(p.vx)<=ad) p.vx=0; else p.vx -= ad*Math.sign(p.vx); }
+  }
+
+  // speed cap (rolling can carry more, mostly down slopes)
+  var cap = p.rolling ? PLAT_ROLL_TOP : PLAT_TOP;
+  if (p.vx > cap) p.vx = cap;
+  if (p.vx < -cap) p.vx = -cap;
+
+  // weighted jump with a variable height cut
+  var jumpHeld = !!G.keys.up;
+  var jumped = false;
+  if (onGround && jumpHeld && !plat.jumpPrev){
+    p.vy = -PLAT_JUMP_V; p.grounded = false; onGround = false; p.jumping = true; p.jumpCut = false; jumped = true;
+    platSfx("jump");
+  }
+  if (p.jumping && !jumpHeld && !p.jumpCut && p.vy < 0){ p.vy *= PLAT_JUMP_CUT; p.jumpCut = true; }
+  plat.jumpPrev = jumpHeld;
+
+  // gravity
+  if (!p.grounded){
+    p.vy += PLAT_GRAV * s;
+    if (p.vy > PLAT_FALL_CAP) p.vy = PLAT_FALL_CAP;
+  }
+
+  // integrate
+  p.x += p.vx * s;
+  p.y += p.vy * s;
+
+  // horizontal bounds
+  if (p.x < PLAT_R){ p.x = PLAT_R; if (p.vx<0) p.vx = 0; }
+  if (p.x > plat.stage.w - PLAT_R){ p.x = plat.stage.w - PLAT_R; if (p.vx>0) p.vx = 0; }
+
+  // resolve against the ground
+  var g2 = platGroundAt(p.x);
+  if (g2.has){
+    var floor = g2.y - PLAT_R;
+    if (p.y >= floor && p.vy >= 0){
+      p.y = floor; p.vy = 0;
+      if (!p.grounded){ p.jumping = false; p.jumpCut = false; }
+      p.grounded = true;
+    } else if (p.y < floor){
+      // above the surface: hug a descending slope (snap) unless we just jumped or are rising
+      var gap = floor - p.y;
+      var snap = Math.abs(p.vx)*0.06 + 10;
+      if (wasGrounded && !jumped && p.vy >= 0 && gap <= snap){
+        p.y = floor; p.vy = 0; p.grounded = true;
+      } else {
+        p.grounded = false;
+      }
+    } else {
+      p.grounded = false;
+    }
+  } else {
+    p.grounded = false;     // over the pit
+  }
+
+  // fell into the pit or off the world
+  if (p.y > plat.stage.deathY){ platDamage(true); return; }
+
+  // reached the goal
+  if (p.x >= plat.stage.goalX){ platWin(); return; }
+}
+
+function platUpdate(dt){
+  if (!plat) return;
+  var s = Math.min(50, dt) / 1000;
+  plat.t += s;
+
+  // ambient motes drift (always)
+  for (var i=0;i<plat.motes.length;i++){
+    var m = plat.motes[i];
+    m.x -= m.sp * s;
+    if (m.x < -10){ m.x = plat.stage.w + 10; m.y = rng()*360; }
+  }
+
+  if (plat.mode === "ready"){
+    if (G.keys.left || G.keys.right || G.keys.up || G.keys.down) platBegin();
+    return;
+  }
+  if (plat.mode !== "playing") return;
+
+  // physics in small substeps so high speed never tunnels through a slope
+  var steps = Math.max(1, Math.ceil(s / 0.008));
+  var ss = s / steps;
+  for (var k=0;k<steps;k++){ if (plat.mode !== "playing") break; platPhysics(ss); }
+  if (plat.mode !== "playing") return;
+
+  // timers, world actors, pickups, and zone crossings
+  if (plat.invuln > 0) plat.invuln = Math.max(0, plat.invuln - s);
+  if (plat.zoneBanner > 0) plat.zoneBanner = Math.max(0, plat.zoneBanner - s);
+  // defeat puffs fade out
+  if (plat.puffs && plat.puffs.length){
+    for (var pi=plat.puffs.length-1; pi>=0; pi--){
+      var pf = plat.puffs[pi]; pf.life += s; pf.y -= 18*s;
+      if (pf.life >= pf.max) plat.puffs.splice(pi,1);
+    }
+  }
+  platMoveEnemies(s);
+  platInteract();
+  if (plat.mode !== "playing") return;
+  platTrackZone();
+
+  var p = plat.player;
+  // camera follows the hero and looks a touch ahead in the run direction
+  var viewW = (plat.cssW||640) * (PLAT_VIEW_H / (plat.cssH||480));
+  var look = (p.dir>0 ? 0.30 : 0.46);
+  var tx = p.x - viewW*look;
+  tx = Math.max(0, Math.min(tx, plat.stage.w - viewW));
+  plat.cam.x += (tx - plat.cam.x) * Math.min(1, s*6);
+  plat.cam.y = 0;
+
+  // motion trail
+  if (!plat.reduceMotion){
+    plat.trail.push({ x:p.x, y:p.y, roll:p.rolling });
+    if (plat.trail.length > 9) plat.trail.shift();
+  }
+
+  // animation
+  p.anim += Math.abs(p.vx) * s * 0.02;
+  if (p.rolling) p.rot += p.vx * s * 0.03;
+}
+
+/* ---------- World actors, pickups, and zone crossings ---------- */
+function platMoveEnemies(s){
+  for (var i=0;i<plat.enemies.length;i++){
+    var e = plat.enemies[i];
+    if (!e.alive) continue;
+    e.x += e.dir * e.speed * s;
+    if (e.x <= e.x0){ e.x = e.x0; e.dir = 1; }
+    if (e.x >= e.x1){ e.x = e.x1; e.dir = -1; }
+    if (e.behavior === "walker"){
+      var g = platGroundAt(e.x); e.y = (g.has ? g.y : 440) - PLAT_ENEMY_R;
+    } else {
+      e.y = e.baseY + (plat.reduceMotion ? 0 : Math.sin(plat.t*1.6 + e.ph) * e.amp);
+    }
+  }
+}
+
+function platInteract(){
+  var p = plat.player;
+  // sparks: collect on contact
+  for (var i=0;i<plat.sparks.length;i++){
+    var sk = plat.sparks[i];
+    if (sk.got) continue;
+    var dx = sk.x - p.x, dy = sk.y - p.y;
+    if (dx*dx + dy*dy < (PLAT_R+12)*(PLAT_R+12)){ sk.got = true; plat.sparkCount++; plat.score += PLAT_SPARK_PTS; platSfx("spark"); }
+  }
+  // spikes: a hit if standing in the patch
+  for (var j=0;j<plat.stage.spikes.length;j++){
+    var sp = plat.stage.spikes[j];
+    if (p.x > sp.x - PLAT_R && p.x < sp.x + sp.w + PLAT_R){
+      var gs = platGroundAt(p.x);
+      if (gs.has && (p.y + PLAT_R) >= gs.y - 6){ platDamage(false); if (plat.mode !== "playing") return; }
+    }
+  }
+  // enemies: roll through or stomp to defeat; otherwise take a hit
+  for (var k=0;k<plat.enemies.length;k++){
+    var e = plat.enemies[k];
+    if (!e.alive) continue;
+    var ex = e.x - p.x, ey = e.y - p.y;
+    var rr = PLAT_R + PLAT_ENEMY_R;
+    if (ex*ex + ey*ey < rr*rr){
+      var stomp = (p.vy > 80 && p.y < e.y - PLAT_ENEMY_R*0.2);
+      if (p.rolling || stomp){
+        e.alive = false; plat.kills++; plat.score += PLAT_KILL_PTS;
+        var zk = platZoneAt(e.x);
+        plat.puffs.push({ x:e.x, y:e.y, life:0, max:0.5, color: zk.glow, seed: (plat.t*7+k) });
+        platSfx("defeat");
+        if (stomp){ p.vy = -360; p.grounded = false; }
+      } else {
+        platDamage(false); if (plat.mode !== "playing") return;
+      }
+    }
+  }
+}
+
+function platTrackZone(){
+  var zs = plat.stage.zones, p = plat.player;
+  for (var i=0;i<zs.length;i++){
+    if (p.x >= zs[i].x0 && p.x < zs[i].x1){
+      if (i !== plat.zoneIx){
+        plat.zoneIx = i;
+        plat.checkpointX = Math.max(plat.checkpointX, zs[i].x0 + 40);  // checkpoints never move backward
+        plat.zoneBanner = 2.2;
+      }
+      return;
+    }
+  }
+}
+
+/* ---------- Painting the run (M32.S1 art and polish pass) ----------
+   Engine math is untouched. Every world gets its own theme locked backdrop
+   (two or three drifting parallax layers), its own ground treatment, and its
+   own ambient motion, with view culling so a mid range phone stays smooth.
+   Backdrops are drawn in screen space, clipped to each world's on screen band,
+   so two visible worlds never bleed into one another. */
+
+function platViewW(){ return (plat.cssW||640) * (PLAT_VIEW_H/(plat.cssH||480)); }
+
+/* a tiny deterministic hash for prop placement, independent of the game rng
+   so enemy and mote seeding is never disturbed */
+function platHash(i, s){ var x = Math.sin(i*127.1 + (s||0)*311.7) * 43758.5453; return x - Math.floor(x); }
+
+/* per world ground fill colors, theme locked */
+function platGroundColors(id){
+  switch(id){
+    case "ch0": return { top:"#5a4226", bot:"#241608", line:"#caa05a", grit:"#3a2a14" };
+    case "chF": return { top:"#3f4a26", bot:"#161c0c", line:"#9bb066", grit:"#27331a" };
+    case "ch1": return { top:"#2c3540", bot:"#0d1116", line:"#5fe39a", grit:"#1b222b" };
+    case "ch2": return { top:"#214043", bot:"#0a1719", line:"#56cabf", grit:"#16302f" };
+    case "ch3": return { top:"#3a2a2a", bot:"#140d0e", line:"#ef6a5c", grit:"#241616" };
+    case "chP": return { top:"#243a47", bot:"#091420", line:"#7fc8ff", grit:"#142532" };
+    default:    return { top:"#2a2350", bot:"#0b0820", line:"#9fd0ff", grit:"#191338" };
+  }
+}
+
+/* ===== screen space backdrop ===== */
+
+function platDrawSky(c, cssW, cssH){
+  var camX = plat.cam.x, scale = cssH/PLAT_VIEW_H, viewW = platViewW();
+  var zs = plat.stage.zones;
+  for (var i=0;i<zs.length;i++){
+    var z = zs[i];
+    if (z.x1 < camX-20 || z.x0 > camX+viewW+20) continue;
+    var bx0 = Math.max(0, (z.x0 - camX)*scale);
+    var bx1 = Math.min(cssW, (z.x1 - camX)*scale);
+    if (bx1 <= bx0) continue;
+    var g = c.createLinearGradient(0,0,0,cssH);
+    g.addColorStop(0, z.sky);
+    g.addColorStop(0.58, "#0b0f1c");
+    g.addColorStop(1, "#05070f");
+    c.fillStyle = g; c.fillRect(bx0, 0, bx1-bx0, cssH);
+    // a soft horizon glow in the world's accent
+    var hy = cssH*0.80;
+    var hg = c.createLinearGradient(0, hy-cssH*0.34, 0, hy);
+    hg.addColorStop(0, hexA(z.glow, 0));
+    hg.addColorStop(1, hexA(z.glow, 0.16));
+    c.fillStyle = hg; c.fillRect(bx0, hy-cssH*0.34, bx1-bx0, cssH*0.34);
+  }
+}
+
+function platDrawZoneLayers(c, cssW, cssH, scale){
+  var camX = plat.cam.x, viewW = platViewW(), t = plat.t, rm = plat.reduceMotion;
+  var zs = plat.stage.zones;
+  for (var i=0;i<zs.length;i++){
+    var z = zs[i];
+    if (z.x1 < camX-20 || z.x0 > camX+viewW+20) continue;
+    var bx0 = Math.max(0, (z.x0 - camX)*scale);
+    var bx1 = Math.min(cssW, (z.x1 - camX)*scale);
+    if (bx1 <= bx0) continue;
+    c.save();
+    c.beginPath(); c.rect(bx0, 0, bx1-bx0, cssH); c.clip();
+    platPaintZone(c, z, camX, scale, cssW, cssH, t, rm);
+    c.restore();
+  }
+}
+
+/* parallax screen x: far layers (small f) scroll slower than the world */
+function pSX(worldX, f, camX, scale){ return (worldX - camX*f) * scale; }
+
+function platPaintZone(c, z, camX, scale, cssW, cssH, t, rm){
+  switch(z.id){
+    case "ch0": platZoneCh0(c, z, camX, scale, cssW, cssH, t, rm); break;
+    case "chF": platZoneChF(c, z, camX, scale, cssW, cssH, t, rm); break;
+    case "ch1": platZoneCh1(c, z, camX, scale, cssW, cssH, t, rm); break;
+    case "ch2": platZoneCh2(c, z, camX, scale, cssW, cssH, t, rm); break;
+    case "ch3": platZoneCh3(c, z, camX, scale, cssW, cssH, t, rm); break;
+    case "chP": platZoneChP(c, z, camX, scale, cssW, cssH, t, rm); break;
+    default:    platZoneChV(c, z, camX, scale, cssW, cssH, t, rm); break;
+  }
+}
+
+/* ---- Level 0: a Stone Age river valley at dawn ---- */
+function platZoneCh0(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // low dawn sun
+  var sunX = pSX(z.x0+360, 0.18, camX, scale);
+  var sg = c.createRadialGradient(sunX, hy-cssH*0.30, 4, sunX, hy-cssH*0.30, cssH*0.22);
+  sg.addColorStop(0,"rgba(255,206,120,0.55)"); sg.addColorStop(1,"rgba(255,206,120,0)");
+  c.fillStyle = sg; c.beginPath(); c.arc(sunX, hy-cssH*0.30, cssH*0.22, 0, Math.PI*2); c.fill();
+  c.fillStyle = "rgba(255,220,150,0.5)"; c.beginPath(); c.arc(sunX, hy-cssH*0.30, cssH*0.05, 0, Math.PI*2); c.fill();
+  // far ochre ridgeline
+  c.fillStyle = "rgba(120,86,48,0.55)";
+  c.beginPath(); c.moveTo(-40, cssH);
+  for (var x=-40; x<=cssW+40; x+=26){
+    var wx = camX*0.30 + x/scale;
+    var yy = hy - cssH*0.10 - cssH*0.07*Math.sin(wx*0.004) - cssH*0.04*Math.sin(wx*0.013);
+    c.lineTo(x, yy);
+  }
+  c.lineTo(cssW+40, cssH); c.closePath(); c.fill();
+  // mid boulders and a worn riverbank
+  for (var i=0;i<8;i++){
+    var wX = z.x0 - 120 + i*200 + platHash(i, 1)*120;
+    var sx = pSX(wX, 0.52, camX, scale);
+    if (sx < -120 || sx > cssW+120) continue;
+    var bw = (60 + platHash(i,2)*70)*scale*0.5;
+    var bh = bw*(0.5+platHash(i,3)*0.3);
+    c.fillStyle = "rgba(92,68,40,0.7)";
+    c.beginPath(); c.ellipse(sx, hy-bh*0.2, bw, bh, 0, Math.PI, 0); c.fill();
+  }
+  // a river glint band
+  c.fillStyle = "rgba(150,180,180,0.10)"; c.fillRect(0, hy-cssH*0.02, cssW, cssH*0.05);
+  // ambient: drifting pollen and a gliding bird
+  if (!rm){
+    c.save(); c.globalCompositeOperation = "lighter";
+    for (var p=0;p<10;p++){
+      var px = ((platHash(p,4)*cssW) + t*(8+platHash(p,5)*16)) % (cssW+40) - 20;
+      var py = hy - cssH*0.20 - (Math.sin(t*0.7+p)*0.5+0.5)*cssH*0.18;
+      c.fillStyle = "rgba(255,210,140,0.5)";
+      c.beginPath(); c.arc(px, py, 1.6+platHash(p,6)*1.4, 0, Math.PI*2); c.fill();
+    }
+    c.restore();
+    var brdX = (t*40) % (cssW+120) - 60, brdY = hy-cssH*0.42 + Math.sin(t*0.9)*8;
+    var fl = Math.sin(t*5)*5;
+    c.strokeStyle = "rgba(40,30,20,0.55)"; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(brdX-9, brdY+fl); c.lineTo(brdX, brdY); c.lineTo(brdX+9, brdY+fl); c.stroke();
+  }
+}
+
+/* ---- Feudalism: hills, a castle keep, an abbey spire ---- */
+function platZoneChF(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // far treeline hills
+  c.fillStyle = "rgba(54,72,40,0.6)";
+  c.beginPath(); c.moveTo(-40, cssH);
+  for (var x=-40; x<=cssW+40; x+=22){
+    var wx = camX*0.28 + x/scale;
+    var yy = hy - cssH*0.12 - cssH*0.06*Math.sin(wx*0.005) - cssH*0.03*Math.sin(wx*0.017);
+    c.lineTo(x, yy);
+  }
+  c.lineTo(cssW+40, cssH); c.closePath(); c.fill();
+  // mid: the castle keep and an abbey spire
+  var keepX = pSX(z.x0+560, 0.5, camX, scale);
+  if (keepX > -160 && keepX < cssW+160){
+    var bw = 64*scale, bh = cssH*0.20, by = hy - bh;
+    c.fillStyle = "rgba(70,74,82,0.85)";
+    c.fillRect(keepX-bw/2, by, bw, bh);
+    // crenellations
+    c.fillStyle = "rgba(86,90,98,0.9)";
+    for (var k=0;k<5;k++){ c.fillRect(keepX-bw/2 + k*(bw/5), by-8, bw/9, 8); }
+    // a tower with a rippling banner
+    c.fillStyle = "rgba(60,64,72,0.9)"; c.fillRect(keepX+bw*0.18, by-cssH*0.06, 12*scale, cssH*0.06);
+    var rip = rm ? 0 : Math.sin(t*3)*4;
+    c.fillStyle = "rgba(160,70,60,0.9)";
+    c.beginPath(); c.moveTo(keepX+bw*0.18+12*scale, by-cssH*0.06);
+    c.lineTo(keepX+bw*0.18+12*scale+26, by-cssH*0.06+6+rip);
+    c.lineTo(keepX+bw*0.18+12*scale, by-cssH*0.06+14); c.closePath(); c.fill();
+    // small lit windows
+    c.fillStyle = "rgba(255,196,110,0.8)";
+    c.fillRect(keepX-6, by+bh*0.4, 5, 8); c.fillRect(keepX+8, by+bh*0.6, 5, 8);
+  }
+  var abbeyX = pSX(z.x0+980, 0.5, camX, scale);
+  if (abbeyX > -120 && abbeyX < cssW+120){
+    var ah = cssH*0.16, ay = hy-ah;
+    c.fillStyle = "rgba(78,80,86,0.82)"; c.fillRect(abbeyX-16, ay, 32, ah);
+    c.beginPath(); c.moveTo(abbeyX-22, ay); c.lineTo(abbeyX, ay-34); c.lineTo(abbeyX+22, ay); c.closePath(); c.fill();
+  }
+  // ambient: drifting crows and falling leaves
+  if (!rm){
+    for (var b=0;b<4;b++){
+      var cx = ((platHash(b,7)*cssW) + t*(30+platHash(b,8)*30)) % (cssW+80) - 40;
+      var cy = hy-cssH*0.40 - platHash(b,9)*cssH*0.10 + Math.sin(t*1.2+b)*6;
+      var fl = Math.sin(t*7+b)*5;
+      c.strokeStyle = "rgba(20,22,16,0.6)"; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(cx-7, cy+fl); c.lineTo(cx, cy); c.lineTo(cx+7, cy+fl); c.stroke();
+    }
+    c.save(); c.globalCompositeOperation = "source-over";
+    for (var lf=0;lf<8;lf++){
+      var lx = ((platHash(lf,10)*cssW) - t*(10+platHash(lf,11)*14)) % (cssW+40); if (lx<0) lx+=cssW+40; lx-=20;
+      var ly = (hy-cssH*0.25) + (t*16 + platHash(lf,12)*cssH) % (cssH*0.22);
+      c.fillStyle = "rgba(150,130,60,0.5)";
+      c.beginPath(); c.ellipse(lx, ly, 3, 1.6, t+lf, 0, Math.PI*2); c.fill();
+    }
+    c.restore();
+  }
+}
+
+/* ---- Capitalism: a market town skyline, smokestacks, a rising chart ---- */
+function platZoneCh1(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // far skyline of blocks
+  for (var i=0;i<12;i++){
+    var wX = z.x0 - 200 + i*150 + platHash(i,13)*60;
+    var sx = pSX(wX, 0.30, camX, scale);
+    if (sx < -90 || sx > cssW+90) continue;
+    var bw = (40 + platHash(i,14)*46)*scale*0.6;
+    var bh = (cssH*0.12) + platHash(i,15)*cssH*0.18;
+    c.fillStyle = "rgba(36,46,54,0.7)";
+    c.fillRect(sx-bw/2, hy-bh, bw, bh);
+    // lit windows grid
+    c.fillStyle = "rgba(95,227,154,0.35)";
+    for (var wy=0; wy<bh-14; wy+=12){ for (var wx2=0; wx2<bw-8; wx2+=10){
+      if (platHash(i*40+wy+wx2,16) > 0.55) c.fillRect(sx-bw/2+4+wx2, hy-bh+8+wy, 4, 5);
+    }}
+  }
+  // mid: smokestacks with rising puffs and a neon up arrow
+  var stackX = pSX(z.x0+620, 0.55, camX, scale);
+  if (stackX > -120 && stackX < cssW+120){
+    var sh = cssH*0.22;
+    c.fillStyle = "rgba(50,40,38,0.9)"; c.fillRect(stackX-10, hy-sh, 20, sh); c.fillRect(stackX+26, hy-sh*0.8, 16, sh*0.8);
+    if (!rm){ c.save(); c.globalCompositeOperation="lighter";
+      for (var s=0;s<5;s++){
+        var pu = (t*0.5 + s*0.3) % 1;
+        var puY = hy-sh - pu*cssH*0.18;
+        c.fillStyle = "rgba(180,190,200,"+(0.28*(1-pu)).toFixed(3)+")";
+        c.beginPath(); c.arc(stackX + Math.sin(t+s)*4, puY, 8+pu*16, 0, Math.PI*2); c.fill();
+      }
+      c.restore();
+    }
+  }
+  var arrowX = pSX(z.x0+360, 0.5, camX, scale);
+  if (arrowX > -100 && arrowX < cssW+100){
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.strokeStyle = hexA(z.glow, 0.55); c.lineWidth = 3;
+    c.beginPath();
+    var ax = arrowX-40, ay = hy-cssH*0.10;
+    c.moveTo(ax, ay); c.lineTo(ax+24, ay-cssH*0.05); c.lineTo(ax+48, ay-cssH*0.02); c.lineTo(ax+80, ay-cssH*0.13);
+    c.stroke();
+    c.beginPath(); c.moveTo(ax+80, ay-cssH*0.13); c.lineTo(ax+70, ay-cssH*0.11); c.moveTo(ax+80, ay-cssH*0.13); c.lineTo(ax+78, ay-cssH*0.10); c.stroke();
+    c.restore();
+  }
+}
+
+/* ---- Socialism: rows of warm housing, a co-op hall, a garden trellis ---- */
+function platZoneCh2(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // far housing blocks with warm windows
+  for (var i=0;i<10;i++){
+    var wX = z.x0 - 160 + i*170 + platHash(i,17)*50;
+    var sx = pSX(wX, 0.32, camX, scale);
+    if (sx < -100 || sx > cssW+100) continue;
+    var bw = 70*scale*0.6, bh = cssH*0.14 + platHash(i,18)*cssH*0.06;
+    c.fillStyle = "rgba(40,58,58,0.75)"; c.fillRect(sx-bw/2, hy-bh, bw, bh);
+    var fk = rm ? 0.7 : (0.5+0.5*Math.abs(Math.sin(t*1.3+i)));
+    c.fillStyle = "rgba(255,196,120,"+(0.55*fk).toFixed(3)+")";
+    for (var wy=0; wy<bh-12; wy+=14){ for (var wx2=0; wx2<bw-8; wx2+=14){
+      c.fillRect(sx-bw/2+5+wx2, hy-bh+8+wy, 6, 7);
+    }}
+  }
+  // mid: the co-op hall with a banner
+  var hallX = pSX(z.x0+600, 0.55, camX, scale);
+  if (hallX > -140 && hallX < cssW+140){
+    var hh = cssH*0.16, hyy = hy-hh, hw = 96*scale*0.6;
+    c.fillStyle = "rgba(46,70,68,0.9)"; c.fillRect(hallX-hw/2, hyy, hw, hh);
+    c.fillStyle = "rgba(63,184,175,0.9)"; c.fillRect(hallX-hw/2, hyy-10, hw, 10);
+    var rip = rm?0:Math.sin(t*2.6)*3;
+    c.fillStyle = "rgba(86,202,191,0.85)";
+    c.fillRect(hallX-hw*0.3, hyy-10, hw*0.6, 6+rip);
+  }
+  // near: a low garden trellis
+  c.strokeStyle = "rgba(120,170,120,0.5)"; c.lineWidth = 2;
+  for (var g=0;g<6;g++){
+    var gx = pSX(z.x0 + g*240, 0.75, camX, scale);
+    if (gx<-40||gx>cssW+40) continue;
+    c.beginPath(); c.moveTo(gx, hy); c.lineTo(gx, hy-cssH*0.05); c.stroke();
+  }
+  // ambient: doves
+  if (!rm){
+    for (var d=0;d<3;d++){
+      var dx = ((platHash(d,19)*cssW) + t*(24+d*8)) % (cssW+60) - 30;
+      var dy = hy-cssH*0.34 - platHash(d,20)*cssH*0.08 + Math.sin(t*1.4+d)*5;
+      var fl = Math.sin(t*8+d)*4;
+      c.strokeStyle = "rgba(220,228,235,0.7)"; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(dx-6, dy+fl); c.lineTo(dx, dy); c.lineTo(dx+6, dy+fl); c.stroke();
+    }
+  }
+}
+
+/* ---- Command Economy: monolith blocks, an abstract star, a searchlight ---- */
+function platZoneCh3(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // far concrete monoliths
+  for (var i=0;i<9;i++){
+    var wX = z.x0 - 160 + i*180 + platHash(i,21)*40;
+    var sx = pSX(wX, 0.30, camX, scale);
+    if (sx < -110 || sx > cssW+110) continue;
+    var bw = 60*scale*0.6, bh = cssH*0.16 + platHash(i,22)*cssH*0.14;
+    c.fillStyle = "rgba(46,38,40,0.8)"; c.fillRect(sx-bw/2, hy-bh, bw, bh);
+    c.fillStyle = "rgba(60,50,52,0.6)";
+    for (var ln=8; ln<bh; ln+=16) c.fillRect(sx-bw/2, hy-bh+ln, bw, 2);
+  }
+  // mid: a tall monument with an abstract five point star (no real branding)
+  var monX = pSX(z.x0+600, 0.5, camX, scale);
+  if (monX > -100 && monX < cssW+100){
+    var mh = cssH*0.26, my = hy-mh;
+    c.fillStyle = "rgba(58,44,46,0.92)"; c.fillRect(monX-14, my, 28, mh);
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.fillStyle = hexA(z.glow, 0.55);
+    var sR = 14;
+    c.beginPath();
+    for (var sp=0; sp<5; sp++){
+      var a1 = -Math.PI/2 + sp*2*Math.PI/5, a2 = a1 + Math.PI/5;
+      c.lineTo(monX+Math.cos(a1)*sR, my-22+Math.sin(a1)*sR);
+      c.lineTo(monX+Math.cos(a2)*sR*0.42, my-22+Math.sin(a2)*sR*0.42);
+    }
+    c.closePath(); c.fill(); c.restore();
+  }
+  // ambient: a sweeping searchlight and drifting ash
+  if (!rm){
+    var swA = Math.sin(t*0.5)*0.5;
+    var lx = pSX(z.x0+300, 0.5, camX, scale);
+    c.save(); c.globalCompositeOperation = "lighter";
+    var lg = c.createLinearGradient(lx, hy, lx+Math.sin(swA)*cssW, 0);
+    lg.addColorStop(0,"rgba(239,106,92,0.16)"); lg.addColorStop(1,"rgba(239,106,92,0)");
+    c.fillStyle = lg;
+    c.beginPath(); c.moveTo(lx, hy); c.lineTo(lx+Math.sin(swA-0.12)*cssH, 0); c.lineTo(lx+Math.sin(swA+0.12)*cssH, 0); c.closePath(); c.fill();
+    c.restore();
+    for (var as=0; as<10; as++){
+      var axp = ((platHash(as,23)*cssW) - t*(8+platHash(as,24)*10)); axp = ((axp%(cssW+40))+(cssW+40))%(cssW+40) - 20;
+      var ayp = (hy-cssH*0.3) + (t*12 + platHash(as,25)*cssH) % (cssH*0.3);
+      c.fillStyle = "rgba(150,140,140,0.4)";
+      c.beginPath(); c.arc(axp, ayp, 1.4, 0, Math.PI*2); c.fill();
+    }
+  }
+}
+
+/* ---- Piracy: open sea, distant sails, an island lighthouse, gulls ---- */
+function platZoneChP(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // far sea horizon with rolling swell
+  c.fillStyle = "rgba(28,54,74,0.7)";
+  c.beginPath(); c.moveTo(-40, cssH);
+  for (var x=-40; x<=cssW+40; x+=20){
+    var wx = camX*0.26 + x/scale;
+    var sw = rm?0:Math.sin(wx*0.01 + t*0.6)*4;
+    c.lineTo(x, hy-cssH*0.06 + sw);
+  }
+  c.lineTo(cssW+40, cssH); c.closePath(); c.fill();
+  // sea sparkle band
+  if (!rm){ c.save(); c.globalCompositeOperation="lighter";
+    for (var sp2=0; sp2<14; sp2++){
+      var spx = ((platHash(sp2,26)*cssW) - t*20); spx = ((spx%(cssW+40))+(cssW+40))%(cssW+40)-20;
+      var spy = hy-cssH*0.04 + Math.sin(t*2+sp2)*3;
+      c.fillStyle = "rgba(180,220,255,"+(0.2+0.2*Math.abs(Math.sin(t*3+sp2))).toFixed(3)+")";
+      c.fillRect(spx, spy, 6, 1.5);
+    }
+    c.restore();
+  }
+  // an island with a lighthouse
+  var isX = pSX(z.x0+640, 0.5, camX, scale);
+  if (isX > -140 && isX < cssW+140){
+    c.fillStyle = "rgba(40,52,44,0.85)";
+    c.beginPath(); c.ellipse(isX, hy-cssH*0.04, 70*scale*0.6, cssH*0.05, 0, Math.PI, 0); c.fill();
+    var lh = cssH*0.14;
+    c.fillStyle = "rgba(220,225,232,0.9)"; c.fillRect(isX-8, hy-cssH*0.04-lh, 16, lh);
+    c.fillStyle = "rgba(200,80,70,0.9)"; c.fillRect(isX-8, hy-cssH*0.04-lh+lh*0.45, 16, lh*0.15);
+    var beam = rm?0.3:(0.3+0.5*Math.abs(Math.sin(t*1.5)));
+    c.save(); c.globalCompositeOperation="lighter"; c.fillStyle = "rgba(255,240,180,"+(0.4*beam).toFixed(3)+")";
+    c.beginPath(); c.arc(isX, hy-cssH*0.04-lh, 6, 0, Math.PI*2); c.fill(); c.restore();
+  }
+  // a distant sail crossing
+  if (!rm){
+    var saX = (t*22) % (cssW+120) - 60, saY = hy-cssH*0.09;
+    c.fillStyle = "rgba(225,228,234,0.7)";
+    c.beginPath(); c.moveTo(saX, saY); c.lineTo(saX, saY-20); c.lineTo(saX+14, saY-6); c.closePath(); c.fill();
+    c.fillStyle = "rgba(60,44,30,0.8)"; c.fillRect(saX-6, saY, 18, 4);
+  }
+  // ambient: gulls
+  if (!rm){
+    for (var gu=0; gu<4; gu++){
+      var gx = ((platHash(gu,27)*cssW) + t*(28+gu*6)) % (cssW+80) - 40;
+      var gy = hy-cssH*0.40 - platHash(gu,28)*cssH*0.10 + Math.sin(t*1.1+gu)*6;
+      var fl = Math.sin(t*9+gu)*5;
+      c.strokeStyle = "rgba(220,228,235,0.7)"; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(gx-7, gy+fl); c.lineTo(gx, gy); c.lineTo(gx+7, gy+fl); c.stroke();
+    }
+  }
+}
+
+/* ---- The Venus Project: a circular megacity, skyways, flying cars ---- */
+function platZoneChV(c, z, camX, scale, cssW, cssH, t, rm){
+  var hy = cssH*0.80;
+  // far ring towers
+  for (var i=0;i<8;i++){
+    var wX = z.x0 - 140 + i*180 + platHash(i,29)*40;
+    var sx = pSX(wX, 0.30, camX, scale);
+    if (sx < -120 || sx > cssW+120) continue;
+    var bw = 44*scale*0.6, bh = cssH*0.16 + platHash(i,30)*cssH*0.20;
+    var tg = c.createLinearGradient(0, hy-bh, 0, hy);
+    tg.addColorStop(0, "rgba(110,150,230,0.5)"); tg.addColorStop(1, "rgba(40,40,90,0.6)");
+    c.fillStyle = tg; roundRect(c, sx-bw/2, hy-bh, bw, bh, 8);
+    c.save(); c.globalCompositeOperation="lighter";
+    c.fillStyle = hexA(z.glow, 0.4);
+    c.beginPath(); c.arc(sx, hy-bh, bw*0.5, Math.PI, 0); c.fill(); c.restore();
+  }
+  // mid: a curved skyway
+  var arcCx = pSX(z.x0+600, 0.5, camX, scale);
+  c.strokeStyle = hexA(z.glow, 0.4); c.lineWidth = 3;
+  c.beginPath(); c.moveTo(arcCx-cssW*0.6, hy-cssH*0.30);
+  c.quadraticCurveTo(arcCx, hy-cssH*0.42, arcCx+cssW*0.6, hy-cssH*0.30); c.stroke();
+  // holographic rings pulsing
+  if (!rm){ c.save(); c.globalCompositeOperation="lighter";
+    var rPulse = (t*0.4)%1;
+    c.strokeStyle = "rgba(159,208,255,"+(0.4*(1-rPulse)).toFixed(3)+")"; c.lineWidth = 2;
+    c.beginPath(); c.arc(arcCx, hy-cssH*0.22, 20+rPulse*60, 0, Math.PI*2); c.stroke();
+    c.restore();
+  }
+  // ambient: flying cars streaking along the skyway
+  if (!rm){ c.save(); c.globalCompositeOperation="lighter";
+    for (var fc=0; fc<5; fc++){
+      var dir = fc%2===0?1:-1;
+      var prog = ((t*(0.10+platHash(fc,31)*0.08)*dir) + platHash(fc,32))%1; if (prog<0) prog+=1;
+      var fx = arcCx-cssW*0.6 + prog*cssW*1.2;
+      var fy = hy-cssH*0.30 - Math.sin(prog*Math.PI)*cssH*0.10 - platHash(fc,33)*12;
+      c.fillStyle = "rgba(180,220,255,0.85)";
+      c.fillRect(fx, fy, 10*dir, 3);
+      c.fillStyle = "rgba(180,220,255,0.25)"; c.fillRect(fx-18*dir, fy+0.5, 18*dir, 2);
+    }
+    c.restore();
+  }
+}
+
+/* ===== world space layers ===== */
+
+function platDrawTerrain(c){
+  var sp = plat.stage.spans, bottom = 720;
+  var camX = plat.cam.x, viewW = platViewW();
+  for (var i=0;i<sp.length;i++){
+    var s = sp[i];
+    if (s.x1 < camX-40 || s.x0 > camX+viewW+40) continue;     // cull off screen spans
+    var z = platZoneAt((s.x0+s.x1)/2);
+    var gc = platGroundColors(z.id);
+    var grd = c.createLinearGradient(0, Math.min(s.y0,s.y1), 0, bottom);
+    grd.addColorStop(0, gc.top); grd.addColorStop(1, gc.bot);
+    c.fillStyle = grd;
+    c.beginPath();
+    c.moveTo(s.x0, s.y0); c.lineTo(s.x1, s.y1);
+    c.lineTo(s.x1, bottom); c.lineTo(s.x0, bottom); c.closePath(); c.fill();
+    // bright surface line and a soft underglow
+    c.strokeStyle = gc.line; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(s.x0, s.y0); c.lineTo(s.x1, s.y1); c.stroke();
+    c.strokeStyle = hexA(z.edge, 0.20); c.lineWidth = 8;
+    c.beginPath(); c.moveTo(s.x0, s.y0+5); c.lineTo(s.x1, s.y1+5); c.stroke();
+    // surface grit: short hatch marks for texture, only across the visible part
+    var vx0 = Math.max(s.x0, camX-20), vx1 = Math.min(s.x1, camX+viewW+20);
+    c.strokeStyle = hexA(gc.grit, 0.9); c.lineWidth = 2;
+    for (var gx = Math.ceil(vx0/46)*46; gx < vx1; gx += 46){
+      var tt = (s.x1===s.x0)?0:(gx-s.x0)/(s.x1-s.x0);
+      var gy = s.y0 + (s.y1-s.y0)*tt;
+      c.beginPath(); c.moveTo(gx, gy+10); c.lineTo(gx-4, gy+22); c.stroke();
+    }
+  }
+}
+
+function platDrawSpikes(c){
+  var sps = plat.stage.spikes, camX = plat.cam.x, viewW = platViewW();
+  for (var i=0;i<sps.length;i++){
+    var sp = sps[i];
+    if (sp.x+sp.w < camX-20 || sp.x > camX+viewW+20) continue;
+    var z = platZoneAt(sp.x + sp.w/2);
+    var g = platGroundAt(sp.x + sp.w/2);
+    var baseY = (g.has ? g.y : 440);
+    var n = Math.max(2, Math.round(sp.w/22)), step = sp.w/n;
+    var energy = (z.id === "chV");
+    for (var k=0;k<n;k++){
+      var x0 = sp.x + k*step;
+      if (energy){
+        c.save(); c.globalCompositeOperation = "lighter";
+        var eg = c.createLinearGradient(x0, baseY, x0, baseY-22);
+        eg.addColorStop(0, hexA(z.glow, 0.0)); eg.addColorStop(1, hexA(z.glow, 0.9));
+        c.fillStyle = eg;
+        c.beginPath(); c.moveTo(x0, baseY); c.lineTo(x0+step/2, baseY-22); c.lineTo(x0+step, baseY); c.closePath(); c.fill();
+        c.restore();
+      } else {
+        c.fillStyle = (z.id==="ch0") ? "#c9b18a" : (z.id==="ch3"||z.id==="chP") ? "#9aa2ac" : "#aeb4bf";
+        c.strokeStyle = hexA(z.edge, 0.85); c.lineWidth = 1.5;
+        c.beginPath();
+        c.moveTo(x0, baseY); c.lineTo(x0 + step/2, baseY - 18); c.lineTo(x0 + step, baseY);
+        c.closePath(); c.fill(); c.stroke();
+        // a glint
+        c.strokeStyle = "rgba(255,255,255,0.5)"; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(x0+step*0.42, baseY-12); c.lineTo(x0+step/2, baseY-18); c.stroke();
+      }
+    }
+  }
+}
+
+function platDrawGoal(c){
+  var gx = plat.stage.goalX;
+  if (gx < plat.cam.x-60 || gx > plat.cam.x+platViewW()+60) return;
+  var gr = platGroundAt(gx);
+  var gy = (gr.has ? gr.y : 440);
+  var pulse = plat.reduceMotion ? 0.6 : (0.55 + 0.45*Math.abs(Math.sin(plat.t*2.4)));
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  // a luminous gateway arch
+  var topY = gy - 150, arcR = 30;
+  var ag = c.createLinearGradient(gx, topY, gx, gy);
+  ag.addColorStop(0,"rgba(159,208,255,"+(0.10+0.14*pulse).toFixed(3)+")");
+  ag.addColorStop(1,"rgba(127,200,255,0)");
+  c.fillStyle = ag; c.fillRect(gx-26, topY, 52, 150);
+  c.strokeStyle = "rgba(159,208,255,"+(0.7*pulse).toFixed(3)+")"; c.lineWidth = 4;
+  c.beginPath(); c.moveTo(gx-26, gy); c.lineTo(gx-26, topY+arcR);
+  c.quadraticCurveTo(gx-26, topY, gx, topY); c.quadraticCurveTo(gx+26, topY, gx+26, topY+arcR);
+  c.lineTo(gx+26, gy); c.stroke();
+  // pulsing rings inside
+  for (var r=0;r<3;r++){
+    c.strokeStyle = "rgba(180,225,255,"+(0.45*pulse/(r+1)).toFixed(3)+")"; c.lineWidth = 3;
+    c.beginPath(); c.arc(gx, gy-66, 14+r*9 + (plat.reduceMotion?0:(plat.t*20)%9), 0, Math.PI*2); c.stroke();
+  }
+  c.restore();
+  c.globalCompositeOperation = "source-over";
+  c.fillStyle = "#dff0ff"; c.textAlign = "center";
+  c.font = "9px 'Press Start 2P', monospace";
+  c.fillText("GOAL", gx, topY-8);
+}
+
+function platDrawMotes(c){
+  var camX = plat.cam.x, viewW = platViewW();
+  c.save(); c.globalCompositeOperation = "lighter";
+  for (var i=0;i<plat.motes.length;i++){
+    var m = plat.motes[i];
+    if (m.x < camX-20 || m.x > camX+viewW+20) continue;       // cull
+    var z = platZoneAt(m.x);
+    var tw = 0.18 + 0.26*Math.abs(Math.sin(plat.t*1.5 + m.ph));
+    c.fillStyle = hexA(z.glow, tw);
+    c.beginPath(); c.arc(m.x, m.y, m.r, 0, Math.PI*2); c.fill();
+  }
+  c.restore(); c.globalCompositeOperation = "source-over";
+}
+
+function platDrawSparks(c){
+  var camX = plat.cam.x, viewW = platViewW();
+  for (var i=0;i<plat.sparks.length;i++){
+    var sk = plat.sparks[i];
+    if (sk.got) continue;
+    if (sk.x < camX-30 || sk.x > camX+viewW+30) continue;     // cull
+    var pulse = plat.reduceMotion ? 0.8 : (0.6 + 0.4*Math.abs(Math.sin(plat.t*3 + i)));
+    var spin = plat.reduceMotion ? 0 : plat.t*2 + i;
+    c.save(); c.globalCompositeOperation = "lighter";
+    var g = c.createRadialGradient(sk.x, sk.y, 1, sk.x, sk.y, 17*pulse);
+    g.addColorStop(0, "rgba(255,250,210,0.95)"); g.addColorStop(0.5, "rgba(255,224,120,0.5)"); g.addColorStop(1, "rgba(255,224,120,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(sk.x, sk.y, 17*pulse, 0, Math.PI*2); c.fill();
+    // a faceted gem core
+    c.translate(sk.x, sk.y); c.rotate(spin);
+    c.fillStyle = "rgba(255,245,200,0.95)";
+    c.beginPath(); c.moveTo(0,-7); c.lineTo(5,0); c.lineTo(0,7); c.lineTo(-5,0); c.closePath(); c.fill();
+    c.strokeStyle = "rgba(255,255,255,"+pulse.toFixed(3)+")"; c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(0,-7); c.lineTo(0,7); c.moveTo(-5,0); c.lineTo(5,0); c.stroke();
+    c.restore(); c.globalCompositeOperation = "source-over";
+  }
+}
+
+function platDrawEnemyKind(c, e){
+  var x = e.x, y = e.y, R = PLAT_ENEMY_R;
+  var walk = plat.reduceMotion ? 0 : Math.sin(plat.t*6 + e.ph);   // a little gait
+  if (e.kind === "predator"){             // a lean stalking cat
+    c.fillStyle = "#7a5128";
+    c.beginPath(); c.ellipse(x, y, R*1.25, R*0.74, 0, 0, Math.PI*2); c.fill();
+    // haunch and legs
+    c.fillStyle = "#6b4624";
+    c.fillRect(x-R*0.5, y+R*0.2, R*0.28, R*0.7 + walk*2);
+    c.fillRect(x+R*0.5, y+R*0.2, R*0.28, R*0.7 - walk*2);
+    // head with ear and muzzle
+    c.fillStyle = "#7a5128"; c.beginPath(); c.ellipse(x-R*1.05, y-R*0.2, R*0.6, R*0.5, 0, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.moveTo(x-R*1.2,y-R*0.55); c.lineTo(x-R*1.5,y-R*1.1); c.lineTo(x-R*0.85,y-R*0.7); c.closePath(); c.fill();
+    c.fillStyle = "#f2d05a"; c.beginPath(); c.arc(x-R*1.2, y-R*0.25, 2.2, 0, Math.PI*2); c.fill();
+    // a long swishing tail
+    c.strokeStyle = "#6b4624"; c.lineWidth = 4; c.lineCap = "round";
+    c.beginPath(); c.moveTo(x+R*1.1, y-R*0.1);
+    c.quadraticCurveTo(x+R*2.0, y-R*0.6 + walk*4, x+R*1.7, y-R*1.2); c.stroke(); c.lineCap = "butt";
+  } else if (e.kind === "bailiff"){        // a stout official with a ledger
+    c.fillStyle = "#4a3d26"; c.beginPath(); c.ellipse(x, y+R*0.2, R*0.74, R*1.05, 0, 0, Math.PI*2); c.fill();
+    c.fillStyle = "#caa06e"; c.beginPath(); c.arc(x, y-R*0.7, R*0.5, 0, Math.PI*2); c.fill();
+    c.fillStyle = "#2e2718"; c.fillRect(x-R*0.62, y-R*1.05, R*1.24, R*0.34);   // hat brim
+    c.fillRect(x-R*0.34, y-R*1.5, R*0.68, R*0.5);
+    c.fillStyle = "#e8d6a8"; c.fillRect(x+R*0.34 + walk*2, y-R*0.1, R*0.5, R*0.7); // ledger
+    c.strokeStyle = "#b9a47a"; c.lineWidth = 1; c.strokeRect(x+R*0.34 + walk*2, y-R*0.1, R*0.5, R*0.7);
+    c.fillStyle = "#1a1330"; c.beginPath(); c.arc(x-R*0.16, y-R*0.74, 1.6, 0, Math.PI*2); c.fill(); c.beginPath(); c.arc(x+R*0.16, y-R*0.74, 1.6, 0, Math.PI*2); c.fill();
+  } else if (e.kind === "bear"){           // a market bear, shoulders hunched
+    c.fillStyle = "#8a3b34"; c.beginPath(); c.arc(x, y, R*1.05, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(x-R*0.72, y-R*0.72, R*0.36, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(x+R*0.72, y-R*0.72, R*0.36, 0, Math.PI*2); c.fill();
+    c.fillStyle = "#caa089"; c.beginPath(); c.ellipse(x, y+R*0.28, R*0.48, R*0.36, 0, 0, Math.PI*2); c.fill();
+    c.fillStyle = "#5a221d"; c.beginPath(); c.arc(x, y+R*0.18, R*0.12, 0, Math.PI*2); c.fill();  // snout
+    c.fillStyle = "#1a1330"; c.beginPath(); c.arc(x-R*0.34, y-R*0.18, 2, 0, Math.PI*2); c.fill(); c.beginPath(); c.arc(x+R*0.34, y-R*0.18, 2, 0, Math.PI*2); c.fill();
+    // a downward arrow on its chest, the market falling
+    c.strokeStyle = "rgba(20,12,10,0.6)"; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(x, y+R*0.05); c.lineTo(x, y+R*0.5); c.moveTo(x-3, y+R*0.4); c.lineTo(x, y+R*0.55); c.lineTo(x+3, y+R*0.4); c.stroke();
+  } else if (e.kind === "form"){           // a drifting grievance form
+    c.save(); c.translate(x, y); c.rotate((plat.reduceMotion?0:Math.sin(plat.t*1.4 + e.ph)*0.2));
+    c.fillStyle = "#eef0f4"; c.fillRect(-R*0.72, -R*0.98, R*1.44, R*1.96);
+    c.fillStyle = "#cfd6e2"; c.beginPath(); c.moveTo(R*0.72,-R*0.98); c.lineTo(R*0.28,-R*0.98); c.lineTo(R*0.72,-R*0.54); c.closePath(); c.fill(); // dog ear
+    c.strokeStyle = "#aab2c0"; c.lineWidth = 1.4;
+    for (var li=0; li<5; li++){ c.beginPath(); c.moveTo(-R*0.5, -R*0.6 + li*R*0.38); c.lineTo(R*0.5, -R*0.6 + li*R*0.38); c.stroke(); }
+    c.fillStyle = "#e25549"; c.fillRect(-R*0.5, R*0.6, R*0.7, R*0.18);   // a red stamp
+    c.restore();
+  } else if (e.kind === "warden"){         // a stern planning warden
+    c.fillStyle = "#565a62"; c.fillRect(x-R*0.72, y-R*0.5, R*1.44, R*1.5);
+    c.fillStyle = "#44484f"; c.beginPath(); c.arc(x, y-R*0.5, R*0.68, Math.PI, 0); c.fill();  // cap
+    c.fillStyle = "#2f3238"; c.fillRect(x-R*0.72, y-R*0.16, R*1.44, 3);                       // brim
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.fillStyle = "rgba(239,106,92,"+(0.5+0.5*Math.abs(walk)).toFixed(3)+")"; c.fillRect(x-R*0.5, y-R*0.34, R*1.0, 3); // visor band glows
+    c.restore();
+    c.fillStyle = "#1a1330"; c.fillRect(x-R*0.3, y+R*0.16, R*0.2, R*0.22); c.fillRect(x+R*0.12, y+R*0.16, R*0.2, R*0.22);
+  } else if (e.kind === "navy"){           // a small naval cutter
+    var roll = plat.reduceMotion?0:Math.sin(plat.t*2 + e.ph)*0.08;
+    c.save(); c.translate(x, y); c.rotate(roll);
+    c.fillStyle = "#243a4a"; c.beginPath();
+    c.moveTo(-R*1.15, 0); c.lineTo(R*1.15, 0); c.lineTo(R*0.7, R*0.62); c.lineTo(-R*0.7, R*0.62); c.closePath(); c.fill();
+    c.fillStyle = "#caa46a"; c.fillRect(-1.5, -R*1.15, 3, R*1.15);                  // mast
+    c.fillStyle = "#cdd5df";
+    c.beginPath(); c.moveTo(2, -R*1.1); c.lineTo(R*0.8, -R*0.4); c.lineTo(2, -R*0.3); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(-2, -R*0.95); c.lineTo(-R*0.7, -R*0.35); c.lineTo(-2, -R*0.28); c.closePath(); c.fill();
+    c.restore();
+  } else {                                  // chV drone
+    var gxo = (plat.reduceMotion?0:Math.sin(plat.t*22 + e.ph) > 0.96 ? 2 : 0);
+    var bob = plat.reduceMotion?0:Math.sin(plat.t*3 + e.ph)*2;
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.strokeStyle = "#5fd6e8"; c.lineWidth = 2; c.beginPath(); c.ellipse(x+gxo, y+bob, R*1.15, R*0.5, 0, 0, Math.PI*2); c.stroke();
+    c.restore();
+    c.fillStyle = "#2a2740"; c.beginPath(); c.arc(x+gxo, y+bob, R*0.62, 0, Math.PI*2); c.fill();
+    c.fillStyle = "#5fd6e8"; c.beginPath(); c.arc(x+gxo, y+bob, R*0.26, 0, Math.PI*2); c.fill();
+    // rotor ticks
+    c.strokeStyle = "rgba(120,220,235,0.7)"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(x-R*1.1, y+bob-2); c.lineTo(x-R*0.7, y+bob-2); c.moveTo(x+R*0.7, y+bob-2); c.lineTo(x+R*1.1, y+bob-2); c.stroke();
+  }
+}
+
+function platDrawEnemies(c){
+  var camX = plat.cam.x, viewW = platViewW();
+  for (var i=0;i<plat.enemies.length;i++){
+    var e = plat.enemies[i];
+    if (!e.alive) continue;
+    if (e.x < camX-40 || e.x > camX+viewW+40) continue;       // cull
+    var z = platZoneAt(e.x);
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    var au = c.createRadialGradient(e.x, e.y, 2, e.x, e.y, PLAT_ENEMY_R*2.2);
+    au.addColorStop(0, hexA(z.glow, 0.42)); au.addColorStop(1, hexA(z.glow, 0));
+    c.fillStyle = au; c.beginPath(); c.arc(e.x, e.y, PLAT_ENEMY_R*2.2, 0, Math.PI*2); c.fill();
+    c.globalCompositeOperation = "source-over";
+    // a small contact shadow for grounded foes
+    if (e.behavior === "walker"){
+      c.fillStyle = "rgba(0,0,0,0.25)";
+      c.beginPath(); c.ellipse(e.x, e.y+PLAT_ENEMY_R*0.95, PLAT_ENEMY_R*1.0, PLAT_ENEMY_R*0.28, 0, 0, Math.PI*2); c.fill();
+    }
+    platDrawEnemyKind(c, e);
+    c.restore();
+  }
+}
+
+/* defeat puffs: a short burst where a foe was beaten */
+function platDrawPuffs(c){
+  if (!plat.puffs || !plat.puffs.length) return;
+  c.save(); c.globalCompositeOperation = "lighter";
+  for (var i=0;i<plat.puffs.length;i++){
+    var pf = plat.puffs[i];
+    var k = 1 - pf.life/pf.max;            // 0 fresh -> 1 gone
+    var rad = PLAT_ENEMY_R*(0.6 + k*1.6);
+    var a = (1-k)*0.7;
+    var g = c.createRadialGradient(pf.x, pf.y, 1, pf.x, pf.y, rad);
+    g.addColorStop(0, hexA(pf.color, a)); g.addColorStop(1, hexA(pf.color, 0));
+    c.fillStyle = g; c.beginPath(); c.arc(pf.x, pf.y, rad, 0, Math.PI*2); c.fill();
+    // a few shards flying out
+    for (var s=0;s<5;s++){
+      var ang = pf.seed + s*(Math.PI*2/5);
+      var d = k*PLAT_ENEMY_R*1.8;
+      c.fillStyle = hexA(pf.color, (1-k)*0.9);
+      c.fillRect(pf.x+Math.cos(ang)*d, pf.y+Math.sin(ang)*d - k*8, 2.4, 2.4);
+    }
+  }
+  c.restore(); c.globalCompositeOperation = "source-over";
+}
+
+function platDrawHero(c){
+  var p = plat.player;
+  // motion trail
+  c.save(); c.globalCompositeOperation = "lighter";
+  for (var i=0;i<plat.trail.length;i++){
+    var tr = plat.trail[i];
+    var a = (i+1)/plat.trail.length * 0.30;
+    c.fillStyle = "rgba(255,244,210,"+a.toFixed(3)+")";
+    c.beginPath(); c.arc(tr.x, tr.y, PLAT_R*0.8*(0.5+0.5*(i/plat.trail.length)), 0, Math.PI*2); c.fill();
+  }
+  c.restore(); c.globalCompositeOperation = "source-over";
+
+  if (plat.invuln > 0 && Math.floor(plat.t*14)%2===0) return;   // blink during mercy
+
+  var cx = p.x, cy = p.y, sp = Math.abs(p.vx);
+  var stretch = p.rolling ? 0 : Math.min(0.25, sp/PLAT_TOP*0.25);
+  var rx = PLAT_R*(1 + stretch);
+  var ry = PLAT_R*(1 - stretch*0.6);
+
+  // a soft contact shadow on the ground
+  var gr = platGroundAt(cx);
+  if (gr.has && p.grounded){
+    c.fillStyle = "rgba(0,0,0,0.25)";
+    c.beginPath(); c.ellipse(cx, gr.y-2, PLAT_R*0.95, PLAT_R*0.30, 0, 0, Math.PI*2); c.fill();
+  }
+
+  // halo
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  var gl = c.createRadialGradient(cx, cy, 2, cx, cy, PLAT_R*2.5);
+  gl.addColorStop(0,"rgba(255,250,235,0.92)"); gl.addColorStop(0.5,"rgba(255,220,150,0.42)"); gl.addColorStop(1,"rgba(255,220,150,0)");
+  c.fillStyle = gl; c.beginPath(); c.arc(cx, cy, PLAT_R*2.5, 0, Math.PI*2); c.fill();
+  c.globalCompositeOperation = "source-over";
+
+  if (p.rolling){
+    // a spinning ball with motion arcs
+    c.fillStyle = "#fff6df";
+    c.beginPath(); c.arc(cx, cy, PLAT_R, 0, Math.PI*2); c.fill();
+    c.strokeStyle = "rgba(120,90,40,0.55)"; c.lineWidth = 2.4; c.lineCap = "round";
+    for (var k=0;k<4;k++){
+      var a2 = p.rot + k*(Math.PI/2);
+      c.beginPath();
+      c.arc(cx, cy, PLAT_R*0.66, a2, a2+0.7);
+      c.stroke();
+    }
+    c.lineCap = "butt";
+    // a bright leading edge
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.fillStyle = "rgba(255,255,235,0.6)";
+    c.beginPath(); c.arc(cx + p.dir*PLAT_R*0.5, cy, PLAT_R*0.4, 0, Math.PI*2); c.fill();
+    c.restore();
+  } else {
+    // body
+    c.fillStyle = "#fff6df";
+    c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); c.fill();
+    // a faint inner core for depth
+    c.save(); c.globalCompositeOperation = "lighter";
+    var ic = c.createRadialGradient(cx-rx*0.3, cy-ry*0.3, 1, cx, cy, rx);
+    ic.addColorStop(0,"rgba(255,255,255,0.6)"); ic.addColorStop(1,"rgba(255,255,255,0)");
+    c.fillStyle = ic; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); c.fill();
+    c.restore();
+    // little running feet: two light dashes that alternate with the stride
+    if (p.grounded && !plat.reduceMotion){
+      var stride = Math.sin(p.anim*6);
+      c.fillStyle = "rgba(255,236,190,0.85)";
+      c.beginPath(); c.ellipse(cx - PLAT_R*0.34, cy + ry*0.92 + stride*2, 3.4, 2.0, 0, 0, Math.PI*2); c.fill();
+      c.beginPath(); c.ellipse(cx + PLAT_R*0.34, cy + ry*0.92 - stride*2, 3.4, 2.0, 0, 0, Math.PI*2); c.fill();
+    }
+    // forward facing eyes with a gentle bob
+    var ex = p.dir * PLAT_R*0.34;
+    var bob = plat.reduceMotion ? 0 : Math.sin(p.anim*6)*1.2;
+    c.fillStyle = "#1a1330";
+    c.beginPath(); c.ellipse(cx+ex-3*p.dir, cy-3+bob, 2.4, 3.4, 0, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.ellipse(cx+ex+3*p.dir, cy-3+bob, 2.4, 3.4, 0, 0, Math.PI*2); c.fill();
+    c.fillStyle = "rgba(255,255,255,0.9)";
+    c.beginPath(); c.arc(cx+ex-3*p.dir, cy-4+bob, 0.9, 0, Math.PI*2); c.fill();
+    c.beginPath(); c.arc(cx+ex+3*p.dir, cy-4+bob, 0.9, 0, Math.PI*2); c.fill();
+  }
+  c.restore();
+}
+
+/* ===== screen overlays ===== */
+
+function platVignette(c, cssW, cssH){
+  var vg = c.createRadialGradient(cssW/2, cssH*0.46, cssH*0.30, cssW/2, cssH*0.5, cssH*0.78);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.34)");
+  c.fillStyle = vg; c.fillRect(0,0,cssW,cssH);
+}
+
+function platDrawHud(c, cssW, cssH){
+  c.save();
+  c.textAlign = "left"; c.textBaseline = "alphabetic";
+  c.fillStyle = "#ffe6b0"; c.font = "9px 'Press Start 2P', monospace";
+  c.fillText("LIVES", 16, 24);
+  for (var i=0;i<plat.maxLives;i++){
+    c.globalAlpha = i < plat.lives ? 1 : 0.2;
+    c.save(); c.globalCompositeOperation = i < plat.lives ? "lighter" : "source-over";
+    c.fillStyle = "#fff6df"; c.beginPath(); c.arc(72+i*16, 20, 5, 0, Math.PI*2); c.fill();
+    c.restore();
+  }
+  c.globalAlpha = 1;
+  c.fillStyle = "#ffe6b0"; c.font = "8px 'Press Start 2P', monospace";
+  c.fillText("SPARKS " + plat.sparkCount, 16, 46);
+  c.fillText("SCORE " + plat.score, 16, 62);
+  var prog = Math.max(0, Math.min(1, plat.player.x / plat.stage.goalX));
+  var bw = Math.min(220, cssW*0.4), bx = cssW - bw - 16, by = 18;
+  c.fillStyle = "rgba(255,255,255,0.15)"; roundRect(c, bx, by-6, bw, 8, 4);
+  var z = platZoneAt(plat.player.x);
+  c.fillStyle = z.glow; roundRect(c, bx, by-6, bw*prog, 8, 4);
+  // a little marker dot at the head of the bar
+  c.save(); c.globalCompositeOperation = "lighter";
+  c.fillStyle = "#fff6df"; c.beginPath(); c.arc(bx + bw*prog, by-2, 3, 0, Math.PI*2); c.fill(); c.restore();
+  c.fillStyle = "#cfe8ff"; c.font = "7px 'Press Start 2P', monospace"; c.textAlign = "right";
+  c.fillText("GOAL", cssW-16, by+14);
+  c.restore();
+}
+
+function platDrawZoneBanner(c, cssW){
+  if (!(plat.zoneBanner > 0)) return;
+  var z = plat.stage.zones[plat.zoneIx];
+  if (!z) return;
+  var tIn = 2.2 - plat.zoneBanner, a = 1;
+  if (tIn < 0.3) a = tIn/0.3; else if (plat.zoneBanner < 0.4) a = plat.zoneBanner/0.4;
+  a = Math.max(0, Math.min(1, a));
+  c.save(); c.globalAlpha = a; c.textAlign = "center";
+  var bw = Math.min(360, cssW-40);
+  c.fillStyle = "rgba(6,8,16,0.62)"; roundRect(c, cssW/2 - bw/2, 38, bw, 40, 9);
+  // accent rule under the name
+  c.fillStyle = hexA(z.glow, 0.9); c.fillRect(cssW/2 - bw*0.18, 70, bw*0.36, 2);
+  // a small world index pip row
+  for (var i=0;i<plat.stage.zones.length;i++){
+    c.fillStyle = (i===plat.zoneIx) ? z.glow : "rgba(255,255,255,0.22)";
+    c.beginPath(); c.arc(cssW/2 - (plat.stage.zones.length-1)*5 + i*10, 50, 2.4, 0, Math.PI*2); c.fill();
+  }
+  c.fillStyle = z.glow; c.font = "13px 'Press Start 2P', monospace";
+  c.fillText(z.name, cssW/2, 67);
+  c.globalAlpha = 1; c.restore();
+}
+
+function platRender(){
+  if (!plat || !pctx) return;
+  var c = pctx;
+  var cssW = plat.cssW || (window.innerWidth||640);
+  var cssH = plat.cssH || (window.innerHeight||480);
+  var dpr = platDpr || 1;
+  var scale = cssH / PLAT_VIEW_H;
+
+  // screen space: per world sky bands and layered parallax backdrops
+  c.setTransform(dpr,0,0,dpr,0,0);
+  platDrawSky(c, cssW, cssH);
+  platDrawZoneLayers(c, cssW, cssH, scale);
+
+  // world transform with the camera
+  c.setTransform(dpr*scale, 0, 0, dpr*scale, -plat.cam.x*dpr*scale, -plat.cam.y*dpr*scale);
+  platDrawTerrain(c);
+  platDrawSpikes(c);
+  platDrawGoal(c);
+  platDrawSparks(c);
+  platDrawMotes(c);
+  platDrawEnemies(c);
+  platDrawPuffs(c);
+  platDrawHero(c);
+
+  // screen space: vignette, HUD, world banner
+  c.setTransform(dpr,0,0,dpr,0,0);
+  platVignette(c, cssW, cssH);
+  platDrawHud(c, cssW, cssH);
+  platDrawZoneBanner(c, cssW);
+}
+
 function allChaptersCleared(){
   for (var i=0;i<CHAPTER_ORDER.length;i++){
     var id = CHAPTER_ORDER[i];
@@ -7933,6 +9575,7 @@ function update(dt){
   if (G.scene==="ARCADE"){ arcadeUpdate(dt); return; }
   if (G.scene==="FREEPLAY"){ freeUpdate(dt); return; }
   if (G.scene==="GALLERY"){ galUpdate(dt); return; }
+  if (G.scene==="PLATFORMER"){ platUpdate(dt); return; }
   if (G.scene!=="WALK") return;
   var p = G.player;
   var speed = p.speed * (G.time < G.slowUntil ? 0.5 : 1);
@@ -7987,6 +9630,7 @@ function camera(){
 
 function render(){
   if (G.scene==="GALLERY"){ galRender(); return; }
+  if (G.scene==="PLATFORMER"){ platRender(); return; }
   if (!ctx) return; // headless safe
   if (arcade && (G.scene==="ARCADE" || G.scene==="ARCADE_MENU")){ renderArcade(); return; }
   if (G.scene === "INTERIOR" && currentRoom){ drawRoomCanvas(currentRoom); return; }
@@ -15034,7 +16678,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M28.S2",
+  version: "M32.S1",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -15053,6 +16697,22 @@ window.MF = {
   galReduceMotion: function(){ return gal ? gal.reduceMotion : null; },
   galNearest: galNearest,
   galConfig: function(){ return { W:GAL_W, H:GAL_H, talkR:GAL_TALK_R, max:GAL_MAX, viewH:GAL_VIEW_H }; },
+  galLaunchX: function(){ return GAL_LAUNCH_X; },
+  openPlatformer: openPlatformer,
+  closePlatformer: closePlatformer,
+  startPlatformer: startPlatformer,
+  platBegin: platBegin,
+  platState: function(){ return plat; },
+  platStep: function(dt){ return platUpdate(dt); },
+  platRender: function(){ return platRender(); },
+  platConfig: function(){ return { viewH:PLAT_VIEW_H, top:PLAT_TOP, rollTop:PLAT_ROLL_TOP, jumpV:PLAT_JUMP_V, r:PLAT_R, enemyR:PLAT_ENEMY_R, gravity:PLAT_GRAV, acc:PLAT_ACC, sparkPts:PLAT_SPARK_PTS, killPts:PLAT_KILL_PTS, goalPts:PLAT_GOAL_PTS, noHitPts:PLAT_NOHIT_PTS }; },
+  platGroundAt: function(x){ return plat ? platGroundAt(x) : null; },
+  platZoneAt: function(x){ return plat ? platZoneAt(x) : null; },
+  platPuffs: function(){ return plat ? plat.puffs : null; },
+  platViewW: function(){ return platViewW(); },
+  platGroundColors: function(id){ return platGroundColors(id); },
+  platSoundOn: function(){ return platAudio.on; },
+  platToggleSound: function(){ return platToggleSound(); },
   allChaptersCleared: allChaptersCleared,
   briefingThemes: BRIEFING_THEMES,
   buildAmbient: buildAmbient,
