@@ -3780,6 +3780,8 @@ bindHold("pt-left","left"); bindHold("pt-right","right");
 bindHold("pt-jump","up"); bindHold("pt-roll","down");
 var galCardClick = document.getElementById("gallery-card");
 if (galCardClick) galCardClick.addEventListener("click", function(){ if (gal && gal.talking) galAdvance(); });
+var galCanvasEl = document.getElementById("gallery-canvas");
+if (galCanvasEl) galCanvasEl.addEventListener("pointerdown", function(e){ if (galPointerAt(e.clientX, e.clientY)) e.preventDefault(); });
 window.addEventListener("resize", function(){ if (G.scene==="GALLERY") galSizeCanvas(); else if (G.scene==="PLATFORMER") platSizeCanvas(); });
 if (typeof window.ontouchstart !== "undefined") document.body.classList.add("touch");
 
@@ -7129,11 +7131,11 @@ function reviewBriefing(){
    case for their system. Pure state engine, no DOM in the
    step, headless safe. This is the reveal: the pixels were on purpose.
    =================================================================== */
-var GAL_W = 3200, GAL_H = 600;          // world units (the hall)
+var GAL_W = 3760, GAL_H = 600;          // world units (the hall), widened so the launch button frames clear of the last guest
 var GAL_VIEW_H = 600;                   // world units that fill the height
 var GAL_ACC = 2600, GAL_FRIC = 0.0018, GAL_MAX = 268;  // movement feel
 var GAL_TALK_R = 132;                   // proximity to a guest
-var GAL_LAUNCH_X = 3030;                // the hidden launcher, well past the last guest at 2640
+var GAL_LAUNCH_X = 3120;                // the FINAL GAME button, set well past the last guest at 2640 with room beyond to center
 
 var GALLERY_GUESTS = [
   { id:"oro", chId:"ch0", name:"ORO THE FORAGER", sys:"THE FIRST TRADE",
@@ -7249,13 +7251,25 @@ function galMakeMotes(n){
 
 function galSizeCanvas(){
   if (!galCanvas) return;
-  var w = window.innerWidth || 640, h = window.innerHeight || 480;
+  // Measure the real frame the panel occupies (the stage card on desktop, the full
+  // viewport on a phone), so the rendered scale and any canvas hit test agree.
+  var pan = galCanvas.parentNode;
+  var w = 0, h = 0;
+  if (pan && pan.getBoundingClientRect){ var r = pan.getBoundingClientRect(); w = r.width; h = r.height; }
+  if (!(w > 0)) w = window.innerWidth || 640;
+  if (!(h > 0)) h = window.innerHeight || 480;
+  w = Math.round(w); h = Math.round(h);
   galDpr = Math.min(2, window.devicePixelRatio || 1);
   galCanvas.width = Math.round(w * galDpr);
   galCanvas.height = Math.round(h * galDpr);
   galCanvas.style.width = w + "px";
   galCanvas.style.height = h + "px";
   gal && (gal.cssW = w, gal.cssH = h);
+}
+
+function galSettleSize(){
+  var run = function(){ galSizeCanvas(); if (gal && gctx) galRender(); };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
 }
 
 function galNearest(){
@@ -7761,30 +7775,35 @@ function galLauncher(c){
   c.beginPath(); c.arc(x-6, coreY-2, 2.4, 0, Math.PI*2); c.fill();
   c.beginPath(); c.arc(x+6, coreY-2, 2.4, 0, Math.PI*2); c.fill();
 
-  // floating label
+  // the FINAL GAME button: a clear, tappable destination over the arch, not a secret marker
+  var b = galLaunchButtonRect();
   c.textAlign = "center";
-  var ly = fy - 34 - (gal.reduceMotion ? 0 : Math.sin(gal.t*2.4)*4);
-  c.globalAlpha = 0.7 + 0.3*pulse;
-  c.fillStyle = "#7fb0ff";
-  c.font = "11px 'Press Start 2P', monospace";
-  c.shadowColor = "#7fb0ff"; c.shadowBlur = 12*lit;
-  c.fillText("PLAY THIS GAME", x, ly);
+  // plate
+  c.shadowColor = "#7fb0ff"; c.shadowBlur = 18*lit;
+  c.fillStyle = "rgba(12,18,34,0.92)";
+  roundRect(c, b.x, b.y, b.w, b.h, 12);
   c.shadowBlur = 0;
-  c.globalAlpha = 0.6 + 0.4*pulse;
+  // glowing border, brighter as the light nears
+  c.strokeStyle = "rgba(127,176,255,"+(0.5+0.5*lit).toFixed(3)+")";
+  c.lineWidth = 2.6;
+  strokeRoundRect(c, b.x, b.y, b.w, b.h, 12);
+  // label
+  c.fillStyle = "#eaf2ff";
+  c.font = "14px 'Press Start 2P', monospace";
+  c.shadowColor = "#7fb0ff"; c.shadowBlur = 10*lit;
+  c.fillText("FINAL GAME", b.cx, b.cy - 1);
+  c.shadowBlur = 0;
+  c.fillStyle = "#9fbef0";
+  c.font = "7px 'Press Start 2P', monospace";
+  c.fillText("THE LONG RUN", b.cx, b.cy + 17);
+
+  // a hint under the arch: tap or walk up, with the enter prompt once within reach
+  var hy = baseY + 30 - (gal.reduceMotion ? 0 : Math.sin(gal.t*2.4)*3);
+  c.globalAlpha = 0.7 + 0.3*pulse;
   c.fillStyle = "#cfe0ff";
   c.font = "7px 'Press Start 2P', monospace";
-  c.fillText("A HIDDEN BONUS", x, ly+16);
+  c.fillText(gal.nearLaunch ? "\u25B8 PRESS SPACE TO PLAY" : "WALK HERE OR TAP TO PLAY", x, hy);
   c.globalAlpha = 1;
-
-  // the enter prompt, only within reach
-  if (gal.nearLaunch){
-    var py = coreY - 72 - (gal.reduceMotion ? 0 : Math.sin(gal.t*3)*3);
-    c.fillStyle = "rgba(8,10,22,0.85)";
-    roundRect(c, x-86, py-16, 172, 28, 8);
-    c.fillStyle = "#fff3d6"; c.textAlign = "center";
-    c.font = "8px 'Press Start 2P', monospace";
-    c.fillText("\u25B8 ENTER  THE LONG RUN", x, py+2);
-  }
 
   c.restore();
   c.globalAlpha = 1;
@@ -7959,6 +7978,21 @@ function roundRect(c, x, y, w, h, r){
   c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); c.fill();
 }
 
+function strokeRoundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); c.stroke();
+}
+
+// World space rectangle for the FINAL GAME button, centered over the arch.
+// The renderer draws the plate here and the canvas hit test uses the same rect,
+// so what the player sees is exactly what they can tap.
+function galLaunchButtonRect(){
+  var w = 232, h = 60;
+  var cx = GAL_LAUNCH_X, cy = GAL_H*0.34;
+  return { x: cx - w/2, y: cy - h/2, w: w, h: h, cx: cx, cy: cy };
+}
+
 function hexA(hex, a){
   var n = parseInt(hex.slice(1),16);
   return "rgba("+(n>>16)+","+((n>>8)&255)+","+(n&255)+","+a+")";
@@ -7970,6 +8004,27 @@ function galAct(){
   if (gal.talking){ galAdvance(); return; }
   if (gal.nearLaunch){ openPlatformer(); return; }
   if (gal.near){ galTalk(gal.near); }
+}
+
+// A click or tap on the FINAL GAME button launches THE LONG RUN. Maps the pointer
+// from screen pixels into hall world space with the same scale and camera the
+// renderer uses, then hit tests the shared button rect.
+function galPointerAt(clientX, clientY){
+  if (!gal || G.scene !== "GALLERY") return false;
+  if (gal.talking) return false;                       // a card is open; taps advance it instead
+  if (!galCanvas || !galCanvas.getBoundingClientRect) return false;
+  var rect = galCanvas.getBoundingClientRect();
+  var lx = clientX - rect.left, ly = clientY - rect.top;
+  var scale = (gal.cssH || rect.height || 480) / GAL_VIEW_H;
+  if (!(scale > 0)) return false;
+  var wx = lx / scale + gal.cam.x;
+  var wy = ly / scale + gal.cam.y;
+  var b = galLaunchButtonRect();
+  if (wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + b.h){
+    openPlatformer();
+    return true;
+  }
+  return false;
 }
 
 function galTalk(g){
@@ -8022,13 +8077,13 @@ function openGallery(opts){
   galCardEl = document.getElementById("gallery-card");
   galFrom = opts.from || "TITLE";
   galInit();
-  galSizeCanvas();
   // hide other surfaces
   panelTitle.classList.remove("open");
   panelComplete.classList.remove("open");
   if (typeof elHud !== "undefined" && elHud) elHud.style.display = "none";
   briefingButtonVisible(false);
   document.getElementById("panel-gallery").classList.add("on");
+  galSizeCanvas();                    // measure the now visible panel, not a hidden one
   gal.reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   var introEl = document.getElementById("gallery-intro");
   if (introEl && !gal.reduceMotion){
@@ -8039,6 +8094,7 @@ function openGallery(opts){
   G.keys = {};
   G.scene = "GALLERY";
   galHideCard();
+  galSettleSize();                    // a second pass next frame so the first frame is framed correctly
 }
 
 var galFrom = "TITLE";
@@ -8068,6 +8124,13 @@ var PLAT_ACC = 1700, PLAT_AIR_ACC = 1100;            // run accel and air contro
 var PLAT_TOP = 560, PLAT_ROLL_TOP = 920;             // top speeds: running and rolling
 var PLAT_DECEL = 1300, PLAT_ROLL_DECEL = 210, PLAT_AIR_DECEL = 130;  // drag
 var PLAT_JUMP_V = 760, PLAT_JUMP_CUT = 0.5;          // weighted, variable height jump
+// Spin dash (standing start), additive feel constants only. Charge is normalized 0..1.
+var PLAT_SPIN_MAX = 1.0;          // charge cap
+var PLAT_SPIN_PER_TAP = 0.34;     // charge added per jump or action tap (about three taps to full)
+var PLAT_SPIN_DECAY = 0.35;       // charge bled per second while the player waits
+var PLAT_SPIN_MIN_V = 540;        // launch speed at the lowest useful charge
+var PLAT_SPIN_MAX_V = 900;        // launch speed at full charge (under PLAT_ROLL_TOP so it is not clipped)
+var PLAT_SPIN_GATE = 60;          // below this speed, down held charges; above it, the running roll applies
 var PLAT_SLOPE_ACC = 1750;                           // gravity carried along a slope
 var PLAT_R = 18;                                     // hero radius (world units)
 var PLAT_ENEMY_R = 16;                               // enemy radius
@@ -8111,6 +8174,8 @@ function platBlip(freq, dur, type, vol){
 function platSfx(kind){
   if (!platAudio.on || !platAudio.ctx) return;
   if (kind==="jump") platBlip(540, 0.12, "square", 0.16);
+  else if (kind==="rev") platBlip(340, 0.06, "square", 0.10);
+  else if (kind==="dash"){ platBlip(180,0.10,"sawtooth",0.16); platBlip(320,0.12,"square",0.12); }
   else if (kind==="spark"){ platBlip(880,0.08,"triangle",0.18); platBlip(1320,0.10,"triangle",0.14); }
   else if (kind==="defeat") platBlip(210,0.16,"sawtooth",0.16);
   else if (kind==="hit") platBlip(150,0.22,"sawtooth",0.2);
@@ -8283,9 +8348,11 @@ function platInit(){
     player: {
       x: st.startX, y: 0, vx:0, vy:0, dir:1,
       grounded:false, rolling:false, jumping:false, jumpCut:false,
+      spin:0, spinning:false,
       anim:0, rot:0
     },
     jumpPrev:false,
+    downPrev:false,
     reduceMotion: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   };
   plat.motes = platMakeMotes(46);
@@ -8297,7 +8364,18 @@ function platInit(){
 
 function platSizeCanvas(){
   if (!platCanvas) return;
-  var w = window.innerWidth||640, h = window.innerHeight||480;
+  // Measure the real frame the panel occupies. On desktop that is the centered
+  // stage card, on a phone it is the full viewport. The panel has no inline size,
+  // so it always reports the true frame even if the canvas had a stale size.
+  var pan = platCanvas.parentNode;
+  var w = 0, h = 0;
+  if (pan && pan.getBoundingClientRect){
+    var r = pan.getBoundingClientRect();
+    w = r.width; h = r.height;
+  }
+  if (!(w > 0)) w = window.innerWidth || 640;   // fall back to the window before layout settles
+  if (!(h > 0)) h = window.innerHeight || 480;
+  w = Math.round(w); h = Math.round(h);
   platDpr = Math.min(2, window.devicePixelRatio||1);
   platCanvas.width = Math.round(w*platDpr);
   platCanvas.height = Math.round(h*platDpr);
@@ -8305,17 +8383,25 @@ function platSizeCanvas(){
   plat && (plat.cssW = w, plat.cssH = h);
 }
 
+function platSettleSize(){
+  // A second sizing pass after the panel is shown, so the first frame is already
+  // framed correctly even when the initial measure ran before layout.
+  var run = function(){ platSizeCanvas(); if (plat && pctx) platRender(); };
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+}
+
 function startPlatformer(){
   platCanvas = document.getElementById("plat-canvas");
   pctx = platCanvas && platCanvas.getContext ? platCanvas.getContext("2d") : null;
   platInit();
-  platSizeCanvas();
   var pan = document.getElementById("panel-platformer");
-  if (pan) pan.classList.add("on");
+  if (pan) pan.classList.add("on");   // show first so the panel is laid out before we measure it
+  platSizeCanvas();                   // measure the now visible frame, not a hidden one
   if (typeof elHud !== "undefined" && elHud) elHud.style.display = "none";
   platShowBoot("ready");
   G.keys = {};
   G.scene = "PLATFORMER";
+  platSettleSize();                   // a second pass next frame in case the first measure was early
 }
 
 function openPlatformer(){ startPlatformer(); }     // entered from the hall launcher
@@ -8391,6 +8477,7 @@ function platRespawn(){
   var p = plat.player;
   p.x = plat.checkpointX; p.vx = 0; p.vy = 0; p.dir = 1;
   p.rolling = false; p.jumping = false; p.jumpCut = false; p.anim = 0; p.rot = 0;
+  p.spin = 0; p.spinning = false;
   var gr = platGroundAt(p.x);
   p.y = (gr.has ? gr.y : plat.stage.deathY) - PLAT_R;
   p.grounded = true;
@@ -8405,6 +8492,7 @@ function platBegin(){
   platRespawn();                    // places at the start (checkpoint is the start)
   plat.mode = "playing";
   plat.jumpPrev = !!G.keys.up;      // a held start key should not auto jump on frame one
+  plat.downPrev = !!G.keys.down;    // a held down should not register as a launch on frame one
   platHideBoot();
 }
 
@@ -8464,21 +8552,59 @@ function platPhysics(s){
   var gr = platGroundAt(p.x);
   var onGround = p.grounded && gr.has;
 
+  // input edges for this frame
+  var downHeld = !!G.keys.down;
+  var jumpHeld = !!G.keys.up;
+  var jumpEdge = jumpHeld && !plat.jumpPrev;     // rising edge of the jump or action input
+
   // roll: hold down while grounded and moving; stand up when slow and released
   if (onGround){
-    if (G.keys.down && Math.abs(p.vx) > 60) p.rolling = true;
-    else if (!G.keys.down && Math.abs(p.vx) < 120) p.rolling = false;
+    if (downHeld && Math.abs(p.vx) > 60) p.rolling = true;
+    else if (!downHeld && Math.abs(p.vx) < 120) p.rolling = false;
+  }
+
+  // SPIN DASH (standing start): hold down while roughly stationary and tap jump to rev a
+  // capped charge while spinning in place, then release down to launch into the rolling
+  // attack in the facing direction. The running roll above is untouched; this is its
+  // standing start sibling.
+  var spinEligible = onGround && downHeld && Math.abs(p.vx) < PLAT_SPIN_GATE;
+  var spinLaunch = false;
+  if (spinEligible){
+    p.spinning = true;
+    if (jumpEdge){
+      p.spin = Math.min(PLAT_SPIN_MAX, p.spin + PLAT_SPIN_PER_TAP);   // a tap revs the charge
+      jumpEdge = false;                                              // and does not also jump
+      platSfx("rev");
+    } else {
+      p.spin = Math.max(0, p.spin - PLAT_SPIN_DECAY * s);            // slow decay while waiting
+      if (p.spin <= 0) p.spinning = false;
+    }
+  } else if (p.spinning && !downHeld && plat.downPrev && p.spin > 0 && onGround){
+    // down released while charged: launch in the facing direction at a speed set by charge
+    var f = p.spin / PLAT_SPIN_MAX;
+    p.vx = p.dir * (PLAT_SPIN_MIN_V + (PLAT_SPIN_MAX_V - PLAT_SPIN_MIN_V) * f);
+    p.rolling = true;
+    p.spin = 0; p.spinning = false;
+    spinLaunch = true;
+    platSfx("dash");
+  } else {
+    // not charging: bleed any leftover charge and clear the spin flag
+    if (p.spin > 0) p.spin = Math.max(0, p.spin - PLAT_SPIN_DECAY * s);
+    if (p.spin <= 0) p.spinning = false;
   }
 
   // horizontal accel and drag
   if (onGround){
-    if (ax !== 0){
-      p.vx += ax * (p.rolling ? PLAT_ACC*0.35 : PLAT_ACC) * s;   // less steering while rolling
+    if (p.spinning){
+      var sd = PLAT_DECEL * 1.6 * s;                                 // planted while charging: no steering
+      if (Math.abs(p.vx) <= sd) p.vx = 0; else p.vx -= sd * Math.sign(p.vx);
+    } else if (ax !== 0){
+      p.vx += ax * (p.rolling ? PLAT_ACC*0.35 : PLAT_ACC) * s;       // less steering while rolling
     } else {
       var dec = (p.rolling ? PLAT_ROLL_DECEL : PLAT_DECEL) * s;
       if (Math.abs(p.vx) <= dec) p.vx = 0; else p.vx -= dec * Math.sign(p.vx);
     }
-    p.vx += PLAT_SLOPE_ACC * gr.slope * s;     // momentum carried along the slope
+    if (!p.spinning) p.vx += PLAT_SLOPE_ACC * gr.slope * s;          // momentum carried along the slope
   } else {
     if (ax !== 0) p.vx += ax * PLAT_AIR_ACC * s;
     else { var ad = PLAT_AIR_DECEL*s; if (Math.abs(p.vx)<=ad) p.vx=0; else p.vx -= ad*Math.sign(p.vx); }
@@ -8489,15 +8615,15 @@ function platPhysics(s){
   if (p.vx > cap) p.vx = cap;
   if (p.vx < -cap) p.vx = -cap;
 
-  // weighted jump with a variable height cut
-  var jumpHeld = !!G.keys.up;
+  // weighted jump with a variable height cut (a spin rev or a launch never also jumps)
   var jumped = false;
-  if (onGround && jumpHeld && !plat.jumpPrev){
+  if (onGround && jumpEdge && !spinLaunch && !p.spinning){
     p.vy = -PLAT_JUMP_V; p.grounded = false; onGround = false; p.jumping = true; p.jumpCut = false; jumped = true;
     platSfx("jump");
   }
   if (p.jumping && !jumpHeld && !p.jumpCut && p.vy < 0){ p.vy *= PLAT_JUMP_CUT; p.jumpCut = true; }
   plat.jumpPrev = jumpHeld;
+  plat.downPrev = downHeld;
 
   // gravity
   if (!p.grounded){
@@ -8601,6 +8727,7 @@ function platUpdate(dt){
   // animation
   p.anim += Math.abs(p.vx) * s * 0.02;
   if (p.rolling) p.rot += p.vx * s * 0.03;
+  else if (p.spinning) p.rot += (4 + 14*Math.min(1, p.spin/PLAT_SPIN_MAX)) * (p.dir>=0?1:-1) * s;
 }
 
 /* ---------- World actors, pickups, and zone crossings ---------- */
@@ -9380,7 +9507,26 @@ function platDrawHero(c){
   c.fillStyle = gl; c.beginPath(); c.arc(cx, cy, PLAT_R*2.5, 0, Math.PI*2); c.fill();
   c.globalCompositeOperation = "source-over";
 
-  if (p.rolling){
+  // spin dash charge tell: a tightening ring and orbiting sparks that grow with charge.
+  // Reduced motion keeps the ring steady and the orbit still, so nothing flickers hard.
+  if (p.spinning && p.spin > 0){
+    var fch = Math.min(1, p.spin / PLAT_SPIN_MAX);
+    var pulse = plat.reduceMotion ? 1 : (1 + 0.10*Math.sin(plat.t*22));
+    c.save(); c.globalCompositeOperation = "lighter";
+    c.strokeStyle = "rgba(255,228,150," + (0.35 + 0.5*fch).toFixed(3) + ")";
+    c.lineWidth = 2 + 2*fch;
+    c.beginPath(); c.arc(cx, cy, PLAT_R*(1.5 + 0.5*fch)*pulse, 0, Math.PI*2); c.stroke();
+    var orbits = 3 + Math.round(3*fch);
+    c.fillStyle = "rgba(255,245,210,0.9)";
+    for (var so=0; so<orbits; so++){
+      var oa = (plat.reduceMotion ? 0 : plat.t*9) + so*(Math.PI*2/orbits);
+      var orad = PLAT_R*(1.7 + 0.4*fch);
+      c.beginPath(); c.arc(cx + Math.cos(oa)*orad, cy + Math.sin(oa)*orad, 1.6 + 1.4*fch, 0, Math.PI*2); c.fill();
+    }
+    c.restore(); c.globalCompositeOperation = "source-over";
+  }
+
+  if (p.rolling || p.spinning){
     // a spinning ball with motion arcs
     c.fillStyle = "#fff6df";
     c.beginPath(); c.arc(cx, cy, PLAT_R, 0, Math.PI*2); c.fill();
@@ -16678,7 +16824,7 @@ if (!Store.get("mf_seen_intro", false)){
 
 /* ---------- Test API ---------- */
 window.MF = {
-  version: "M32.S1",
+  version: "M33.S4",
   state: G,
   chapters: CHAPTERS,
   chapterOrder: CHAPTER_ORDER,
@@ -16698,6 +16844,9 @@ window.MF = {
   galNearest: galNearest,
   galConfig: function(){ return { W:GAL_W, H:GAL_H, talkR:GAL_TALK_R, max:GAL_MAX, viewH:GAL_VIEW_H }; },
   galLaunchX: function(){ return GAL_LAUNCH_X; },
+  galLaunchRect: function(){ return gal ? galLaunchButtonRect() : null; },
+  galPointer: function(cx, cy){ return galPointerAt(cx, cy); },
+  galSizeCanvas: function(){ return galSizeCanvas(); },
   openPlatformer: openPlatformer,
   closePlatformer: closePlatformer,
   startPlatformer: startPlatformer,
@@ -16713,6 +16862,7 @@ window.MF = {
   platGroundColors: function(id){ return platGroundColors(id); },
   platSoundOn: function(){ return platAudio.on; },
   platToggleSound: function(){ return platToggleSound(); },
+  platSizeCanvas: function(){ return platSizeCanvas(); },
   allChaptersCleared: allChaptersCleared,
   briefingThemes: BRIEFING_THEMES,
   buildAmbient: buildAmbient,
